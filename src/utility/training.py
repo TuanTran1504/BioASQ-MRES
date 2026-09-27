@@ -1135,9 +1135,9 @@ def save_training_curves(trainer: Any, save_dir: Path) -> dict[str, str]:
                     (
                         column,
                         {
-                            "generated_overall_average_primary_score": "all-dev MRR (160)",
-                            "generated_overall_macro_average_primary_score": "all-dev macro MRR (160)",
-                            "generated_subset_mrr": "evidence-supported MRR (129)",
+                            "generated_overall_average_primary_score": "dev primary score",
+                            "generated_overall_macro_average_primary_score": "dev macro primary score",
+                            "generated_subset_mrr": "selected-subset MRR",
                         }.get(column, column.replace("_", " ")),
                     )
                     for column in generated_metric_columns

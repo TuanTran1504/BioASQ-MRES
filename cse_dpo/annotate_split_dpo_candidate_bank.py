@@ -87,6 +87,9 @@ def file_hash(path: Path) -> str:
 def prepare_records(
     bank_path: Path,
     questions_path: Path,
+    *,
+    expected_samples: int = 10,
+    source_model: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     question_rows = json.loads(questions_path.read_text(encoding="utf-8"))
     questions = {str(row["id"]): row for row in question_rows}
@@ -98,8 +101,8 @@ def prepare_records(
     if bank_question_order != list(questions):
         raise ValueError("Candidate-bank question order does not match the held-out DPO question file")
     sample_counts = Counter(str(row["question_id"]) for row in rows)
-    if set(sample_counts.values()) != {10}:
-        raise ValueError(f"Expected exactly 10 candidates per question, got {dict(Counter(sample_counts.values()))}")
+    if expected_samples <= 0 or set(sample_counts.values()) != {expected_samples}:
+        raise ValueError(f"Expected exactly {expected_samples} candidates per question, got {dict(Counter(sample_counts.values()))}")
 
     records: list[dict[str, Any]] = []
     for row in rows:
@@ -123,7 +126,7 @@ def prepare_records(
                 "gold_aliases": aliases,
                 "candidate": candidate,
                 "candidate_output": format_answer(candidate),
-                "source_model": SOURCE_MODEL,
+                "source_model": source_model or row.get("generator_label") or row.get("generator_checkpoint") or SOURCE_MODEL,
                 "response_id": str(row.get("response_id")),
                 "sample_id": row.get("sample_id"),
                 "bank_path": str(bank_path.resolve()),
@@ -149,7 +152,7 @@ def prepare_records(
     summary = {
         "question_count": len(questions),
         "candidate_count": len(records),
-        "samples_per_question": 10,
+        "samples_per_question": expected_samples,
         "deterministic_exact_c3_records": exact_count,
         "nonexact_records": len(records) - exact_count,
         "unique_nonexact_normalized_question_candidates": len(unique_nonexact_normalized),
@@ -168,6 +171,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--judge-model", default="gpt-4.1-mini-2025-04-14")
     parser.add_argument("--max-new-judge-calls", type=int, default=500)
     parser.add_argument("--request-delay-seconds", type=float, default=1.0)
+    parser.add_argument("--expected-samples", type=int, default=10)
+    parser.add_argument("--source-model", default=None, help="Optional model label; otherwise use candidate provenance.")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -181,7 +186,8 @@ def main() -> None:
         if not path.exists():
             raise FileNotFoundError(path)
 
-    records, selection_summary = prepare_records(bank_path, questions_path)
+    records, selection_summary = prepare_records(
+        bank_path, questions_path, expected_samples=args.expected_samples, source_model=args.source_model)
     output_root.mkdir(parents=True, exist_ok=True)
     plan = {
         "status": "planned" if args.dry_run else "running",
@@ -191,7 +197,7 @@ def main() -> None:
         "questions": str(questions_path),
         "questions_sha256": file_hash(questions_path),
         "output_root": str(output_root),
-        "source_model": SOURCE_MODEL,
+        "source_models": sorted({str(record["source_model"]) for record in records}),
         "judge_model": args.judge_model,
         "judge_rubric_sha256": digest(JUDGE_SYSTEM),
         "gold_c3_policy": "always_first_extractive_alias",

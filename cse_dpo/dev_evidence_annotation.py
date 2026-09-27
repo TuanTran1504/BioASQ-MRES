@@ -33,11 +33,12 @@ one or more sufficient evidence sets and leave uncited snippets unassessed.
 """
 
 
-def build_packets(project_root):
+def build_packets(project_root, *, dev_path=None, train_path=None):
     root = Path(project_root)
     directory = root/'data/BioASQ_factoid_sft_prepared/single_answer_full_resources_qwen25_05b'
-    dev_path, train_path = directory/'eval_prepared.json', directory/'train_prepared.json'
-    dev, train = json.loads(dev_path.read_text()), json.loads(train_path.read_text())
+    dev_path = Path(dev_path) if dev_path is not None else directory/'eval_prepared.json'
+    train_path = Path(train_path) if train_path is not None else directory/'train_prepared.json'
+    dev, train = json.loads(dev_path.read_text(encoding='utf-8')), json.loads(train_path.read_text(encoding='utf-8'))
     dev_ids, train_ids = {r['id'] for r in dev}, {r['id'] for r in train}
     if len(dev_ids)!=len(dev) or len(train_ids)!=len(train):
         raise ValueError('Duplicate question IDs in source data')

@@ -1,0 +1,301 @@
+{
+  "archive": "reproducibility/notebook_archive.zip",
+  "archive_sha256": "a24f9538c46990f1d193b565e315495b5f71f6b00c641b22181da961f43741cc",
+  "notebook_count": 42,
+  "entries": [
+    {
+      "original_path": "notebooks/audit_stage1_training_generations.ipynb",
+      "sha256": "b4d92f2be2d098e1648d84f22530ee704eb04dd1f4f74f01f1f2168886db8957",
+      "bytes": 14460,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/build_factoid_evidence_grounded_gold_response_dpo_pairs_qwen25_05b.ipynb",
+      "sha256": "d460826467c662ebbb14f78c9ebebfbb494b6a8b924abf466825a173455c2442",
+      "bytes": 5631,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "standard_factoid / all_factoid_negatives"
+    },
+    {
+      "original_path": "notebooks/build_factoid_standard_dpo_pairs_from_strict_extractive_banks.ipynb",
+      "sha256": "382c898cc542eadfdd61b2c9a6a101f9b74cc13dcbc61d85d251419858d18207",
+      "bytes": 6211,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "standard_factoid / all_factoid_negatives"
+    },
+    {
+      "original_path": "notebooks/build_synthetic_factoid_qa_pilot.ipynb",
+      "sha256": "560616d501de4e387645a0fa8783d0215b050cadb8dca864c56fc10e4ec0f4db",
+      "bytes": 9355,
+      "replacement": "08_synthetic_qa.ipynb",
+      "presets": "prepare / generate / verify / finalize"
+    },
+    {
+      "original_path": "notebooks/build_synthetic_factoid_qa_pilot_v2.ipynb",
+      "sha256": "cc5b702f261e29a0120e2f0edc1b0f1e65aa43bcdd68c508d0279fe3e0d40134",
+      "bytes": 9645,
+      "replacement": "08_synthetic_qa.ipynb",
+      "presets": "prepare / generate / verify / finalize"
+    },
+    {
+      "original_path": "notebooks/candidates_evaluation.ipynb",
+      "sha256": "f79748cbc0e389f9b82f9dadb3ca367ddd1ed65733b44f42be914db28fec9ffe",
+      "bytes": 35312,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/check_factoid_test_evidence_support.ipynb",
+      "sha256": "2e9135a0bff1863c92d964aebab0ecef5b965985c26129dd79bf658e3444769e",
+      "bytes": 4342,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/compare_frequency10_vs_conditioned5_qwen25_05b.ipynb",
+      "sha256": "1fe21ad59870d6bacdf2179d36880c7008bdd1f58bebb5eb8eb46b43d29c3816",
+      "bytes": 4423,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "history_conditioned"
+    },
+    {
+      "original_path": "notebooks/compare_gpt_direct_vs_structured_reasoning_dev.ipynb",
+      "sha256": "abe986b86013b697d02a925cf8667696c57be33accc8cd9bee553b7123eb86c0",
+      "bytes": 8317,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "gpt_direct_vs_reasoning"
+    },
+    {
+      "original_path": "notebooks/compare_stage1_dpo_vs_sft_sampling_inference.ipynb",
+      "sha256": "b71070bd55bb7f9347e483ff1ee82f7997839268f7b3b424420f4d4fb092d7cf",
+      "bytes": 31280,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "greedy / compare_sampling / sample10_frequency"
+    },
+    {
+      "original_path": "notebooks/compare_synthetic_factoid_qa_generator_models.ipynb",
+      "sha256": "032be7b50a1d91c6862759f6ecf51b708f604e17b311ace9cd27a008ead5aece",
+      "bytes": 8632,
+      "replacement": "08_synthetic_qa.ipynb",
+      "presets": "prepare / generate / verify / finalize"
+    },
+    {
+      "original_path": "notebooks/evaluate_factoid_generation_methods_bioasq.ipynb",
+      "sha256": "b2db203417fd287285ab6167dadf14ca0b268c76d524e49742e55769df95cae4",
+      "bytes": 27002,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "greedy / compare_sampling / sample10_frequency"
+    },
+    {
+      "original_path": "notebooks/evaluate_factoid_models_on_dev_qwen25_05b.ipynb",
+      "sha256": "c26b435ab4b4c459740ce3e975507c6afb0f488e245d62524dcb3374d5cc3aaa",
+      "bytes": 35628,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "greedy / compare_sampling / sample10_frequency"
+    },
+    {
+      "original_path": "notebooks/evaluate_factoid_models_on_test_qwen25_05b.ipynb",
+      "sha256": "6e2e72a413055e6df3460acc452a2f7f62a77d87e657361341c518392bfd16d7",
+      "bytes": 36062,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "greedy / compare_sampling / sample10_frequency"
+    },
+    {
+      "original_path": "notebooks/evaluate_factoid_openai_only_on_test.ipynb",
+      "sha256": "43855ce355ead173a097d936353f59184dd44c84a33ad9ea13e5eec31513cf81",
+      "bytes": 14739,
+      "replacement": "06_evaluation.ipynb",
+      "presets": "openai_direct"
+    },
+    {
+      "original_path": "notebooks/generate_factoid_evidence_grounded_qwen25_05b_dpo_candidate_bank_n20.ipynb",
+      "sha256": "4f15c5df3d18c9a5aec270d8b82c771f21cfbe83b6e2771af8cd3f32a60a63b6",
+      "bytes": 10155,
+      "replacement": "02_candidate_generation.ipynb",
+      "presets": "sample10 / sample20 / literal_copy"
+    },
+    {
+      "original_path": "notebooks/generate_factoid_qwen25_05b_dpo_candidate_bank_n20.ipynb",
+      "sha256": "83d54cb635b29f7049fa419ad36dc55262023933738321026d8a2a08b58b28ce",
+      "bytes": 7771,
+      "replacement": "02_candidate_generation.ipynb",
+      "presets": "sample10 / sample20 / literal_copy"
+    },
+    {
+      "original_path": "notebooks/generate_factoid_qwen25_05b_split_dpo_candidate_bank.ipynb",
+      "sha256": "a0b50c18592e819f028e50e3d4fdc1f5481fa9bb35f4533db60377798d032ab7",
+      "bytes": 8973,
+      "replacement": "02_candidate_generation.ipynb",
+      "presets": "sample10 / sample20 / literal_copy"
+    },
+    {
+      "original_path": "notebooks/generate_factoid_strict_extractive_qwen25_05b_3b_candidate_banks.ipynb",
+      "sha256": "30960b8eaa3d73e206fcd2bcf34250473ac8ea11ea6ace5897faef5627b0478b",
+      "bytes": 25017,
+      "replacement": "02_candidate_generation.ipynb",
+      "presets": "sample10 / sample20 / literal_copy"
+    },
+    {
+      "original_path": "notebooks/inspect_dev_candidate_bank_differences.ipynb",
+      "sha256": "8bb9d3fb367786da5587f412511829adc86b1ca8bea34c29bcc9545a94013dec",
+      "bytes": 5746,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/inspect_train_candidate_bank_differences.ipynb",
+      "sha256": "eb7f5d8343cf4521d2cd687a10f137b53cb321a029b58aef279ece382f3b9aa6",
+      "bytes": 6225,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/judge_factoid_candidate_banks_train200_c3_c0_llm.ipynb",
+      "sha256": "10fad85ebda42a4c52ca6ad7c38a4d74d6a90f3e783d0e9e9ab584622fb9794c",
+      "bytes": 6991,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "judge_sample10 / judge_sample20"
+    },
+    {
+      "original_path": "notebooks/judge_factoid_candidate_banks_train_next200_merge400_c3_c0_llm.ipynb",
+      "sha256": "6894d49ab268d7a1945e90a8b412a577e7ae042175e952f43802c6e9cd27a3d0",
+      "bytes": 9388,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "judge_sample10 / judge_sample20"
+    },
+    {
+      "original_path": "notebooks/judge_factoid_predictions_c3_c0_llm.ipynb",
+      "sha256": "32e80616e2e03a2265949d763af0437ca66b2f7db6df9e9c9422e8df80ceef2c",
+      "bytes": 13309,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "judge_sample10 / judge_sample20"
+    },
+    {
+      "original_path": "notebooks/judge_factoid_qwen25_05b_split_dpo_bank_gpt.ipynb",
+      "sha256": "0f671f50eb79e7c9c2a32654da955382d7ddc1b0e5c2bfad138f67c2168c0de9",
+      "bytes": 7075,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "judge_sample10 / judge_sample20"
+    },
+    {
+      "original_path": "notebooks/model_evaluation_mistake_analysis.ipynb",
+      "sha256": "afbc6faefa268ff64c8ef74ea571de90c64a7efa6ca6b9b67174d94112e11aae",
+      "bytes": 40624,
+      "replacement": "07_analysis.ipynb",
+      "presets": "compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage"
+    },
+    {
+      "original_path": "notebooks/prepare_factoid_evidence_answer_sft.ipynb",
+      "sha256": "9f05f722071772a63eebf4009c573197890a010cb760864c800f5046007ddd19",
+      "bytes": 39933,
+      "replacement": "01_data_preparation.ipynb",
+      "presets": "judge_evidence / occurrence_evidence"
+    },
+    {
+      "original_path": "notebooks/prepare_factoid_evidence_answer_sft_occurrence_only.ipynb",
+      "sha256": "25ff506b7b9e2e23436b479743bfea125673e7de1ccdbc54455f66e99c9f8eac",
+      "bytes": 16573,
+      "replacement": "01_data_preparation.ipynb",
+      "presets": "judge_evidence / occurrence_evidence"
+    },
+    {
+      "original_path": "notebooks/score_stage2_alignment_potential.ipynb",
+      "sha256": "2304df2f9027459eedc108502511b7ae6965a036d0bd9dcb5d07967d57d796b3",
+      "bytes": 17777,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "stage2_alignment"
+    },
+    {
+      "original_path": "notebooks/split_candidate_bank_dpo_pairs_into_three_stages.ipynb",
+      "sha256": "d8186d6118a0bd4058686c41ab2ade2b39570ba068a937bdd07a267307e0c11f",
+      "bytes": 4529,
+      "replacement": "03_judging_and_preference_pairs.ipynb",
+      "presets": "three_stage_curriculum"
+    },
+    {
+      "original_path": "notebooks/train_factoid_error_aware_multitask_dpo_qwen25_05b.ipynb",
+      "sha256": "4118e00fc1d683c6495692cd2a826b632ee0a7d7d1b4ea15b842598074127713",
+      "bytes": 6127,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "error_aware"
+    },
+    {
+      "original_path": "notebooks/train_factoid_evidence_answer_sft_qwen25_05b.ipynb",
+      "sha256": "9fa146bfb27312bb230684ca6f4ec503e06d68d636ab1bfdd52a2924944fc476",
+      "bytes": 20696,
+      "replacement": "04_sft_training.ipynb",
+      "presets": "evidence_plus_answer / evidence_answer_control"
+    },
+    {
+      "original_path": "notebooks/train_factoid_evidence_grounded_single_answer_qwen25_05b.ipynb",
+      "sha256": "17c1fd457a80455105662e2eafa95199726ff549f601df0a0b6f2a96af677a80",
+      "bytes": 14768,
+      "replacement": "04_sft_training.ipynb",
+      "presets": "answer_only"
+    },
+    {
+      "original_path": "notebooks/train_factoid_evidence_grounded_single_answer_qwen25_3b.ipynb",
+      "sha256": "238179b2be7a51f48fab8a3dc897f1276acff651c75dd4530df638906f73f41c",
+      "bytes": 15647,
+      "replacement": "04_sft_training.ipynb",
+      "presets": "answer_only"
+    },
+    {
+      "original_path": "notebooks/train_factoid_full_resources_single_answer_qwen25_05b.ipynb",
+      "sha256": "b73e216a0de8763c589831e9fc6365ff286c23e57d97d8480b6f8e0f8cf4d82c",
+      "bytes": 8860,
+      "replacement": "04_sft_training.ipynb",
+      "presets": "answer_only"
+    },
+    {
+      "original_path": "notebooks/train_factoid_grounded_rationale_sft_qwen25_05b.ipynb",
+      "sha256": "3298c9ffe7d90466cf9e1802a8e6cc98a6a18e1eea9b8da47a7e266225c60c05",
+      "bytes": 39642,
+      "replacement": "04_sft_training.ipynb",
+      "presets": "rationale_from_base / rationale_continued"
+    },
+    {
+      "original_path": "notebooks/train_factoid_snippet_supported_qwen25_05b_3b.ipynb",
+      "sha256": "e56b5686987d2f41e55feb885a10c1f3b2cc1732e59a78d05d86088ed28ed57a",
+      "bytes": 14671,
+      "replacement": "01_data_preparation.ipynb + 04_sft_training.ipynb",
+      "presets": "snippet_supported + answer_only"
+    },
+    {
+      "original_path": "notebooks/train_factoid_stage1_jaccard0_standard_dpo_qwen25_3b.ipynb",
+      "sha256": "4b151cd4dd7ea9209081a16cf324d01789bb161b5af5a36bc187157d8f5e8054",
+      "bytes": 8199,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "stage1 / two_stage / three_stage"
+    },
+    {
+      "original_path": "notebooks/train_factoid_stage2_dpo_d_retention_qwen25_3b.ipynb",
+      "sha256": "bcd455f3d79ad9343536d4eb18cc94537b2a2591c4da799990ed0994ebf30478",
+      "bytes": 6189,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "stage2_retention"
+    },
+    {
+      "original_path": "notebooks/train_factoid_three_stage_dpo_qwen25_05b.ipynb",
+      "sha256": "bef235d9237eb85cf43082fc076e44e542be0681eb9fa1b8d340665caf8f05eb",
+      "bytes": 15977,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "stage1 / two_stage / three_stage"
+    },
+    {
+      "original_path": "notebooks/train_factoid_two_stage_dpo_qwen25_05b_sft80_old_full_pairs.ipynb",
+      "sha256": "261bc78024dd8b60a4238febcc9d0b06e4fccbe060d253b37752d5a78a8facad",
+      "bytes": 15680,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "stage1 / two_stage / three_stage"
+    },
+    {
+      "original_path": "notebooks/train_factoid_two_stage_standard_dpo_qwen25_3b.ipynb",
+      "sha256": "f4a2dedd579b1d2534a98f231102fb0b48dc218d68017bee5658292386b7a3f9",
+      "bytes": 6477,
+      "replacement": "05_dpo_training.ipynb",
+      "presets": "stage1 / two_stage / three_stage"
+    }
+  ]
+}

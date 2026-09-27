@@ -349,11 +349,22 @@ def encode_sft_record(tokenizer: Any, row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_sft_data(tokenizer: Any, prompt_spec: dict[str, Any]) -> list[dict[str, Any]]:
-    """Build or validate the exact 1,111-rationale + 278-replay training set."""
+def build_sft_data(tokenizer: Any, prompt_spec: dict[str, Any], *,
+                   expected_question_count: int | None = 1111) -> list[dict[str, Any]]:
+    """Build rationale/replay data; retain historical count checks by default."""
     from cse_dpo.candidate_bank_class_judge import candidate_is_extractive, extract_snippets
 
-    rationale_path = SFT_DATA_DIR / "rationale_sft_accepted1111.jsonl"
+    positive_rows = [row for row in read_jsonl(RATIONALE_BANK) if row.get("status") == "accepted"]
+    count = len(positive_rows)
+    if not count or len({row["question_id"] for row in positive_rows}) != count:
+        raise ValueError("Accepted positive rationales must be nonempty and unique by question.")
+    if expected_question_count is not None and count != expected_question_count:
+        raise ValueError(f"Expected {expected_question_count} accepted positive rationales, got {count}.")
+    if not 0 <= ANSWER_ONLY_REPLAY_FRACTION <= .5:
+        raise ValueError("Replay fraction must be between 0 and 0.5 for sampling without replacement.")
+    expected_replay = round(count * ANSWER_ONLY_REPLAY_FRACTION / (1 - ANSWER_ONLY_REPLAY_FRACTION))
+    rationale_filename = f"rationale_sft_accepted{count}.jsonl"
+    rationale_path = SFT_DATA_DIR / rationale_filename
     replay_path = SFT_DATA_DIR / "answer_only_replay.jsonl"
     frozen_paths = (rationale_path, replay_path, SFT_MIXED_FILE)
     if all(path.exists() for path in frozen_paths):
@@ -361,10 +372,10 @@ def build_sft_data(tokenizer: Any, prompt_spec: dict[str, Any]) -> list[dict[str
         replay = read_jsonl(replay_path)
         mixed = read_jsonl(SFT_MIXED_FILE)
         if (
-            len(rationale_examples) != 1111
-            or len(replay) != 278
-            or len(mixed) != 1389
-            or len({row["id"] for row in mixed}) != 1389
+            len(rationale_examples) != count
+            or len(replay) != expected_replay
+            or len(mixed) != count + expected_replay
+            or len({row["id"] for row in mixed}) != count + expected_replay
         ):
             raise ValueError("Existing frozen rationale SFT files have unexpected counts or duplicate IDs")
         if {row["id"] for row in mixed} != {
@@ -432,8 +443,8 @@ def build_sft_data(tokenizer: Any, prompt_spec: dict[str, Any]) -> list[dict[str
     positive_rows = [
         row for row in read_jsonl(RATIONALE_BANK) if row.get("status") == "accepted"
     ]
-    if len(positive_rows) != 1111 or len({row["question_id"] for row in positive_rows}) != 1111:
-        raise ValueError("Expected exactly 1,111 unique accepted positive rationales")
+    if len({row["question_id"] for row in positive_rows}) != count:
+        raise ValueError("Positive rationale question IDs must be unique")
     if {row["question_id"] for row in positive_rows} & dev_ids:
         raise ValueError("Rationale SFT data overlaps the 160-question dev split")
 
@@ -502,11 +513,11 @@ def build_sft_data(tokenizer: Any, prompt_spec: dict[str, Any]) -> list[dict[str
     mixed = rationale_examples + replay
     rng.shuffle(mixed)
     encoded = [encode_sft_record(tokenizer, row) for row in mixed]
-    if len(mixed) != 1389 or len(replay) != 278:
+    if len(mixed) != count + expected_replay or len(replay) != expected_replay:
         raise ValueError("Unexpected rationale/replay record count")
 
     generated_files = {
-        "rationale_sft_accepted1111.jsonl": rationale_examples,
+        rationale_filename: rationale_examples,
         "answer_only_replay.jsonl": replay,
         "mixed_train.jsonl": mixed,
     }

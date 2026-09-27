@@ -16,7 +16,7 @@ Obtain BioASQ data from the official BioASQ distribution and follow its terms of
 
 Representative preparation entry points:
 
-- `notebooks/prepare_factoid_evidence_answer_sft.ipynb`
+- [Data preparation notebook](notebooks/01_data_preparation.ipynb)
 - `cse_dpo/split_gold_supported_sft_dpo.py`
 - `cse_dpo/build_candidate_bank_gold_snippet_dpo_inputs.py`
 - `cse_dpo/build_synthetic_factoid_qa_pilot.py`

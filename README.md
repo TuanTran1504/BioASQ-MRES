@@ -19,13 +19,17 @@ Model weights, checkpoints, raw datasets, API credentials, cached model download
 
 ### Evidence-grounded SFT
 
-The current factoid SFT implementation is in:
+Use [01 Data preparation](notebooks/01_data_preparation.ipynb) to filter and split
+questions, then [04 SFT training](notebooks/04_sft_training.ipynb) to train either
+Qwen2.5-0.5B or Qwen2.5-3B on the same files. The default splits all 1,600 factoids
+90/10 before filtering: 160 dev questions remain unfiltered, and the training
+pool retains 1,137 snippet-matching questions (1,363 alias examples).
+The 95 official test factoids stay separate.
 
-- `cse_dpo/train_factoid_evidence_answer_sft.py`
-- `notebooks/train_factoid_evidence_grounded_single_answer_qwen25_05b.ipynb`
-- `notebooks/train_factoid_evidence_grounded_single_answer_qwen25_3b.ipynb`
-
-Prepared examples use an extractive single-answer format and preserve source surface forms.
+The [notebook guide](notebooks/README.md) covers all eight workflows and named
+variants. Execution defaults to preview. Original notebooks and their saved
+outputs are preserved in the [verified archive](reproducibility/notebook_archive.zip);
+see the [migration map](notebooks/MIGRATION.md).
 
 ### Candidate banks and annotation
 
@@ -39,13 +43,9 @@ Candidate generation, scoring, GPT-based class annotation, and dataset audits ar
 
 ### Multi-stage DPO
 
-The principal multi-stage trainer is:
-
-```bash
-python -m cse_dpo.train_factoid_three_stage_dpo --help
-```
-
-The associated experiment notebook is `notebooks/train_factoid_three_stage_dpo_qwen25_05b.ipynb`. The code supports standard DPO and project-specific objectives and filters used in the experiments.
+Use [05 DPO training](notebooks/05_dpo_training.ipynb) for standard, staged,
+tie-aware and alternative preference objectives. It calls the existing trainers
+with explicit data/model paths and defaults staged training to a smoke run.
 
 ### Synthetic factoid generation
 
@@ -55,7 +55,7 @@ The answer-first, source-disjoint synthetic QA pipeline is:
 python -m cse_dpo.build_synthetic_factoid_qa_pilot --help
 ```
 
-Use `notebooks/build_synthetic_factoid_qa_pilot_v2.ipynb` for the controlled generator/verifier pilot. API responses and generated datasets are written under ignored `Artifacts/` paths.
+Use [08 Synthetic QA](notebooks/08_synthetic_qa.ipynb) for the controlled generator/verifier pilot. API responses and generated datasets are written under ignored `Artifacts/` paths.
 
 ### Evaluation
 
@@ -63,8 +63,8 @@ Evaluation code includes generated-answer scoring, inference strategy comparison
 
 - `cse_dpo/generated_bioasq_eval.py`
 - `src/utility/evaluate_models.py`
-- `notebooks/evaluate_factoid_generation_methods_bioasq.ipynb`
-- `notebooks/compare_stage1_dpo_vs_sft_sampling_inference.ipynb`
+- [06 Evaluation](notebooks/06_evaluation.ipynb)
+- [07 Analysis](notebooks/07_analysis.ipynb)
 
 ### Reproduce the best list-question result
 
@@ -111,7 +111,7 @@ For OpenAI-assisted annotation or synthesis, provide credentials through the mec
 
 - The project generally uses seed `3407` for data splits and generation experiments.
 - Real development and test questions are kept separate from synthetic-source selection.
-- Many notebooks contain machine-specific path settings near the top; update `PROJECT_ROOT`, model references, and data paths for the destination system.
+- Active notebooks discover the project root and use explicit input paths. Historical machine-specific configurations remain in the archive.
 - Historical run metadata is retained in `models/registry.json`, but the referenced weights and artifacts are not distributed here.
 
 This is research code under active development. Review experiment configurations and data licensing requirements before reuse or redistribution.

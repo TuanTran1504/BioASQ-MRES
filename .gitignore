@@ -66,6 +66,7 @@ errors/
 *.tar.gz
 *.tgz
 *.zip
+!/reproducibility/notebook_archive.zip
 *.7z
 *.log
 

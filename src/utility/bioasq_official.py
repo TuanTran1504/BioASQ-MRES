@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -250,7 +251,7 @@ def _run_official_per_question(
     *, gold_path: Path, prediction_path: Path, jar_path: Path, challenge_version: int
 ) -> list[Dict[str, Any]]:
     classes = _official_adapter_classes(jar_path)
-    classpath = f"{classes}:{jar_path}"
+    classpath = os.pathsep.join((str(classes), str(jar_path)))
     command = [
         *_conda_executable("java"), "-cp", classpath,
         "evaluation.BioASQPerQuestionEvaluator",
