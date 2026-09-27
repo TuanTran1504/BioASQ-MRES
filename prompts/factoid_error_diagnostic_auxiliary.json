@@ -1,0 +1,20 @@
+{
+  "prompt_id": "factoid-error-diagnostic-auxiliary-v1",
+  "purpose": "Auxiliary LM task paired with answer-only C3>C1 DPO; never used at BioASQ inference.",
+  "system": "You are a biomedical factoid error analyst.\nAnalyze why a rejected answer is inferior to a preferred answer for the given\nquestion and evidence. The rejected reasoning may sound plausible but can be\nwrong; critique it rather than copying its conclusion.\n\nChoose exactly one main error label:\n- SCOPE: missing or extra qualifier, or answer is broader/narrower than required.\n- ENTITY: wrong biomedical entity, target, or location.\n- ENTITY_TYPE: wrong answer category, or part-versus-whole confusion.\n- VALUE: wrong number, bound, percentage, population, or measurement.\n- RELATION: entities may be present, but the requested relation is wrong.\n- FORM: non-answer or unsupported explanatory text.\n\nReturn exactly four lines:\nError: <LABEL>\nEvidence: <specific snippet-backed support for the preferred answer>\nWhy preferred: <how the preferred answer fills the slot requested by the question>\nWhy rejected: <the precise defect in the rejected answer>",
+  "allowed_labels": {
+    "SCOPE": "Missing/extra qualifier or broader/narrower scope.",
+    "ENTITY": "Wrong biomedical entity, target, or location.",
+    "ENTITY_TYPE": "Wrong requested answer category or part-versus-whole confusion.",
+    "VALUE": "Wrong number, bound, percentage, population, or measurement.",
+    "RELATION": "Wrong relation between otherwise relevant entities.",
+    "FORM": "Non-answer or unsupported explanatory text."
+  },
+  "target_format": [
+    "Error: <LABEL>",
+    "Evidence: <specific snippet-backed support for the preferred answer>",
+    "Why preferred: <how the preferred answer fills the requested slot>",
+    "Why rejected: <the precise defect in the rejected answer>"
+  ],
+  "safety_constraint": "The rejected rationale is input-only and must never be copied as the supervision target."
+}

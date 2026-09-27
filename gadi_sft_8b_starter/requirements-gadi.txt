@@ -1,0 +1,11 @@
+# Install PyTorch separately in scripts/setup_environment.sh so its CUDA wheel can
+# be matched to the Gadi GPU environment. These are the project-level packages.
+unsloth
+transformers
+trl
+datasets
+accelerate
+bitsandbytes
+sentence-transformers
+scikit-learn
+huggingface-hub

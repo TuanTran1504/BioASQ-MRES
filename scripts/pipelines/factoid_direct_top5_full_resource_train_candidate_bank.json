@@ -1,0 +1,83 @@
+{
+  "run_name": "factoid-direct-top5-full-resource-train-candidate-bank",
+  "cwd": "${project_root}",
+  "env": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+    "UNSLOTH_DISABLE_STATISTICS": "1"
+  },
+  "variables": {
+    "factoid_candidate_bank_root": "Artifacts/cse_dpo/candidate_banks/factoid_direct_top5_full_resources_train_s3_n20",
+
+    "factoid_prepared_root": "data/BioASQ_factoid_sft_prepared",
+    "factoid_direct_top5_prepared_dir": "${factoid_prepared_root}/direct_top5_hard_negative_full_resources",
+    "factoid_train_input": "${factoid_direct_top5_prepared_dir}/train_prepared.json",
+    "factoid_direct_top5_prompt_file": "prompts/factoid_single_answer_aligned.json",
+    "factoid_direct_top5_prompt_ref": "factoid-top-five-eval-v1",
+
+    "factoid_model_ref": "Artifacts/Factoid_SFT/models/direct_top5_full_resources_gold_eval/adapter",
+    "factoid_model_slug": "direct-top5-full-resources-gold-eval",
+
+    "factoid_samples_per_question_total": "20",
+    "factoid_max_seq_length": "4096",
+    "factoid_max_new_tokens": "128",
+    "factoid_temperature": "0.7",
+    "factoid_top_p": "0.9",
+    "factoid_batch_size": "1",
+    "factoid_seed": "3407"
+  },
+  "steps": [
+    {
+      "name": "generate factoid direct-top5 full-resource train candidate bank",
+      "command": [
+        "python",
+        "-m",
+        "cse_dpo.generate_candidate_bank",
+        "--eval-input",
+        "${factoid_train_input}",
+        "--model-ref",
+        "${factoid_model_ref}",
+        "--output-dir",
+        "${factoid_candidate_bank_root}",
+        "--dataset-name",
+        "bioasq-factoid",
+        "--question-types",
+        "factoid",
+        "--prompt-file",
+        "${factoid_direct_top5_prompt_file}",
+        "--prompt",
+        "${factoid_direct_top5_prompt_ref}",
+        "--chat-template",
+        "llama-3",
+        "--prompt-format",
+        "chat",
+        "--samples-per-question-total",
+        "${factoid_samples_per_question_total}",
+        "--max-resources",
+        "0",
+        "--max-resource-chars",
+        "0",
+        "--max-seq-length",
+        "${factoid_max_seq_length}",
+        "--max-new-tokens",
+        "${factoid_max_new_tokens}",
+        "--temperature",
+        "${factoid_temperature}",
+        "--top-p",
+        "${factoid_top_p}",
+        "--batch-size",
+        "${factoid_batch_size}",
+        "--seed",
+        "${factoid_seed}",
+        "--factoid-parser-mode",
+        "agnostic",
+        "--local-files-only"
+      ],
+      "skip_if_exists": [
+        "${factoid_candidate_bank_root}/${factoid_model_slug}/candidate_bank.jsonl",
+        "${factoid_candidate_bank_root}/${factoid_model_slug}/manifest.json"
+      ]
+    }
+  ]
+}

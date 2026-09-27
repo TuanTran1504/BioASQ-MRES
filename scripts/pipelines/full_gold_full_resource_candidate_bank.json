@@ -1,0 +1,57 @@
+{
+  "run_name": "full-gold-full-resource-candidate-bank",
+  "cwd": "${project_root}",
+  "env": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+    "UNSLOTH_DISABLE_STATISTICS": "1"
+  },
+  "variables": {
+    "full_gold_question_input": "data/training13b_list_full_gold_in_snippets.json",
+    "full_gold_full_sft_run_id": "20260809-170001-bioasq-8b-full-gold-full-resources-sft",
+    "full_gold_candidate_bank_root": "Artifacts/cse_dpo/candidate_banks/full_gold_full_resource_train",
+    "full_gold_candidate_bank_dir": "${full_gold_candidate_bank_root}/${full_gold_full_sft_run_id}"
+  },
+  "steps": [
+    {
+      "name": "generate full gold full resource candidate bank",
+      "command": [
+        "python",
+        "-m",
+        "cse_dpo.generate_candidate_bank",
+        "--eval-input",
+        "${full_gold_question_input}",
+        "--model-ref",
+        "${full_gold_full_sft_run_id}",
+        "--output-dir",
+        "${full_gold_candidate_bank_root}",
+        "--dataset-name",
+        "bioasq-full-gold",
+        "--question-types",
+        "list",
+        "--samples-per-question-total",
+        "12",
+        "--max-resources",
+        "0",
+        "--max-resource-chars",
+        "0",
+        "--max-seq-length",
+        "131072",
+        "--max-new-tokens",
+        "1024",
+        "--temperature",
+        "0.7",
+        "--top-p",
+        "0.9",
+        "--batch-size",
+        "1",
+        "--local-files-only"
+      ],
+      "skip_if_exists": [
+        "${full_gold_candidate_bank_dir}/candidate_bank.jsonl",
+        "${full_gold_candidate_bank_dir}/manifest.json"
+      ]
+    }
+  ]
+}

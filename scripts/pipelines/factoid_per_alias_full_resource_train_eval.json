@@ -1,0 +1,207 @@
+{
+  "run_name": "factoid-per-alias-full-resource-train-eval",
+  "cwd": "${project_root}",
+  "env": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+    "UNSLOTH_DISABLE_STATISTICS": "1"
+  },
+  "variables": {
+    "factoid_root": "Artifacts/Factoid_SFT",
+    "factoid_models_root": "${factoid_root}/models",
+    "factoid_evaluations_root": "${factoid_root}/evaluations",
+    "factoid_prepared_root": "data/BioASQ_factoid_sft_prepared",
+    "factoid_candidate_diagnosis_root": "${factoid_root}/candidate_diagnosis",
+
+    "factoid_full_prepared_dir": "${factoid_prepared_root}/single_answer_full_resources",
+    "factoid_per_alias_prepared_dir": "${factoid_prepared_root}/single_answer_full_resources_per_alias",
+
+    "factoid_full_train_input": "${factoid_full_prepared_dir}/train_prepared.json",
+    "factoid_full_eval_input": "${factoid_full_prepared_dir}/eval_prepared.json",
+
+    "factoid_per_alias_train_input": "${factoid_per_alias_prepared_dir}/train_per_alias.json",
+    "factoid_per_alias_eval_input": "${factoid_per_alias_prepared_dir}/eval_per_alias.json",
+
+    "factoid_single_answer_prompt_file": "prompts/factoid_single_answer_aligned.json",
+    "factoid_single_answer_prompt_ref": "factoid-single-answer-aligned-v1",
+
+    "factoid_full_run_name": "bioasq-8b-factoid-full-resources-single-answer-per-alias-sft",
+    "factoid_full_model_slug": "full-resources-single-answer-per-alias",
+    "factoid_candidate_model_slug": "sft_full_single_answer_per_alias",
+    "factoid_full_trainer_output": "${factoid_models_root}/full_resources_single_answer_per_alias/trainer_output",
+    "factoid_full_adapter_output": "${factoid_models_root}/full_resources_single_answer_per_alias/adapter",
+
+    "factoid_eval_full_output": "${factoid_evaluations_root}/single_answer_original_test_full_resources_per_alias",
+
+    "factoid_base_model": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+    "factoid_chat_template": "llama-3",
+    "factoid_prompt_format": "chat",
+    "factoid_seed": "3407",
+
+    "factoid_train_batch_size": "1",
+    "factoid_eval_batch_size": "1",
+    "factoid_gradient_accumulation_steps": "32",
+    "factoid_warmup_steps": "5",
+    "factoid_num_train_epochs": "6.0",
+    "factoid_learning_rate": "6e-4",
+    "factoid_weight_decay": "0.01",
+    "factoid_logging_steps": "1",
+    "factoid_save_steps": "25",
+    "factoid_lora_r": "32",
+    "factoid_lora_alpha": "32",
+    "factoid_lora_dropout": "0.0",
+    "factoid_dataset_num_proc": "1",
+    "factoid_early_stopping_patience": "3",
+    "factoid_early_stopping_threshold": "0.001",
+    "factoid_selection_metric": "generated_primary_score",
+    "factoid_selection_num_generations": "1",
+    "factoid_selection_max_new_tokens": "64",
+    "factoid_selection_aggregation_strategy": "union",
+
+    "factoid_eval_max_new_tokens": "64"
+  },
+  "steps": [
+    {
+      "name": "create per-alias train prepared",
+      "command": [
+        "python",
+        "scripts/create_per_alias_dataset.py",
+        "--inputs",
+        "${factoid_full_train_input}",
+        "--output",
+        "${factoid_per_alias_train_input}"
+      ],
+      "skip_if_exists": [
+        "${factoid_per_alias_train_input}"
+      ]
+    },
+    {
+      "name": "create per-alias eval prepared",
+      "command": [
+        "python",
+        "scripts/create_per_alias_dataset.py",
+        "--inputs",
+        "${factoid_full_eval_input}",
+        "--output",
+        "${factoid_per_alias_eval_input}"
+      ],
+      "skip_if_exists": [
+        "${factoid_per_alias_eval_input}"
+      ]
+    },
+    {
+      "name": "train factoid per-alias full-resource single-answer sft model",
+      "command": [
+        "python",
+        "src/utility/answer_gen_ft.py",
+        "--train-input",
+        "${factoid_per_alias_train_input}",
+        "--eval-input",
+        "${factoid_full_eval_input}",
+        "--question-types",
+        "factoid",
+        "--validation-ratio",
+        "0.1",
+        "--model-name",
+        "${factoid_base_model}",
+        "--chat-template",
+        "${factoid_chat_template}",
+        "--prompt-format",
+        "${factoid_prompt_format}",
+        "--prompt-file",
+        "${factoid_single_answer_prompt_file}",
+        "--prompt",
+        "${factoid_single_answer_prompt_ref}",
+        "--max-resources",
+        "0",
+        "--max-resource-chars",
+        "0",
+        "--max-factoid-answers",
+        "5",
+        "--max-seq-length",
+        "4096",
+        "--per-device-train-batch-size",
+        "${factoid_train_batch_size}",
+        "--per-device-eval-batch-size",
+        "${factoid_eval_batch_size}",
+        "--gradient-accumulation-steps",
+        "${factoid_gradient_accumulation_steps}",
+        "--warmup-steps",
+        "${factoid_warmup_steps}",
+        "--num-train-epochs",
+        "${factoid_num_train_epochs}",
+        "--learning-rate",
+        "${factoid_learning_rate}",
+        "--weight-decay",
+        "${factoid_weight_decay}",
+        "--logging-steps",
+        "${factoid_logging_steps}",
+        "--save-strategy",
+        "steps",
+        "--save-steps",
+        "${factoid_save_steps}",
+        "--lora-r",
+        "${factoid_lora_r}",
+        "--lora-alpha",
+        "${factoid_lora_alpha}",
+        "--lora-dropout",
+        "${factoid_lora_dropout}",
+        "--dataset-num-proc",
+        "${factoid_dataset_num_proc}",
+        "--selection-metric",
+        "${factoid_selection_metric}",
+        "--selection-max-seq-length",
+        "3584",
+        "--selection-max-new-tokens",
+        "${factoid_selection_max_new_tokens}",
+        "--selection-num-generations",
+        "${factoid_selection_num_generations}",
+        "--selection-aggregation-strategy",
+        "${factoid_selection_aggregation_strategy}",
+        "--early-stopping-patience",
+        "${factoid_early_stopping_patience}",
+        "--early-stopping-threshold",
+        "${factoid_early_stopping_threshold}",
+        "--seed",
+        "${factoid_seed}",
+        "--run-name",
+        "${factoid_full_run_name}",
+        "--output-dir",
+        "${factoid_full_trainer_output}",
+        "--save-model-dir",
+        "${factoid_full_adapter_output}",
+        "--register-alias",
+        "factoid-sft-full-resources-single-answer-per-alias",
+        "--resume-from-checkpoint",
+        "auto",
+        "--local-files-only"
+      ],
+      "skip_if_exists": [
+        "${factoid_full_adapter_output}/training_complete.json"
+      ]
+    },
+    {
+      "name": "run aligned factoid candidate-diagnosis dev suite on per-alias full-resource model",
+      "command": [
+        "bash",
+        "scripts/run_factoid_candidate_diagnosis_model_suite.sh",
+        "${factoid_candidate_model_slug}",
+        "dev_full",
+        "${factoid_seed}"
+      ],
+      "skip_if_exists": [
+        "${factoid_candidate_diagnosis_root}/analysis/dev_full/${factoid_candidate_model_slug}/s1_single_greedy/summary.json",
+        "${factoid_candidate_diagnosis_root}/analysis/dev_full/${factoid_candidate_model_slug}/s2_top5_greedy/summary.json",
+        "${factoid_candidate_diagnosis_root}/analysis/dev_full/${factoid_candidate_model_slug}/s3_single_sample_n20/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s1_single_greedy/parser_agnostic/policy_permissive/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s1_single_greedy/parser_agnostic/policy_strict/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s1_single_greedy/parser_agnostic/policy_first_entity/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s2_top5_greedy/parser_agnostic/policy_permissive/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s3_single_sample_n20/parser_agnostic/policy_permissive/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s3_single_sample_n20/parser_agnostic/policy_strict/summary.json",
+        "${factoid_candidate_diagnosis_root}/reanalysis/dev_full/${factoid_candidate_model_slug}/s3_single_sample_n20/parser_agnostic/policy_first_entity/summary.json"
+      ]
+    }
+  ]
+}

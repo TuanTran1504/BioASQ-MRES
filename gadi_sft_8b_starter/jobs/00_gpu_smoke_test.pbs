@@ -1,0 +1,31 @@
+#!/bin/bash
+# Replace gpuvolta if nl78 is granted a different Gadi GPU queue.
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=50GB
+#PBS -l walltime=00:20:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq8b-smoke
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export PYTHONUNBUFFERED=1
+
+cd "${PBS_O_WORKDIR}"
+nvidia-smi
+python3 scripts/verify_bundle.py
+python3 scripts/run_sft_8b.py \
+  --variant full_resources_per_alias \
+  --run-name "smoke-${PBS_JOBID}" \
+  --smoke-test

@@ -1,0 +1,2 @@
+# Copy this file to open_ai_api.txt and replace the placeholder locally.
+OPENAI_API_KEY=replace-with-your-local-key

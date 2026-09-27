@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "aliases": {
+    "default": {
+      "prompt_id": "factoid-top-five-v1"
+    },
+    "factoid-single-answer": {
+      "prompt_id": "factoid-single-answer-v1"
+    },
+    "factoid-top-five": {
+      "prompt_id": "factoid-top-five-v1"
+    }
+  },
+  "prompts": {
+    "factoid-single-answer-v1": {
+      "prompt_id": "factoid-single-answer-v1",
+      "name": "BioASQ Factoid Single Answer",
+      "chat_template": "llama-3",
+      "prompt_format": "chat",
+      "description": "Single-entity factoid prompt used for repeated sample-and-rank diagnosis.",
+      "instructions": {
+        "summary": "You are a biomedical expert. Your task is to generate a concise, well-structured summary answering the given question. Base your response on the provided PubMed resources, focusing on the text marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- The summary must be at most 200 words.\n- Do NOT include personal opinions, speculations, or unrelated information.\n- Maintain a neutral and scientific tone.",
+        "factoid": "You are a biomedical expert. Your task is to extract the single most relevant factoid answer from the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Return exactly one short biomedical expression.\n- Do NOT provide alternate answers, explanations, or extra text.\n- Maintain this format strictly: [BE] short answer [EE]",
+        "list": "You are a biomedical expert. Your task is to generate a complete list of relevant items, jointly taken to constitute a single answer, based on the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Do NOT provide explanations or extra text.\n- The returned list must contain no more than 100 entries of no more than 100 characters each.\n- Maintain this format strictly: [BI] list item [EI] [BI] another list item [EI] ...",
+        "yesno": "You are a biomedical expert. Your task is to answer a yes/no question based on the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Do NOT provide explanations or extra text.\n- Answer only 'yes' or 'no'."
+      }
+    },
+    "factoid-top-five-v1": {
+      "prompt_id": "factoid-top-five-v1",
+      "name": "BioASQ Factoid Top Five",
+      "chat_template": "llama-3",
+      "prompt_format": "chat",
+      "description": "Top-five ranked factoid prompt used for direct list generation diagnosis.",
+      "instructions": {
+        "summary": "You are a biomedical expert. Your task is to generate a concise, well-structured summary answering the given question. Base your response on the provided PubMed resources, focusing on the text marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- The summary must be at most 200 words.\n- Do NOT include personal opinions, speculations, or unrelated information.\n- Maintain a neutral and scientific tone.",
+        "factoid": "You are a biomedical expert. Your task is to extract the most relevant factoid-based answer from the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Return up to 5 distinct short biomedical expressions.\n- You may return fewer than 5 expressions when fewer are well-supported by the evidence.\n- Do NOT invent filler answers just to reach 5 outputs.\n- Order the expressions by decreasing confidence.\n- If multiple expressions refer to the same concept, prefer the clearest canonical wording.\n- Do NOT provide explanations or extra text.\n Be aware that the confident answer should always be placed at the first position- Maintain this format strictly: [BE] short answer [EE] [BE] alternate wording [EE] ...",
+        "list": "You are a biomedical expert. Your task is to generate a complete list of relevant items, jointly taken to constitute a single answer, based on the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Do NOT provide explanations or extra text.\n- The returned list must contain no more than 100 entries of no more than 100 characters each.\n- Maintain this format strictly: [BI] list item [EI] [BI] another list item [EI] ...",
+        "yesno": "You are a biomedical expert. Your task is to answer a yes/no question based on the provided PubMed resources. Relevant information is marked with [BS] and [ES].\nRules:\n- Use only the information provided with a special focus on the marked information.\n- Do NOT provide explanations or extra text.\n- Answer only 'yes' or 'no'."
+      }
+    }
+  }
+}

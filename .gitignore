@@ -1,0 +1,84 @@
+# Python bytecode and local runtime caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+
+# Local environments and editor state
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+
+# Credentials
+open_ai_api.txt
+*_api_key.txt
+*.pem
+*.key
+
+# Raw/prepared datasets are large and may have separate distribution terms.
+/data/**
+!/data/README.md
+/gadi_sft_8b_starter/data/
+
+# Generated experiment outputs, checkpoints, and local ablations.
+/Artifacts/
+/Abalations/
+/unsloth_compiled_cache/
+wandb/
+runs/
+trainer_output/
+checkpoint-*/
+cache/
+errors/
+
+# Downloaded base models. Keep only portable metadata and documentation.
+/models/*/
+!/models/README.md
+!/models/registry.json
+
+# Model weights and serialized training state.
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+*.pickle
+*.pkl
+*.npy
+*.npz
+*.arrow
+*.parquet
+
+# Generated archives and logs.
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.log
+
+# Embedded VCS metadata in bundled third-party sources.
+**/.git/
+
+# Generated artifacts in accidentally nested project copies.
+Artifacts/
+
+# Native build by-products and editor backups.
+*.o
+*~
+
+# Third-party IDE/build by-products; keep source and distributable evaluator jars.
+third_party/Evaluation-Measures/flat/BioASQEvaluation/build/
+third_party/Evaluation-Measures/flat/BioASQEvaluation/nbproject/private/

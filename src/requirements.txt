@@ -1,0 +1,8 @@
+unsloth
+sentence-transformers
+transformers
+trl
+datasets
+accelerate
+scikit-learn
+bitsandbytes
