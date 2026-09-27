@@ -66,6 +66,21 @@ Evaluation code includes generated-answer scoring, inference strategy comparison
 - `notebooks/evaluate_factoid_generation_methods_bioasq.ipynb`
 - `notebooks/compare_stage1_dpo_vs_sft_sampling_inference.ipynb`
 
+### Reproduce the best list-question result
+
+The end-to-end pipeline for the best recorded list-question system trains the
+two required SFT adapters, samples the candidate bank, constructs whole-response
+MR5 v3 preference pairs, trains standard DPO, and runs official BioASQ scoring:
+
+```bash
+./scripts/reproduce_best_list_system.sh --dry-run
+./scripts/reproduce_best_list_system.sh
+```
+
+The historical score on the 83 Task 13B list questions was **0.5312 mean F1**.
+See [reproducibility/best_list_system/README.md](reproducibility/best_list_system/README.md)
+for required data, exact stages, expected counts, and resumption instructions.
+
 ## Installation
 
 Python 3.10 or newer is recommended.

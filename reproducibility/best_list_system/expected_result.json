@@ -1,0 +1,38 @@
+{
+  "experiment": "best-list-system-whole-response-dpo-v3",
+  "description": "Historical best local BioASQ Task 13B list-question result.",
+  "base_model": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+  "evaluation": {
+    "dataset": "BioASQ Task 13B batches 1-4",
+    "question_type": "list",
+    "question_count": 83,
+    "scorer": "official BioASQ Java evaluator",
+    "challenge_version": 5,
+    "mean_precision": 0.5808108892446244,
+    "mean_recall": 0.5165599508664863,
+    "mean_f1": 0.5311819105609734
+  },
+  "historical_counts": {
+    "visible_gold_sft_train_questions": 899,
+    "visible_gold_sft_dev_questions": 100,
+    "full_snippet_sft_train_questions": 947,
+    "full_snippet_sft_dev_questions": 100,
+    "candidate_bank_questions": 1047,
+    "candidate_bank_samples_per_question": 12,
+    "candidate_bank_rows": 12564,
+    "pair_eligible_candidate_rows": 11976,
+    "preference_pairs": 2327,
+    "preference_pair_questions": 461,
+    "dpo_train_pairs": 2212,
+    "dpo_eval_pairs": 115
+  },
+  "method": {
+    "policy_initialization": "MR5 visible-gold SFT adapter",
+    "candidate_generator": "Full-snippet SFT adapter",
+    "preference_data": "Whole-response MR5 v3 pairs",
+    "dpo_loss": "sigmoid",
+    "dpo_beta": 0.1,
+    "seed": 3407
+  },
+  "reproducibility_note": "GPU kernels, dependency versions, and stochastic candidate sampling can cause small deviations from the historical score."
+}
