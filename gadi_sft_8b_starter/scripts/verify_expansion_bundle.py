@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import argparse
 from pathlib import Path
 
 
@@ -17,7 +18,14 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    config_path = ROOT / "configs/extractive_expansion_8b.json"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=ROOT / "configs/extractive_expansion_8b.json",
+    )
+    args = parser.parse_args()
+    config_path = args.config if args.config.is_absolute() else ROOT / args.config
     config = json.loads(config_path.read_text(encoding="utf-8"))
     data_path = ROOT / config["input"]
     prompt_path = ROOT / config["prompt"]
@@ -33,12 +41,20 @@ def main() -> None:
     if any(set(row) != required or not row["snippets"] or not row["gold_aliases"] for row in rows):
         raise ValueError("Expansion rows do not have the expected nonempty fields")
     prompt = prompt_path.read_text(encoding="utf-8")
-    if "exact text spans" not in prompt or "up to TEN" not in prompt:
-        raise ValueError("Unexpected extractive expansion prompt")
+    response_mode = str(config.get("response_mode", "extractive"))
+    if response_mode == "extractive":
+        if "exact text spans" not in prompt or "up to TEN" not in prompt:
+            raise ValueError("Unexpected extractive expansion prompt")
+    elif response_mode == "equivalent":
+        if "equivalent answer expressions" not in prompt or "relation_type" not in prompt:
+            raise ValueError("Unexpected equivalent expansion prompt")
+    else:
+        raise ValueError("Unknown response_mode")
     print("Expansion questions:", len(rows))
     print("Total snippets:", sum(len(row["snippets"]) for row in rows))
     print("Data SHA256:", hashlib.sha256(data_path.read_bytes()).hexdigest())
     print("Prompt SHA256:", hashlib.sha256(prompt_path.read_bytes()).hexdigest())
+    print("Response mode:", response_mode)
     print("8B expansion bundle is valid.")
 
 

@@ -2,7 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 
-from src.notebook_workflows.coverage_comparison import EXTRACTIVE_EXPANSION_PROMPT
+from src.notebook_workflows.coverage_comparison import EXPANSION_PROMPT, EXTRACTIVE_EXPANSION_PROMPT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +24,19 @@ def test_gadi_prompt_matches_local_expansion_protocol():
     assert prompt.strip() == EXTRACTIVE_EXPANSION_PROMPT.strip()
     assert config["prompt"] == "prompts/extractive_expansion_v2.txt"
     assert config["prompt_version"] == "extractive-expansion-v2"
+    assert config["max_seq_length"] == 6144
+    assert config["max_new_tokens"] == 512
+    assert config["temperature"] == 0.0
+    assert config["require_all_snippets"] is True
+
+
+def test_gadi_equivalent_prompt_matches_original_gpt_protocol():
+    prompt = (BUNDLE / "prompts/equivalent_expansion_v1.txt").read_text(encoding="utf-8")
+    config = json.loads((BUNDLE / "configs/equivalent_expansion_8b.json").read_text())
+    assert prompt.strip() == EXPANSION_PROMPT.strip()
+    assert config["prompt"] == "prompts/equivalent_expansion_v1.txt"
+    assert config["prompt_version"] == "equivalent-expansion-v1"
+    assert config["response_mode"] == "equivalent"
     assert config["max_seq_length"] == 6144
     assert config["max_new_tokens"] == 512
     assert config["temperature"] == 0.0
@@ -108,4 +121,35 @@ def test_gadi_parser_deduplicates_before_applying_unique_candidate_limit():
     assert [row["answer"] for row in accepted] == ["alpha", "beta"]
     assert sum(row["reason"] == "duplicate_answer_surface" for row in rejected) == 10
     assert "answer_count_out_of_range" in issues
+    assert compliant is False
+
+
+def test_gadi_equivalent_parser_accepts_original_and_relations():
+    runner = load_runner()
+    response = json.dumps({
+        "answers": [
+            {"answer": "alpha", "relation_type": "original"},
+            {"answer": "A", "relation_type": "abbreviation_expansion"},
+        ]
+    })
+    accepted, rejected, issues, compliant = runner.parse_equivalent_response(response)
+    assert [row["answer"] for row in accepted] == ["alpha", "A"]
+    assert [row["relation_type"] for row in accepted] == ["original", "abbreviation_expansion"]
+    assert rejected == []
+    assert issues == []
+    assert compliant is True
+
+
+def test_gadi_equivalent_parser_recovers_and_deduplicates_truncated_json():
+    runner = load_runner()
+    response = (
+        '{"answers":['
+        '{"answer":"alpha","relation_type":"original"},'
+        '{"answer":"ALPHA","relation_type":"synonym"},'
+        '{"answer":"beta","relation_type":"synonym"'
+    )
+    accepted, rejected, issues, compliant = runner.parse_equivalent_response(response)
+    assert [row["answer"] for row in accepted] == ["alpha"]
+    assert rejected[0]["reason"] == "duplicate_answer_surface"
+    assert "incomplete_top_level_json_recovered" in issues
     assert compliant is False

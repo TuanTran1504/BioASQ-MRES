@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the 8B exact-span expansion experiment on one Gadi GPU."""
+"""Run an 8B expansion experiment on one Gadi GPU."""
 
 from __future__ import annotations
 
@@ -28,6 +28,15 @@ VALID_CANDIDATE_TYPES = {
     "abbreviation_surface",
     "numeric_surface",
     "alternative_evidence",
+}
+VALID_RELATION_TYPES = {
+    "original",
+    "synonym",
+    "abbreviation_expansion",
+    "nomenclature_variant",
+    "spelling_or_inflection",
+    "numerically_equivalent",
+    "harmless_formatting",
 }
 
 
@@ -169,6 +178,79 @@ def parse_extractive_response(
     return accepted, rejected, issues, not structural_issues
 
 
+def parse_equivalent_response(
+    text: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], bool]:
+    """Recover and deduplicate equivalent-expression candidates without using gold."""
+    value = next((obj for obj in json_objects(text) if isinstance(obj.get("answers"), list)), None)
+    issues: list[str] = []
+    if value is None:
+        required = {"answer", "relation_type"}
+        raw_answers = [obj for obj in json_objects(text) if required <= set(obj)]
+        if not raw_answers:
+            raise ValueError("No JSON answer candidates were found")
+        issues.append("incomplete_top_level_json_recovered")
+    else:
+        if set(value) != {"answers"}:
+            issues.append("unexpected_top_level_fields")
+        raw_answers = value["answers"]
+        if not 1 <= len(raw_answers) <= 10:
+            issues.append("answer_count_out_of_range")
+
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_position, row in enumerate(raw_answers, 1):
+        if not isinstance(row, dict):
+            rejected.append({
+                "raw_position": raw_position,
+                "reason": "candidate_is_not_an_object",
+                "raw_candidate": row,
+            })
+            issues.append(f"candidate_{raw_position}_not_object")
+            continue
+        required = {"answer", "relation_type"}
+        if set(row) != required:
+            issues.append(f"candidate_{raw_position}_unexpected_fields")
+        answer = row.get("answer")
+        if not isinstance(answer, str) or not answer.strip():
+            rejected.append({
+                **row,
+                "raw_position": raw_position,
+                "reason": "missing_or_empty_answer",
+            })
+            continue
+        relation_type = str(row.get("relation_type") or "unrecognized")
+        if relation_type not in VALID_RELATION_TYPES:
+            issues.append(f"candidate_{raw_position}_invalid_relation_type")
+        if raw_position == 1 and relation_type != "original":
+            issues.append("first_candidate_not_original")
+        if raw_position > 1 and relation_type == "original":
+            issues.append(f"candidate_{raw_position}_unexpected_original")
+        key = re.sub(r"\s+", " ", answer.casefold()).strip()
+        if key in seen:
+            rejected.append({
+                **row,
+                "raw_position": raw_position,
+                "reason": "duplicate_answer_surface",
+            })
+            continue
+        seen.add(key)
+        if len(accepted) >= 10:
+            rejected.append({
+                **row,
+                "raw_position": raw_position,
+                "reason": "unique_candidate_limit_exceeded",
+            })
+            continue
+        accepted.append({
+            "answer": answer,
+            "relation_type": relation_type,
+            "raw_position": raw_position,
+        })
+    return accepted, rejected, issues, not issues
+
+
 def render_prompt(tokenizer: Any, system_prompt: str, example: dict[str, Any]) -> str:
     user = {
         "question": example["question"],
@@ -229,6 +311,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     config_template = read_json(args.config)
+    response_mode = str(config_template.get("response_mode", "extractive"))
+    if response_mode not in {"extractive", "equivalent"}:
+        raise ValueError("response_mode must be 'extractive' or 'equivalent'")
     input_path = ROOT / config_template["input"]
     prompt_path = ROOT / config_template["prompt"]
     if not input_path.is_file():
@@ -254,7 +339,7 @@ def main() -> None:
         "prompt_sha256": file_sha256(prompt_path),
         "gold_blind_generation": True,
         "local_files_only": not args.allow_download,
-        "response_mode": "extractive",
+        "response_mode": response_mode,
     }
 
     if args.resume_run:
@@ -354,9 +439,12 @@ def main() -> None:
             raw = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
             parse_error = None
             try:
-                accepted, rejected, issues, schema_compliant = parse_extractive_response(
-                    raw, example["snippets"]
-                )
+                if response_mode == "extractive":
+                    accepted, rejected, issues, schema_compliant = parse_extractive_response(
+                        raw, example["snippets"]
+                    )
+                else:
+                    accepted, rejected, issues, schema_compliant = parse_equivalent_response(raw)
             except ValueError as exc:
                 accepted, rejected, issues, schema_compliant = [], [], [], False
                 parse_error = f"{type(exc).__name__}: {exc}"
@@ -401,7 +489,7 @@ def main() -> None:
             write_jsonl(run_dir / "invalid_candidates.jsonl", invalid_candidates)
             write_json(run_dir / "status.json", status)
             print(
-                f"{len(completed_ids)}/{len(examples)} | valid spans: {len(accepted)} | "
+                f"{len(completed_ids)}/{len(examples)} | accepted candidates: {len(accepted)} | "
                 f"rejected: {len(rejected)} | parse failures: {status['parse_failures']}",
                 flush=True,
             )

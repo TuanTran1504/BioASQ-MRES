@@ -1,10 +1,10 @@
 # BioASQ 8B Experiments for Gadi
 
-This is a small, portable package for Gadi. It supports the original SFT jobs and a gold-blind exact-span expansion experiment. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.
+This is a small, portable package for Gadi. It supports the original SFT jobs plus gold-blind exact-span and equivalent-expression expansion experiments. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.
 
 It trains `unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit` with 4-bit LoRA and generated-dev BioASQ MRR checkpoint selection.
 
-The expansion job runs the unchanged instruction checkpoint without training. It gives the model each of the fixed 160 development questions and all of its snippets, asks for up to ten literal answer spans, and writes candidates in the same artifact format used by the local 3B experiment.
+The expansion jobs run the unchanged instruction checkpoint without training. They give the model each of the fixed 160 development questions and all of its snippets. The extractive branch asks for literal answer spans; the equivalent branch uses the original GPT-4.1-mini prompt that produced 55% dev coverage and asks for synonymous or formatting-equivalent answer expressions. Both write candidates in the same scoreable artifact format.
 
 ## Included variants
 
@@ -93,3 +93,29 @@ python scripts/analyze_gadi_expansion.py <run-directory>
 ```
 
 See [docs/TRANSFER_TO_GADI.md](docs/TRANSFER_TO_GADI.md) for the transfer and operating procedure.
+
+## Equivalent-expression expansion experiment
+
+This is a separate experiment from the extractive branch. It uses the exact original equivalent-expansion prompt, returns `answer` plus `relation_type`, and does not require generated variants to be literal snippet substrings. Gold aliases remain excluded from model input.
+
+Run the four-question smoke test first:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+python3 scripts/verify_expansion_bundle.py --config configs/equivalent_expansion_8b.json
+JOB_ID=$(qsub jobs/02_equivalent_expansion_smoke_test.pbs)
+echo "$JOB_ID"
+```
+
+After it finishes, inspect the newest status:
+
+```bash
+SMOKE_RUN=$(ls -td outputs/equivalent_expansion/*equivalent-smoke* | head -n 1)
+python3 -m json.tool "$SMOKE_RUN/status.json"
+```
+
+If all four questions complete and candidates are present, submit the full dev run:
+
+```bash
+qsub jobs/run_equivalent_expansion_8b.pbs
+```

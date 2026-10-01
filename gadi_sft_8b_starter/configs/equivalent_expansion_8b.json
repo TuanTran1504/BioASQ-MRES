@@ -1,0 +1,13 @@
+{
+  "description": "Gold-blind equivalent-expression expansion on the fixed 160-question BioASQ dev split.",
+  "model_name": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+  "input": "data/expansion_dev160.jsonl",
+  "prompt": "prompts/equivalent_expansion_v1.txt",
+  "max_seq_length": 6144,
+  "max_new_tokens": 512,
+  "temperature": 0.0,
+  "require_all_snippets": true,
+  "expected_questions": 160,
+  "prompt_version": "equivalent-expansion-v1",
+  "response_mode": "equivalent"
+}
