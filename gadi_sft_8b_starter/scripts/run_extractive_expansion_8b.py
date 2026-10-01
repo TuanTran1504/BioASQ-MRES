@@ -275,6 +275,11 @@ def render_prompt(
     )
 
 
+def tokenize_text(tokenizer: Any, prompt: str, **kwargs: Any) -> Any:
+    """Tokenize text without letting multimodal processors treat it as an image."""
+    return tokenizer(text=prompt, **kwargs)
+
+
 def load_model(
     model_name: str,
     max_seq_length: int,
@@ -452,7 +457,9 @@ def main() -> None:
                 example,
                 chat_template_kwargs=chat_template_kwargs,
             )
-            prompt_tokens = len(tokenizer(prompt, add_special_tokens=True)["input_ids"])
+            prompt_tokens = len(
+                tokenize_text(tokenizer, prompt, add_special_tokens=True)["input_ids"]
+            )
             if prompt_tokens > max_prompt_tokens:
                 raise ValueError(
                     f"{qid}: all snippets require {prompt_tokens} prompt tokens, exceeding "
@@ -471,7 +478,12 @@ def main() -> None:
                 continue
             active_question = qid
             prompt, prompt_tokens = prepared_prompts[qid]
-            encoded = tokenizer(prompt, return_tensors="pt", add_special_tokens=True)
+            encoded = tokenize_text(
+                tokenizer,
+                prompt,
+                return_tensors="pt",
+                add_special_tokens=True,
+            )
             encoded = {key: value.to(device) for key, value in encoded.items()}
             with torch.inference_mode():
                 output_ids = model.generate(

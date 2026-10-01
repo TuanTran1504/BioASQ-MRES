@@ -100,6 +100,26 @@ def test_render_prompt_passes_model_specific_chat_template_options():
     assert tokenizer.kwargs["enable_thinking"] is False
 
 
+def test_tokenize_text_uses_keyword_for_multimodal_processors():
+    runner = load_runner()
+
+    class ImageFirstProcessor:
+        def __init__(self):
+            self.received_text = None
+
+        def __call__(self, images=None, text=None, **kwargs):
+            if images is not None:
+                raise ValueError("text was incorrectly passed as an image")
+            self.received_text = text
+            return {"input_ids": [1, 2, 3]}
+
+    processor = ImageFirstProcessor()
+    encoded = runner.tokenize_text(processor, "rendered prompt", add_special_tokens=True)
+
+    assert encoded["input_ids"] == [1, 2, 3]
+    assert processor.received_text == "rendered prompt"
+
+
 def test_gadi_parser_repairs_citation_and_audits_bad_span():
     runner = load_runner()
     response = json.dumps({
