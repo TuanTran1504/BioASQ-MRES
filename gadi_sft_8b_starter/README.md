@@ -119,3 +119,57 @@ If all four questions complete and candidates are present, submit the full dev r
 ```bash
 qsub jobs/run_equivalent_expansion_8b.pbs
 ```
+
+## Cross-model equivalent-expansion comparison
+
+The comparison uses the same fixed dev questions, all snippets, original equivalent-expansion prompt, greedy decoding, 512-token output limit, parser, and official BioASQ scorer for every model. The additional checkpoints are:
+
+| Model | Configuration | Gadi loader |
+| --- | --- | --- |
+| Qwen3-8B | `configs/equivalent_expansion_qwen3_8b.json` | `FastLanguageModel`, with thinking disabled |
+| Ministral-3-8B-Instruct-2512 | `configs/equivalent_expansion_ministral3_8b.json` | `FastModel` |
+| Gemma-3-27B-IT | `configs/equivalent_expansion_gemma3_27b.json` | `FastModel` |
+
+Cache the models from a Gadi login node. Gemma requires accepting its Hugging Face terms before the token can download it.
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+module purge
+module load python3/3.12.13
+source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
+export HF_HOME=/scratch/nl78/$USER/hf_cache
+
+python3 scripts/download_base_model.py \
+  --model unsloth/Qwen3-8B-unsloth-bnb-4bit \
+  --token-file /scratch/nl78/$USER/.secrets/hf_token.txt
+python3 scripts/download_base_model.py \
+  --model unsloth/Ministral-3-8B-Instruct-2512-unsloth-bnb-4bit \
+  --token-file /scratch/nl78/$USER/.secrets/hf_token.txt
+python3 scripts/download_base_model.py \
+  --model unsloth/gemma-3-27b-it-unsloth-bnb-4bit \
+  --token-file /scratch/nl78/$USER/.secrets/hf_token.txt
+```
+
+Run each smoke test before its full run. The Gemma smoke test intentionally uses only two questions because the 20 GB 4-bit checkpoint is close enough to the V100's 32 GB limit that model loading and generation must be confirmed first.
+
+```bash
+qsub jobs/03_qwen3_8b_equivalent_smoke_test.pbs
+qsub jobs/04_ministral3_8b_equivalent_smoke_test.pbs
+qsub jobs/05_gemma3_27b_equivalent_smoke_test.pbs
+```
+
+For each completed smoke test, inspect `status.json`, the PBS error log, and peak `GPU Memory Used`. Submit a full run only if the smoke status is `complete` and it produced candidates:
+
+```bash
+qsub jobs/run_equivalent_expansion_qwen3_8b.pbs
+qsub jobs/run_equivalent_expansion_ministral3_8b.pbs
+qsub jobs/run_equivalent_expansion_gemma3_27b.pbs
+```
+
+Copy each completed directory from `outputs/model_comparison/` back to the local repository and score it with:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\analyze_gadi_expansion.py <run-directory>
+```
+
+Compare coverage at 1, 5, and 10, parse success, unique candidates per question, runtime, and peak GPU memory. Also measure the union with GPT-4.1 mini and the existing Llama-3.1-8B run: a model with lower standalone coverage can still be valuable if it covers questions the other generators miss.

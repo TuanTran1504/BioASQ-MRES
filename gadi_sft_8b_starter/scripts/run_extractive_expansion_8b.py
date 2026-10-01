@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run an 8B expansion experiment on one Gadi GPU."""
+"""Run a local-model expansion experiment on one Gadi GPU."""
 
 from __future__ import annotations
 
@@ -251,7 +251,12 @@ def parse_equivalent_response(
     return accepted, rejected, issues, not issues
 
 
-def render_prompt(tokenizer: Any, system_prompt: str, example: dict[str, Any]) -> str:
+def render_prompt(
+    tokenizer: Any,
+    system_prompt: str,
+    example: dict[str, Any],
+    chat_template_kwargs: dict[str, Any] | None = None,
+) -> str:
     user = {
         "question": example["question"],
         "snippets": [
@@ -266,10 +271,16 @@ def render_prompt(tokenizer: Any, system_prompt: str, example: dict[str, Any]) -
         ],
         tokenize=False,
         add_generation_prompt=True,
+        **(chat_template_kwargs or {}),
     )
 
 
-def load_model(model_name: str, max_seq_length: int, allow_download: bool):
+def load_model(
+    model_name: str,
+    max_seq_length: int,
+    allow_download: bool,
+    model_loader: str = "fast_language_model",
+):
     from src.utility.eval_models import load_model_and_tokenizer_for_eval, prime_unsloth_runtime
     from src.utility.eval_types import ModelSpec
 
@@ -279,6 +290,9 @@ def load_model(model_name: str, max_seq_length: int, allow_download: bool):
         from huggingface_hub import snapshot_download
 
         load_target = snapshot_download(model_name, local_files_only=True)
+    if model_loader not in {"fast_language_model", "fast_model"}:
+        raise ValueError("model_loader must be 'fast_language_model' or 'fast_model'")
+
     args = SimpleNamespace(
         max_seq_length=max_seq_length,
         dtype=None,
@@ -292,6 +306,27 @@ def load_model(model_name: str, max_seq_length: int, allow_download: bool):
         source="gadi_base",
         load_target=str(load_target),
     )
+    if model_loader == "fast_model":
+        from unsloth import FastModel
+
+        model, tokenizer = FastModel.from_pretrained(
+            model_name=str(load_target),
+            max_seq_length=max_seq_length,
+            dtype=None,
+            load_in_4bit=True,
+            local_files_only=not allow_download,
+        )
+        class_handler = getattr(FastModel, "for_inference", None)
+        if callable(class_handler):
+            class_handler(model)
+        elif hasattr(model, "for_inference"):
+            model.for_inference()
+        if (
+            getattr(tokenizer, "pad_token_id", None) is None
+            and getattr(tokenizer, "eos_token_id", None) is not None
+        ):
+            tokenizer.pad_token = tokenizer.eos_token
+        return model.eval(), tokenizer
     return load_model_and_tokenizer_for_eval(spec, args)
 
 
@@ -314,6 +349,12 @@ def main() -> None:
     response_mode = str(config_template.get("response_mode", "extractive"))
     if response_mode not in {"extractive", "equivalent"}:
         raise ValueError("response_mode must be 'extractive' or 'equivalent'")
+    model_loader = str(config_template.get("model_loader", "fast_language_model"))
+    if model_loader not in {"fast_language_model", "fast_model"}:
+        raise ValueError("model_loader must be 'fast_language_model' or 'fast_model'")
+    chat_template_kwargs = config_template.get("chat_template_kwargs", {})
+    if not isinstance(chat_template_kwargs, dict):
+        raise ValueError("chat_template_kwargs must be a JSON object")
     input_path = ROOT / config_template["input"]
     prompt_path = ROOT / config_template["prompt"]
     if not input_path.is_file():
@@ -390,6 +431,7 @@ def main() -> None:
             model_name,
             max_seq_length=int(config_template["max_seq_length"]),
             allow_download=args.allow_download,
+            model_loader=model_loader,
         )
         if hasattr(model, "gradient_checkpointing_disable"):
             model.gradient_checkpointing_disable()
@@ -404,7 +446,12 @@ def main() -> None:
         prepared_prompts: dict[str, tuple[str, int]] = {}
         for example in examples:
             qid = example["question_id"]
-            prompt = render_prompt(tokenizer, system_prompt, example)
+            prompt = render_prompt(
+                tokenizer,
+                system_prompt,
+                example,
+                chat_template_kwargs=chat_template_kwargs,
+            )
             prompt_tokens = len(tokenizer(prompt, add_special_tokens=True)["input_ids"])
             if prompt_tokens > max_prompt_tokens:
                 raise ValueError(

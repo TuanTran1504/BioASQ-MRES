@@ -43,6 +43,63 @@ def test_gadi_equivalent_prompt_matches_original_gpt_protocol():
     assert config["require_all_snippets"] is True
 
 
+def test_multi_model_configs_keep_the_same_expansion_protocol():
+    expected = {
+        "equivalent_expansion_qwen3_8b.json": (
+            "unsloth/Qwen3-8B-unsloth-bnb-4bit",
+            "fast_language_model",
+            {"enable_thinking": False},
+        ),
+        "equivalent_expansion_ministral3_8b.json": (
+            "unsloth/Ministral-3-8B-Instruct-2512-unsloth-bnb-4bit",
+            "fast_model",
+            {},
+        ),
+        "equivalent_expansion_gemma3_27b.json": (
+            "unsloth/gemma-3-27b-it-unsloth-bnb-4bit",
+            "fast_model",
+            {},
+        ),
+    }
+    for filename, (model_name, model_loader, template_kwargs) in expected.items():
+        config = json.loads((BUNDLE / "configs" / filename).read_text())
+        assert config["model_name"] == model_name
+        assert config["model_loader"] == model_loader
+        assert config["chat_template_kwargs"] == template_kwargs
+        assert config["prompt"] == "prompts/equivalent_expansion_v1.txt"
+        assert config["response_mode"] == "equivalent"
+        assert config["max_seq_length"] == 6144
+        assert config["max_new_tokens"] == 512
+        assert config["temperature"] == 0.0
+
+
+def test_render_prompt_passes_model_specific_chat_template_options():
+    runner = load_runner()
+
+    class RecordingTokenizer:
+        def __init__(self):
+            self.kwargs = None
+
+        def apply_chat_template(self, messages, **kwargs):
+            self.kwargs = kwargs
+            return "rendered"
+
+    tokenizer = RecordingTokenizer()
+    rendered = runner.render_prompt(
+        tokenizer,
+        "system",
+        {
+            "question": "Question?",
+            "snippets": [{"snippet_id": "1", "text": "Evidence."}],
+        },
+        chat_template_kwargs={"enable_thinking": False},
+    )
+    assert rendered == "rendered"
+    assert tokenizer.kwargs["tokenize"] is False
+    assert tokenizer.kwargs["add_generation_prompt"] is True
+    assert tokenizer.kwargs["enable_thinking"] is False
+
+
 def test_gadi_parser_repairs_citation_and_audits_bad_span():
     runner = load_runner()
     response = json.dumps({

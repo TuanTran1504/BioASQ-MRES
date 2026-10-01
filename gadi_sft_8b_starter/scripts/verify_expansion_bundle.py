@@ -55,7 +55,7 @@ def main() -> None:
     print("Data SHA256:", hashlib.sha256(data_path.read_bytes()).hexdigest())
     print("Prompt SHA256:", hashlib.sha256(prompt_path.read_bytes()).hexdigest())
     print("Response mode:", response_mode)
-    print("8B expansion bundle is valid.")
+    print("Expansion bundle is valid.")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-cache the gated 8B base model on a Gadi login node."""
+"""Pre-cache an experiment model on a Gadi login node."""
 
 from __future__ import annotations
 
