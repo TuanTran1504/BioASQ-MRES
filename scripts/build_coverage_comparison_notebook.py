@@ -15,7 +15,7 @@ def cell(kind, text):
 
 def build():
     cells = [
-        cell("markdown", """# GPT-4.1 mini: extractive expansion versus high-temperature sampling
+        cell("markdown", """# GPT-4.1 mini: extractive expansion v2 versus high-temperature sampling
 
 **Question:** Does asking for a high-recall pool of exact snippet spans improve gold-answer coverage compared with ten independent single-answer generations?
 
@@ -26,7 +26,7 @@ def build():
 
 Both arms use **gpt-4.1-mini-2025-04-14** and the same complete prepared snippets for all **160 original dev questions**. No gold answer seeds generation. Prepared single-answer SFT instructions are excluded. Full accepted aliases from the raw BioASQ data are loaded for scoring only.
 
-The primary result is **oracle gold coverage@10**: how many questions have at least one accepted answer in the pool? There is no reranker, semantic judge or answer-text repair. Every expansion candidate is checked programmatically against all supplied snippets before it can enter the pool. A wrong snippet ID is corrected only when the answer is an exact span in another supplied snippet.
+The expansion arm uses **extractive-expansion-v2**, which makes the global ten-candidate limit and one-citation-per-unique-surface rule explicit. The primary result is **oracle gold coverage@10**: how many questions have at least one accepted answer in the pool? There is no reranker, semantic judge or answer-text repair. Every expansion candidate is checked programmatically against all supplied snippets before it can enter the pool. A wrong snippet ID is corrected only when the answer is an exact span in another supplied snippet.
 
 This compares two practical generation strategies at a maximum of ten candidate slots, not equal API/token cost. The extractive arm searches across snippets and may return different plausible concepts, but it cannot exactly recover any accepted gold alias absent from the supplied snippets.
 
@@ -34,6 +34,7 @@ Execution is off by default. A full uncached trial makes **1,760 requests**. Exa
 """),
         cell("code", """from pathlib import Path
 import importlib
+import hashlib
 import json
 import sys
 from IPython.display import display
@@ -67,7 +68,10 @@ MODEL_NAME = MODEL  # gpt-4.1-mini-2025-04-14
 EXPANSION_MODE = "extractive"
 EXPANSION_TEMPERATURE = 0.0
 SAMPLING_TEMPERATURE = 1.2
+# Retain these sampling slot IDs so the unchanged 1,600-response baseline is reused.
+# The expansion payload contains prompt v2, so it receives distinct cache keys.
 TRIAL_ID = "dev160-v1"
+EXPANSION_PROMPT_VERSION = "extractive-expansion-v2"
 API_KEY_FILE = PROJECT_ROOT / "open_ai_api.txt"
 REQUEST_DELAY_SECONDS = 0.25
 MAX_TRANSPORT_RETRIES = 3  # Only connection/timeouts and HTTP 408/500/502/503/504; each attempt counts.
@@ -91,6 +95,15 @@ Both arms use structured JSON. The API constrains the expansion fields and candi
         cell("code", """# Edit these strings here if you want a different prompt, then rerun preview.
 EXPANSION_SYSTEM = EXTRACTIVE_EXPANSION_PROMPT
 SINGLE_ANSWER_SYSTEM = SINGLE_PROMPT
+required_v2_text = (
+    "at most TEN objects TOTAL for the entire question",
+    "include it only once and cite one supporting snippet_id",
+)
+if not all(text in EXPANSION_SYSTEM for text in required_v2_text):
+    raise ValueError("The loaded extractive prompt is not prompt v2")
+EXPANSION_PROMPT_SHA256 = hashlib.sha256(EXPANSION_SYSTEM.encode("utf-8")).hexdigest()
+print("EXPANSION PROMPT VERSION:", EXPANSION_PROMPT_VERSION)
+print("EXPANSION PROMPT SHA256:", EXPANSION_PROMPT_SHA256)
 print("EXPANSION PROMPT:\\n", EXPANSION_SYSTEM)
 print("SINGLE-ANSWER PROMPT:\\n", SINGLE_ANSWER_SYSTEM)
 """),
