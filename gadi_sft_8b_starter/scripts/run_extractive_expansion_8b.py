@@ -70,6 +70,24 @@ def slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-") or "run"
 
 
+def configure_job_local_compiler_cache() -> Path | None:
+    """Keep compiled GPU kernels inside the current PBS job filesystem."""
+    raw_jobfs = os.environ.get("PBS_JOBFS")
+    if not raw_jobfs:
+        return None
+    jobfs = Path(raw_jobfs)
+    if not jobfs.is_dir():
+        raise RuntimeError(f"PBS_JOBFS does not exist: {jobfs}")
+    cache_paths = {
+        "TORCHINDUCTOR_CACHE_DIR": jobfs / "torchinductor_cache",
+        "TRITON_CACHE_DIR": jobfs / "triton_cache",
+    }
+    for variable, path in cache_paths.items():
+        path.mkdir(parents=True, exist_ok=True)
+        os.environ[variable] = str(path)
+    return jobfs
+
+
 def json_objects(text: str):
     decoder = json.JSONDecoder()
     for match in re.finditer(r"\{", text or ""):
@@ -280,6 +298,19 @@ def tokenize_text(tokenizer: Any, prompt: str, **kwargs: Any) -> Any:
     return tokenizer(text=prompt, **kwargs)
 
 
+def input_token_count(encoded: Any) -> int:
+    """Count one text sequence from tokenizer or processor output."""
+    input_ids = encoded["input_ids"]
+    shape = getattr(input_ids, "shape", None)
+    if shape is not None and len(shape) > 0:
+        return int(shape[-1])
+    if isinstance(input_ids, (list, tuple)):
+        if len(input_ids) == 1 and isinstance(input_ids[0], (list, tuple)):
+            return len(input_ids[0])
+        return len(input_ids)
+    raise TypeError(f"Unsupported input_ids type: {type(input_ids).__name__}")
+
+
 def load_model(
     model_name: str,
     max_seq_length: int,
@@ -349,6 +380,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    compiler_cache_root = configure_job_local_compiler_cache()
+    if compiler_cache_root is not None:
+        print("Job-local compiler cache:", compiler_cache_root, flush=True)
     args = parse_args()
     config_template = read_json(args.config)
     response_mode = str(config_template.get("response_mode", "extractive"))
@@ -457,8 +491,8 @@ def main() -> None:
                 example,
                 chat_template_kwargs=chat_template_kwargs,
             )
-            prompt_tokens = len(
-                tokenize_text(tokenizer, prompt, add_special_tokens=True)["input_ids"]
+            prompt_tokens = input_token_count(
+                tokenize_text(tokenizer, prompt, add_special_tokens=True)
             )
             if prompt_tokens > max_prompt_tokens:
                 raise ValueError(

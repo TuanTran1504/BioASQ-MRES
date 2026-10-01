@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 from src.notebook_workflows.coverage_comparison import EXPANSION_PROMPT, EXTRACTIVE_EXPANSION_PROMPT
@@ -118,6 +119,28 @@ def test_tokenize_text_uses_keyword_for_multimodal_processors():
 
     assert encoded["input_ids"] == [1, 2, 3]
     assert processor.received_text == "rendered prompt"
+
+
+def test_input_token_count_handles_flat_and_batched_processor_outputs():
+    runner = load_runner()
+
+    assert runner.input_token_count({"input_ids": [1, 2, 3]}) == 3
+    assert runner.input_token_count({"input_ids": [[1, 2, 3, 4]]}) == 4
+
+
+def test_compiler_cache_isolated_to_current_pbs_jobfs(tmp_path, monkeypatch):
+    runner = load_runner()
+    monkeypatch.setenv("PBS_JOBFS", str(tmp_path))
+    monkeypatch.setenv("TORCHINDUCTOR_CACHE_DIR", "/jobfs/expired-job")
+    monkeypatch.setenv("TRITON_CACHE_DIR", "/jobfs/expired-job")
+
+    root = runner.configure_job_local_compiler_cache()
+
+    assert root == tmp_path
+    assert os.environ["TORCHINDUCTOR_CACHE_DIR"] == str(tmp_path / "torchinductor_cache")
+    assert os.environ["TRITON_CACHE_DIR"] == str(tmp_path / "triton_cache")
+    assert (tmp_path / "torchinductor_cache").is_dir()
+    assert (tmp_path / "triton_cache").is_dir()
 
 
 def test_gadi_parser_repairs_citation_and_audits_bad_span():
