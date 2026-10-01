@@ -84,7 +84,7 @@ cat outputs/expansion/*smoke*/status.json
 qsub jobs/run_extractive_expansion_8b.pbs
 ```
 
-The full job uses greedy decoding, a 6,144-token total sequence limit, 512 output tokens, and fails if all snippets do not fit. It writes progress after every question under `outputs/expansion/`. To resume an interrupted directory without repeating completed questions, run the same script in a GPU job with `--resume-run outputs/expansion/<run-directory>`.
+The full job uses greedy decoding, a 6,144-token total sequence limit, 512 output tokens, and fails if all snippets do not fit. The validator keeps at most ten distinct literal spans in first-occurrence order. If generation reaches the token limit before closing the outer JSON object, it recovers complete candidate objects, records `incomplete_top_level_json_recovered`, and marks the response as schema-noncompliant. It writes progress after every question under `outputs/expansion/`. To resume an interrupted directory without repeating completed questions, run the same script in a GPU job with `--resume-run outputs/expansion/<run-directory>`.
 
 After copying the completed run directory back to this repository, score it with the existing official BioASQ analyzer:
 

@@ -78,15 +78,19 @@ def parse_extractive_response(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], bool]:
     """Salvage literal spans while separately reporting schema compliance."""
     value = next((obj for obj in json_objects(text) if isinstance(obj.get("answers"), list)), None)
-    if value is None:
-        raise ValueError("No JSON object containing an answers array was found")
-
     issues: list[str] = []
-    if set(value) != {"answers"}:
-        issues.append("unexpected_top_level_fields")
-    raw_answers = value["answers"]
-    if not 1 <= len(raw_answers) <= 10:
-        issues.append("answer_count_out_of_range")
+    if value is None:
+        required = {"answer", "snippet_id", "candidate_type"}
+        raw_answers = [obj for obj in json_objects(text) if required <= set(obj)]
+        if not raw_answers:
+            raise ValueError("No JSON answer candidates were found")
+        issues.append("incomplete_top_level_json_recovered")
+    else:
+        if set(value) != {"answers"}:
+            issues.append("unexpected_top_level_fields")
+        raw_answers = value["answers"]
+        if not 1 <= len(raw_answers) <= 10:
+            issues.append("answer_count_out_of_range")
 
     snippet_by_id = {
         str(row["snippet_id"]): str(row.get("text", ""))
@@ -95,7 +99,7 @@ def parse_extractive_response(
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for raw_position, row in enumerate(raw_answers[:10], 1):
+    for raw_position, row in enumerate(raw_answers, 1):
         if not isinstance(row, dict):
             rejected.append({
                 "raw_position": raw_position,
@@ -140,6 +144,13 @@ def parse_extractive_response(
             })
             continue
         seen.add(key)
+        if len(accepted) >= 10:
+            rejected.append({
+                **row,
+                "raw_position": raw_position,
+                "reason": "unique_candidate_limit_exceeded",
+            })
+            continue
         actual_id = reported_id if reported_id in matching_ids else matching_ids[0]
         if actual_id != reported_id:
             issues.append(f"candidate_{raw_position}_citation_corrected")
@@ -356,6 +367,7 @@ def main() -> None:
                 "raw_response": raw,
                 "parse_error": parse_error,
                 "schema_compliant": schema_compliant,
+                "response_recovered": "incomplete_top_level_json_recovered" in issues,
                 "validation_issues": issues,
                 "invalid_candidate_count": len(rejected),
                 "prompt_tokens": prompt_tokens,
@@ -379,6 +391,7 @@ def main() -> None:
                 completed_questions=len(completed_ids),
                 parse_failures=sum(bool(row.get("parse_error")) for row in generations),
                 schema_compliant_responses=sum(bool(row.get("schema_compliant")) for row in generations),
+                recovered_responses=sum(bool(row.get("response_recovered")) for row in generations),
                 accepted_candidates=len(candidates),
                 invalid_candidates=len(invalid_candidates),
                 corrected_citations=sum(bool(row.get("citation_corrected")) for row in candidates),

@@ -69,3 +69,43 @@ def test_gadi_parser_salvages_literal_candidate_with_schema_issue():
     assert "unexpected_top_level_fields" in issues
     assert "candidate_1_invalid_candidate_type" in issues
     assert compliant is False
+
+
+def test_gadi_parser_recovers_complete_candidates_from_truncated_json():
+    runner = load_runner()
+    response = (
+        '{"answers":['
+        '{"answer":"alpha","snippet_id":"1","candidate_type":"minimal_direct"},'
+        '{"answer":"beta","snippet_id":"2","candidate_type":"minimal_direct"'
+    )
+    accepted, rejected, issues, compliant = runner.parse_extractive_response(
+        response,
+        [
+            {"snippet_id": "1", "text": "An alpha example."},
+            {"snippet_id": "2", "text": "A beta example."},
+        ],
+    )
+    assert [row["answer"] for row in accepted] == ["alpha"]
+    assert rejected == []
+    assert "incomplete_top_level_json_recovered" in issues
+    assert compliant is False
+
+
+def test_gadi_parser_deduplicates_before_applying_unique_candidate_limit():
+    runner = load_runner()
+    answers = [
+        {"answer": "alpha", "snippet_id": "1", "candidate_type": "minimal_direct"}
+        for _ in range(11)
+    ]
+    answers.append({"answer": "beta", "snippet_id": "2", "candidate_type": "minimal_direct"})
+    accepted, rejected, issues, compliant = runner.parse_extractive_response(
+        json.dumps({"answers": answers}),
+        [
+            {"snippet_id": "1", "text": "An alpha example."},
+            {"snippet_id": "2", "text": "A beta example."},
+        ],
+    )
+    assert [row["answer"] for row in accepted] == ["alpha", "beta"]
+    assert sum(row["reason"] == "duplicate_answer_surface" for row in rejected) == 10
+    assert "answer_count_out_of_range" in issues
+    assert compliant is False
