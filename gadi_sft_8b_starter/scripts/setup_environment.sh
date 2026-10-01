@@ -16,7 +16,7 @@ module load "${PYTHON_MODULE}"
 
 python3 -m venv "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
-python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install --upgrade pip "setuptools<82" wheel
 
 # Gadi's gpuvolta nodes use V100 (compute capability 7.0). CUDA 13 PyTorch
 # wheels no longer include that architecture, so use the CUDA 12.6 build and
