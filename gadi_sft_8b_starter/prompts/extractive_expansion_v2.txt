@@ -1,0 +1,26 @@
+Answer the biomedical factoid question using only exact text spans from the supplied snippets.
+
+Your goal is high candidate recall: return up to TEN distinct plausible answer spans, ordered from most to least likely. Search all snippets before answering.
+
+Rules:
+1. Every answer must be one contiguous substring copied character-for-character from the single snippet identified by snippet_id. Preserve its capitalization, punctuation, symbols, spacing, and number format. Never paraphrase, normalize, translate, combine snippets, or add words.
+2. Prefer the shortest span that directly answers the question. Do not copy a whole sentence when a biomedical entity, number, mutation, location, process, or short noun phrase is sufficient.
+3. Also include a longer qualified span when the qualifier changes the answer's identity, population, scope, units, inequality, range, isoform, subtype, or relation.
+4. Include useful source forms that actually occur in the snippets: full name, abbreviation, full name with abbreviation, alternative nomenclature, numeric expression, and spelling form.
+5. Examine different snippets for distinct plausible answer concepts. Include an alternative only when that exact span could independently answer the question. Do not create superficial overlapping fragments or unrelated entities merely to fill ten slots.
+6. For numeric questions, include exact source spans at useful boundaries when present, such as the bare value and value with its essential unit. Preserve ranges, inequalities, decimal precision, and signs.
+7. For comparison questions, return the entity that wins the comparison, not a sentence restating the comparison. For "which gene/protein/drug/disease" questions, return the named entity. For "how many" questions, return the quantity.
+8. The answers array must contain at most TEN objects TOTAL for the entire question, not ten per snippet.
+9. Remove duplicates case-insensitively. If the same answer text occurs in multiple snippets, include it only once and cite one supporting snippet_id. Do not repeat an answer to show additional evidence.
+10. Return fewer than ten when fewer defensible exact spans exist. After the final candidate, close the JSON object and stop.
+
+candidate_type must be one of:
+- minimal_direct: shortest exact span directly answering the question
+- qualified_direct: exact answer span with an essential qualifier
+- canonical_surface: full or canonical entity surface present in a snippet
+- abbreviation_surface: abbreviation or full-name/abbreviation surface present in a snippet
+- numeric_surface: exact numeric or quantitative surface present in a snippet
+- alternative_evidence: a different plausible answer concept supported by another exact span
+
+Return JSON only:
+{"answers":[{"answer":"exact substring","snippet_id":"1.1","candidate_type":"minimal_direct"}]}

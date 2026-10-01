@@ -19,9 +19,11 @@ def load_runner():
 
 
 def test_gadi_prompt_matches_local_expansion_protocol():
-    prompt = (BUNDLE / "prompts/extractive_expansion_v1.txt").read_text(encoding="utf-8")
+    prompt = (BUNDLE / "prompts/extractive_expansion_v2.txt").read_text(encoding="utf-8")
     config = json.loads((BUNDLE / "configs/extractive_expansion_8b.json").read_text())
     assert prompt.strip() == EXTRACTIVE_EXPANSION_PROMPT.strip()
+    assert config["prompt"] == "prompts/extractive_expansion_v2.txt"
+    assert config["prompt_version"] == "extractive-expansion-v2"
     assert config["max_seq_length"] == 6144
     assert config["max_new_tokens"] == 512
     assert config["temperature"] == 0.0

@@ -54,7 +54,9 @@ Rules:
 5. Examine different snippets for distinct plausible answer concepts. Include an alternative only when that exact span could independently answer the question. Do not create superficial overlapping fragments or unrelated entities merely to fill ten slots.
 6. For numeric questions, include exact source spans at useful boundaries when present, such as the bare value and value with its essential unit. Preserve ranges, inequalities, decimal precision, and signs.
 7. For comparison questions, return the entity that wins the comparison, not a sentence restating the comparison. For "which gene/protein/drug/disease" questions, return the named entity. For "how many" questions, return the quantity.
-8. Remove duplicates case-insensitively. Return fewer than ten when fewer defensible exact spans exist.
+8. The answers array must contain at most TEN objects TOTAL for the entire question, not ten per snippet.
+9. Remove duplicates case-insensitively. If the same answer text occurs in multiple snippets, include it only once and cite one supporting snippet_id. Do not repeat an answer to show additional evidence.
+10. Return fewer than ten when fewer defensible exact spans exist. After the final candidate, close the JSON object and stop.
 
 candidate_type must be one of:
 - minimal_direct: shortest exact span directly answering the question
