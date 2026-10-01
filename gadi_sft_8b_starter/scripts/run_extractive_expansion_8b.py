@@ -71,7 +71,13 @@ def slug(value: str) -> str:
 
 
 def configure_job_local_compiler_cache() -> Path | None:
-    """Keep compiled GPU kernels inside the current PBS job filesystem."""
+    """Keep compiled GPU artifacts inside the current PBS job filesystem.
+
+    Unsloth's persistent Mega-cache can restore Torch artifacts containing an
+    absolute ``/jobfs/<old-job-id>`` path.  Those paths expire with the PBS
+    job, so disable the cross-process bundle while retaining job-local
+    compilation and caching.
+    """
     raw_jobfs = os.environ.get("PBS_JOBFS")
     if not raw_jobfs:
         return None
@@ -81,10 +87,13 @@ def configure_job_local_compiler_cache() -> Path | None:
     cache_paths = {
         "TORCHINDUCTOR_CACHE_DIR": jobfs / "torchinductor_cache",
         "TRITON_CACHE_DIR": jobfs / "triton_cache",
+        "UNSLOTH_COMPILE_LOCATION": jobfs / "unsloth_compiled_cache",
+        "UNSLOTH_MEGA_CACHE_DIR": jobfs / "unsloth_mega_cache",
     }
     for variable, path in cache_paths.items():
         path.mkdir(parents=True, exist_ok=True)
         os.environ[variable] = str(path)
+    os.environ["UNSLOTH_MEGA_CACHE"] = "0"
     return jobfs
 
 
@@ -472,6 +481,10 @@ def main() -> None:
             allow_download=args.allow_download,
             model_loader=model_loader,
         )
+        # Unsloth's import-time patch removes TORCHINDUCTOR_CACHE_DIR. Restore
+        # the job-local paths before the first compiled forward/generation.
+        if compiler_cache_root is not None:
+            configure_job_local_compiler_cache()
         if hasattr(model, "gradient_checkpointing_disable"):
             model.gradient_checkpointing_disable()
         if hasattr(model, "config"):

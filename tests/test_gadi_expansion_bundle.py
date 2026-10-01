@@ -133,14 +133,24 @@ def test_compiler_cache_isolated_to_current_pbs_jobfs(tmp_path, monkeypatch):
     monkeypatch.setenv("PBS_JOBFS", str(tmp_path))
     monkeypatch.setenv("TORCHINDUCTOR_CACHE_DIR", "/jobfs/expired-job")
     monkeypatch.setenv("TRITON_CACHE_DIR", "/jobfs/expired-job")
+    monkeypatch.setenv("UNSLOTH_COMPILE_LOCATION", "/jobfs/expired-job")
+    monkeypatch.setenv("UNSLOTH_MEGA_CACHE_DIR", "/jobfs/expired-job")
+    monkeypatch.setenv("UNSLOTH_MEGA_CACHE", "1")
 
     root = runner.configure_job_local_compiler_cache()
 
     assert root == tmp_path
     assert os.environ["TORCHINDUCTOR_CACHE_DIR"] == str(tmp_path / "torchinductor_cache")
     assert os.environ["TRITON_CACHE_DIR"] == str(tmp_path / "triton_cache")
+    assert os.environ["UNSLOTH_COMPILE_LOCATION"] == str(
+        tmp_path / "unsloth_compiled_cache"
+    )
+    assert os.environ["UNSLOTH_MEGA_CACHE_DIR"] == str(tmp_path / "unsloth_mega_cache")
+    assert os.environ["UNSLOTH_MEGA_CACHE"] == "0"
     assert (tmp_path / "torchinductor_cache").is_dir()
     assert (tmp_path / "triton_cache").is_dir()
+    assert (tmp_path / "unsloth_compiled_cache").is_dir()
+    assert (tmp_path / "unsloth_mega_cache").is_dir()
 
 
 def test_gadi_parser_repairs_citation_and_audits_bad_span():
