@@ -34,6 +34,13 @@ python3 scripts/download_base_model.py
 unset HF_TOKEN
 ```
 
+Alternatively, keep the token in a permission-protected file outside the repository and avoid exporting it:
+
+```bash
+python3 scripts/download_base_model.py \
+  --token-file /scratch/nl78/$USER/.secrets/hf_token.txt
+```
+
 5. Edit the `#PBS -q` line in a job file if `gpuvolta` is not the GPU queue available to `nl78`. Check with `qstat -Q` or submit the smoke test first.
 6. Submit the smoke test, then a full run:
 

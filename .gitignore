@@ -22,6 +22,7 @@ env/
 # Credentials
 open_ai_api.txt
 *_api_key.txt
+*_token.txt
 *.pem
 *.key
 
