@@ -23,14 +23,19 @@ python3 -m pip install --upgrade pip setuptools wheel
 # constrain downstream packages from replacing it with the PyPI CUDA 13 wheel.
 PIP_CACHE_DIR="${PIP_CACHE_DIR}" python3 -m pip install \
   "torch==${PYTORCH_VERSION}" "torchvision==${TORCHVISION_VERSION}" \
-  --index-url "${PYTORCH_INDEX_URL}"
+  --index-url "${PYTORCH_INDEX_URL}" --force-reinstall
 PIP_CACHE_DIR="${PIP_CACHE_DIR}" python3 -m pip install \
   -r requirements-gadi.txt -c constraints-gadi-v100.txt
 python3 -m pip check
 
 python3 - <<'PY'
-from importlib.metadata import version
+from importlib.metadata import requires, version
 for package in ("torch", "torchvision", "transformers", "trl", "unsloth"):
     print(f"{package}: {version(package)}")
+torch_requirements = requires("torch") or []
+cuda_requirements = [item for item in torch_requirements if "cuda" in item or "nvidia" in item]
+print("torch CUDA requirements:", ", ".join(cuda_requirements))
+if any("cu13" in item for item in cuda_requirements):
+    raise RuntimeError("The installed PyTorch wheel still targets CUDA 13, which excludes Gadi V100 GPUs")
 print('CUDA loading and the Unsloth import are deferred to the GPU smoke-test job.')
 PY
