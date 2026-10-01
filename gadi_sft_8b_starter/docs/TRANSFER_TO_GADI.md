@@ -2,7 +2,12 @@
 
 ## Transfer
 
-From the local workstation, transfer only this starter bundle. It already contains the required data, SFT source modules, prompt registry, and official BioASQ evaluator.
+From the local workstation, transfer only this starter bundle. Generate the ignored expansion data first when running the 8B expansion experiment:
+
+```bash
+python scripts/export_gadi_expansion_dev.py
+python gadi_sft_8b_starter/scripts/verify_expansion_bundle.py
+```
 
 ```bash
 cd "/home/dinh-tuan/Documents/Project/BioASQ_MRES/Task-Structured Counterfactual Preference Mining"
@@ -60,6 +65,20 @@ qsub jobs/train_full_resources_8b.pbs
 qsub jobs/train_evidence_grounded_8b.pbs
 ```
 
+For the prompt-only exact-span expansion experiment, use its separate smoke test and full job:
+
+```bash
+qsub jobs/01_expansion_smoke_test.pbs
+qsub jobs/run_extractive_expansion_8b.pbs
+```
+
+The expansion run writes after every completed question. If PBS stops a run before completion, submit a copy of the full job whose final command includes:
+
+```bash
+python3 scripts/run_extractive_expansion_8b.py \
+  --resume-run outputs/expansion/<incomplete-run-directory>
+```
+
 Every run is stored independently under `outputs/runs/`. The resulting manifest records the exact command-line configuration, metrics, best generated-dev-MRR checkpoint, and best eval-loss checkpoint.
 
 ## Retrieve results
@@ -71,3 +90,5 @@ rsync -av --progress \
   dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/gadi_sft_8b_starter/outputs/runs/<run-id>/ \
   ./gadi_results/<run-id>/
 ```
+
+For expansion results, replace `outputs/runs/<run-id>/` with `outputs/expansion/<run-id>/`.

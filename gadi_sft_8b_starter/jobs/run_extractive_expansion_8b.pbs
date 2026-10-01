@@ -1,0 +1,32 @@
+#!/bin/bash
+# Replace gpuvolta if nl78 is granted a different Gadi GPU queue.
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=04:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq8b-expand
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+
+cd "${PBS_O_WORKDIR}"
+nvidia-smi
+python3 scripts/verify_expansion_bundle.py
+python3 scripts/run_extractive_expansion_8b.py \
+  --run-name "llama31-8b-dev160-${PBS_JOBID}"
