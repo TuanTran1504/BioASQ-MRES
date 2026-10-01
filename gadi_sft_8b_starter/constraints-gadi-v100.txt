@@ -1,0 +1,4 @@
+# Keep the Gadi gpuvolta/V100 environment on a CUDA 12.6 wheel that includes
+# compute capability 7.0. CUDA 13 PyTorch wheels exclude the V100 architecture.
+torch==2.11.0
+torchvision==0.26.0

@@ -15,6 +15,8 @@ The expansion job runs the unchanged instruction checkpoint without training. It
 
 Both variants use a batch size of 1, gradient accumulation of 32, sequence length 4,096, rank-32 LoRA with dropout 0.05, linear warmup of 5 updates, and generated-dev MRR model selection. Training artifacts are written to `outputs/runs/<timestamp>-<run-name>/` and are never overwritten by a new run name.
 
+The supplied environment setup pins the `gpuvolta` V100 nodes to the PyTorch 2.11 CUDA 12.6 wheel. The default CUDA 13 wheel does not contain compute capability 7.0 code for the V100.
+
 ## First use on Gadi
 
 1. Copy this complete directory to `/scratch/nl78/$USER/`.

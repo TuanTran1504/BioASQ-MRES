@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +17,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 DEFAULT_CONFIG = ROOT / "configs/extractive_expansion_8b.json"
 VALID_CANDIDATE_TYPES = {
     "minimal_direct",
