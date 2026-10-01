@@ -25,6 +25,9 @@ Qwen2.5-0.5B or Qwen2.5-3B on the same files. The default splits all 1,600 facto
 90/10 before filtering: 160 dev questions remain unfiltered, and the training
 pool retains 1,137 snippet-matching questions (1,363 alias examples).
 The 95 official test factoids stay separate.
+The SFT notebook's `gold_plus_synthetic` variant appends 652 strictly verified
+synthetic training questions for 2,015 rows across 1,789 unique questions while
+keeping the same 160-question real dev set.
 
 The [notebook guide](notebooks/README.md) covers all eight workflows and named
 variants. Execution defaults to preview. Original notebooks and their saved
@@ -55,7 +58,7 @@ The answer-first, source-disjoint synthetic QA pipeline is:
 python -m cse_dpo.build_synthetic_factoid_qa_pilot --help
 ```
 
-Use [08 Synthetic QA](notebooks/08_synthetic_qa.ipynb) for the controlled generator/verifier pilot. API responses and generated datasets are written under ignored `Artifacts/` paths.
+Use [08 Synthetic QA](notebooks/08_synthetic_qa.ipynb) for the controlled generator/verifier workflow. Its `pipeline` preset runs preparation, generation, blinded verification, and finalization in sequence; `finish` verifies and finalizes a cached run. Only strict accepted questions enter `synthetic/training_ready/`, which contains prepared SFT train/validation JSON and directly trainable DPO JSONL pairs. Rejected and ineligible records remain audit-only under ignored `Artifacts/` paths.
 
 ### Evaluation
 

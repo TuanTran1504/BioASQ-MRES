@@ -47,8 +47,48 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Model references to evaluate. Each value may be a registry alias, a "
-            "registry run id, a local path, or a Hugging Face model name. This "
+            "registry run id, a local path, a Hugging Face model name, or an "
+            "OpenAI model written as openai:<model-name>. This "
             "flag can be passed once with multiple values or repeated."
+        ),
+    )
+    parser.add_argument(
+        "--openai-model",
+        action="append",
+        default=None,
+        help=(
+            "OpenAI model to evaluate as a candidate through the same prompt, "
+            "official scorer, and optional semantic judge. Repeat for multiple models."
+        ),
+    )
+    parser.add_argument(
+        "--api-key-file",
+        default="open_ai_api.txt",
+        help="File containing the API key used for OpenAI candidate generation.",
+    )
+    parser.add_argument(
+        "--openai-endpoint",
+        default="https://api.openai.com/v1/chat/completions",
+        help="Chat-completions endpoint used for OpenAI candidate generation.",
+    )
+    parser.add_argument(
+        "--max-new-api-calls",
+        type=int,
+        default=0,
+        help=(
+            "Hard shared HTTP-call budget for all OpenAI candidate models. "
+            "Required when --openai-model is used; cached responses do not count."
+        ),
+    )
+    parser.add_argument("--api-timeout-seconds", type=int, default=180)
+    parser.add_argument("--api-request-delay-seconds", type=float, default=0.0)
+    parser.add_argument("--api-max-retries", type=int, default=2)
+    parser.add_argument(
+        "--openai-cache-dir",
+        default=None,
+        help=(
+            "Optional prior OpenAI candidate cache directory to reuse. New responses "
+            "are written inside the current evaluation run."
         ),
     )
     parser.add_argument(
@@ -317,6 +357,48 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--semantic-judge",
+        action="store_true",
+        help=(
+            "Add snippet-grounded semantic accuracy/MRR. Exact aliases are handled "
+            "deterministically; non-exact factoid answers are classified by an LLM."
+        ),
+    )
+    parser.add_argument(
+        "--semantic-judge-model",
+        default="gpt-4.1-mini-2025-04-14",
+        help="OpenAI model used only as the snippet-grounded evaluator.",
+    )
+    parser.add_argument(
+        "--semantic-judge-api-key-file",
+        default="open_ai_api.txt",
+        help="File containing the API key used by the semantic judge.",
+    )
+    parser.add_argument(
+        "--semantic-judge-endpoint",
+        default="https://api.openai.com/v1/chat/completions",
+    )
+    parser.add_argument(
+        "--semantic-judge-max-new-calls",
+        type=int,
+        default=0,
+        help=(
+            "Hard shared HTTP-call budget across all evaluated candidate models. "
+            "Exact matches and cached judgments do not count."
+        ),
+    )
+    parser.add_argument("--semantic-judge-timeout-seconds", type=int, default=180)
+    parser.add_argument("--semantic-judge-request-delay-seconds", type=float, default=0.0)
+    parser.add_argument("--semantic-judge-max-retries", type=int, default=2)
+    parser.add_argument(
+        "--semantic-judge-cache-dir",
+        default=None,
+        help=(
+            "Optional prior semantic-judge cache directory to reuse. New responses "
+            "are always written inside the current evaluation run."
+        ),
+    )
+    parser.add_argument(
         "--bioasq-java-jar",
         default="third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar",
         help="Repo-relative path to the official BioASQ Java evaluator JAR.",
@@ -338,6 +420,24 @@ def parse_args() -> argparse.Namespace:
     )
     args = parser.parse_args()
     args.model_ref = flatten_arg_groups(args.model_ref)
+    local_model_refs: list[str] = []
+    openai_model_refs: list[str] = list(args.openai_model or [])
+    for model_ref in args.model_ref or []:
+        if str(model_ref).casefold().startswith("openai:"):
+            model_name = str(model_ref).split(":", 1)[1].strip()
+            if not model_name:
+                parser.error("OpenAI model references must use openai:<model-name>.")
+            openai_model_refs.append(model_name)
+        else:
+            local_model_refs.append(str(model_ref))
+    args.model_ref = local_model_refs or None
+    args.openai_model = list(dict.fromkeys(openai_model_refs)) or None
+    if not args.model_ref and not args.all_registry_runs and not args.openai_model:
+        parser.error("Select at least one --model-ref, --openai-model, or --all-registry-runs.")
+    if args.openai_model and args.max_new_api_calls <= 0:
+        parser.error("--openai-model requires --max-new-api-calls > 0.")
+    if args.semantic_judge and args.semantic_judge_max_new_calls <= 0:
+        parser.error("--semantic-judge requires --semantic-judge-max-new-calls > 0.")
     if args.resource_window_mode != "single":
         if int(args.max_resources or 0) <= 0:
             parser.error("--resource-window-mode sequential requires --max-resources > 0.")

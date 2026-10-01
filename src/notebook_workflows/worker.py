@@ -20,11 +20,14 @@ def main():
         # Continue into a new run directory, keeping the earlier manifest/cache intact.
         shutil.copytree(p["prepared_run"], preview["outputs"]["output_root"])
     if preview["method"] == "judge_candidates" and p.get("previous_judgments"):
-        # Only reuse response cache, never completed rows from a different bank.
+        # Reuse keyed responses and correction feedback, never completed rows.
         source = Path(p["previous_judgments"]) / "cache"
         if not source.is_dir():
             raise FileNotFoundError(source)
         shutil.copytree(source, Path(preview["outputs"]["output_root"]) / "cache")
+        errors = Path(p["previous_judgments"]) / "errors"
+        if errors.is_dir():
+            shutil.copytree(errors, Path(preview["outputs"]["output_root"]) / "errors")
     if spec.module:
         sys.argv = [spec.module, *preview["command"][3:]]
         runpy.run_module(spec.module, run_name="__main__")

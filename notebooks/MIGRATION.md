@@ -9,14 +9,14 @@ The eight active notebooks reuse Python implementations and named presets. Model
 | audit_stage1_training_generations.ipynb | [07_analysis.ipynb](07_analysis.ipynb) | compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage |
 | build_factoid_evidence_grounded_gold_response_dpo_pairs_qwen25_05b.ipynb | [03_judging_and_preference_pairs.ipynb](03_judging_and_preference_pairs.ipynb) | standard_factoid / all_factoid_negatives |
 | build_factoid_standard_dpo_pairs_from_strict_extractive_banks.ipynb | [03_judging_and_preference_pairs.ipynb](03_judging_and_preference_pairs.ipynb) | standard_factoid / all_factoid_negatives |
-| build_synthetic_factoid_qa_pilot.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | prepare / generate / verify / finalize |
-| build_synthetic_factoid_qa_pilot_v2.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | prepare / generate / verify / finalize |
+| build_synthetic_factoid_qa_pilot.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | pipeline / finish / prepare / generate / verify / finalize |
+| build_synthetic_factoid_qa_pilot_v2.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | pipeline / finish / prepare / generate / verify / finalize |
 | candidates_evaluation.ipynb | [07_analysis.ipynb](07_analysis.ipynb) | compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage |
 | check_factoid_test_evidence_support.ipynb | [07_analysis.ipynb](07_analysis.ipynb) | compare_banks / dpo_diagnostics / stage1_training_audit / test_evidence_coverage |
 | compare_frequency10_vs_conditioned5_qwen25_05b.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | history_conditioned |
 | compare_gpt_direct_vs_structured_reasoning_dev.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | gpt_direct_vs_reasoning |
 | compare_stage1_dpo_vs_sft_sampling_inference.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | greedy / compare_sampling / sample10_frequency |
-| compare_synthetic_factoid_qa_generator_models.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | prepare / generate / verify / finalize |
+| compare_synthetic_factoid_qa_generator_models.ipynb | [08_synthetic_qa.ipynb](08_synthetic_qa.ipynb) | pipeline / finish / prepare / generate / verify / finalize |
 | evaluate_factoid_generation_methods_bioasq.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | greedy / compare_sampling / sample10_frequency |
 | evaluate_factoid_models_on_dev_qwen25_05b.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | greedy / compare_sampling / sample10_frequency |
 | evaluate_factoid_models_on_test_qwen25_05b.ipynb | [06_evaluation.ipynb](06_evaluation.ipynb) | greedy / compare_sampling / sample10_frequency |

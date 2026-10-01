@@ -237,8 +237,16 @@ def main() -> None:
         )
         judgments, judgment_summary = judge.run()
         if judgment_summary["status"] != "complete":
+            failed = [row for row in judgments if row["origin"] == "error"]
+            deferred = sum(row["origin"] == "deferred" for row in judgments)
+            detail = f" First error: {failed[0]['basis']}" if failed else ""
             raise RuntimeError(
-                "Annotation is incomplete. Rerun the same command to reuse cached successful calls and retry failures."
+                f"Annotation is incomplete: {len(failed)} failed, {deferred} deferred "
+                f"out of {len(judgments)} candidates.{detail} "
+                f"See {judgment_summary_path}. "
+                "CLI: rerun the same command to reuse cached successful calls. "
+                f"Notebook: set previous_judgments={str(output_root)!r} for this bank "
+                "and create a fresh plan to retry failures."
             )
 
     write_csv(output_root / "candidate_class_judgments.csv", judgments)

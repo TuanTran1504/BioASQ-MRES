@@ -196,14 +196,20 @@ add("error_aware_dpo", "dpo", "Answer DPO plus an auxiliary error-diagnosis loss
     required=("base_model", "initial_adapter", "stage1_pairs", "c1_rationales", "gold_rationales", "dev_source"),
     gpu=True)
 
-add("local_evaluation", "evaluation", "Evaluate any model(s), split(s), prompt, greedy or sampled aggregation.",
+add("local_evaluation", "evaluation", "Evaluate local and/or OpenAI models with official and grounded-semantic metrics.",
     module="src.utility.evaluate_models", schema_module="src.utility.evaluation",
     parameters={**PROMPT, "eval_input": None, "model_ref": None, "question_types": ["factoid"],
                 "num_generations": 1, "aggregation_strategy": "union", "temperature": 0.,
                 "top_p": 1., "max_new_tokens": 64, "seed": 3407, "score_backend": "bioasq_java",
-                "max_factoid_answers": 10000},
-    outputs={"output_dir": "evaluation"}, inputs=("eval_input", "prompt_file"),
-    required=("eval_input", "model_ref"), gpu=True)
+                "max_factoid_answers": 10000, "openai_model": None,
+                "api_key_file": "open_ai_api.txt", "max_new_api_calls": 0,
+                "openai_cache_dir": None, "semantic_judge": False,
+                "semantic_judge_model": "gpt-4.1-mini-2025-04-14",
+                "semantic_judge_api_key_file": "open_ai_api.txt",
+                "semantic_judge_max_new_calls": 0, "semantic_judge_cache_dir": None},
+    outputs={"output_dir": "evaluation"},
+    inputs=("eval_input", "prompt_file", "openai_cache_dir", "semantic_judge_cache_dir"),
+    required=("eval_input",), gpu=True)
 add("gpt_reasoning", "evaluation", "Paired direct versus structured-reasoning API evaluation.",
     module="cse_dpo.compare_gpt_direct_vs_structured_reasoning_dev",
     parameters={"source": None, "api_key_file": "open_ai_api.txt", "model": "gpt-4.1-mini-2025-04-14",

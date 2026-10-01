@@ -78,6 +78,18 @@ PRESETS = {
             "do_sample": True, "temperature": .7, "top_p": .9,
         }),
         "direct_top5": ("local_evaluation", {"prompt": "factoid-top-five-eval-v1"}),
+        "grounded_semantic": ("local_evaluation", {
+            "semantic_judge": True, "semantic_judge_max_new_calls": 50,
+        }),
+        "gpt_candidate_pilot": ("local_evaluation", {
+            "model_ref": ["openai:gpt-4.1-mini-2025-04-14"],
+            "limit": 10, "max_new_api_calls": 10,
+        }),
+        "local_and_gpt_grounded_pilot": ("local_evaluation", {
+            "model_ref": ["openai:gpt-4.1-mini-2025-04-14"],
+            "limit": 10, "max_new_api_calls": 10,
+            "semantic_judge": True, "semantic_judge_max_new_calls": 100,
+        }),
         "compare_sampling": ("sampling_comparison", {}),
         "history_conditioned": ("conditioned_sampling", {}),
         "gpt_direct_vs_reasoning": ("gpt_reasoning", {}),
@@ -90,9 +102,11 @@ PRESETS = {
         "stage1_training_audit": ("stage1_audit", {}),
     },
     "synthetic": {
+        "pipeline": ("synthetic_qa", {"phase": "all"}),
         "prepare": ("synthetic_qa", {"phase": "prepare"}),
         "generate": ("synthetic_qa", {"phase": "generate"}),
         "verify": ("synthetic_qa", {"phase": "verify"}),
+        "finish": ("synthetic_qa", {"phase": "verify_finalize"}),
         "finalize": ("synthetic_qa", {"phase": "finalize"}),
     },
 }

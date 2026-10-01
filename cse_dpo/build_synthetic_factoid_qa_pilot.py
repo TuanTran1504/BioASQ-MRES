@@ -12,7 +12,11 @@ The pipeline is intentionally staged and resumable:
    extract each answer.  Distractor packs contain three related training-only
    resources that do not contain either intended answer.
 4. ``finalize``: keep only locally valid, verifier-agreed examples and export
-   generic JSONL plus SFT-compatible prepared JSON files.
+   clean SFT records plus conservative cross-relation DPO pairs.
+
+Use ``verify_finalize`` to finish a staged run in one command, or ``all`` to
+prepare, generate, verify, and finalize in one command. Rejected and ineligible
+records remain available as audit artifacts but never enter training-ready files.
 
 No API calls occur during ``prepare`` or ``finalize``.  Every generation and
 verification response is cached by its full prompt, model, and rubric.
@@ -64,7 +68,7 @@ QUESTIONS_PER_SOURCE = 2
 DISTRACTOR_COUNT = 3
 RETRIEVAL_CANDIDATE_COUNT = 30
 GENERATION_RUBRIC_VERSION = "answer-first-bioasq-question-generation-v2"
-VERIFICATION_RUBRIC_VERSION = "blinded-roundtrip-bioasq-verification-v1"
+VERIFICATION_RUBRIC_VERSION = "blinded-roundtrip-bioasq-verification-v2"
 
 ANSWER_TYPES = {
     "gene",
@@ -152,35 +156,49 @@ or:
 VERIFICATION_SYSTEM_PROMPT = """
 You are a blinded biomedical factoid QA verifier. Return JSON only.
 
-For each supplied question, use only the supplied PubMed resources and extract
-the single shortest continuous source span that completely answers it. Preserve
-the exact source surface, including punctuation and hyphens. You are not given
-the intended answer.
+For each supplied question, use only the complete supplied PubMed evidence pack.
+You are not given the intended answer. First identify every distinct continuous
+source span that directly answers the question. Return each independent answer
+in candidate_answers. Split enumerations into separate candidates instead of
+returning a combined list. Repeated mentions of the same answer surface count as
+one candidate.
 
-Set status="accepted" only when:
-- one resource explicitly states the requested relation;
-- exactly one answer is supported by the complete evidence pack;
-- the extracted answer preserves every essential qualifier; and
-- the answer is an exact continuous span in the cited resource.
+An answer may contain any number of words. Length alone never makes an answer
+invalid. Select the shortest sufficient continuous span that preserves the exact
+source surface and every qualifier required by the question. Do not return a
+whole clause or sentence when a smaller span answers the question completely.
 
-Set status="review" for ambiguity, multiple valid answers, missing relations,
-outside-knowledge requirements, non-factoid questions, or unsupported answers.
+Set status="accepted" only when all of these conditions hold:
+- exactly one distinct candidate answer is supported by the full evidence pack;
+- the requested biomedical relation is explicitly stated;
+- the candidate denotes one atomic factoid target rather than a list of targets;
+- the question is singular, self-contained, and answerable without outside knowledge;
+- extracted_answer is exactly the sole candidate span and cites its resource.
 
-Return exactly this form:
-{"items":[
-  {
-    "synthetic_question_id":"supplied ID",
-    "status":"accepted or review",
-    "extracted_answer":"exact span or empty string",
-    "resource_id":"supplied resource number or empty string",
-    "unique_answer":true,
-    "explicit_relation":true,
-    "basis":"one concise sentence"
-  },
-  {"synthetic_question_id":"supplied ID","status":"accepted or review",
-   "extracted_answer":"...","resource_id":"...","unique_answer":true,
-   "explicit_relation":true,"basis":"..."}
-]}
+Set status="review" when there are zero or multiple candidates, when the question
+asks for multiple answers, when an answer is an enumeration, when the relation is
+implicit or unsupported, or when the shortest sufficient boundary is uncertain.
+For review items, extracted_answer may contain the best candidate or be empty.
+
+unique_answer must equal whether candidate_answers contains exactly one distinct
+answer. single_factoid_answer must be false for enumerations or questions seeking
+multiple independent targets. minimal_span_certain must be false when the shortest
+sufficient answer boundary is uncertain. basis must explain the evidence-specific
+decision; never copy an instruction placeholder.
+
+Return exactly this JSON structure for every supplied question:
+{"items":[{
+  "synthetic_question_id":"supplied ID",
+  "status":"accepted or review",
+  "candidate_answers":[{"answer":"exact source span","resource_id":"resource number"}],
+  "extracted_answer":"shortest exact span or empty string",
+  "resource_id":"resource number or empty string",
+  "unique_answer":true,
+  "explicit_relation":true,
+  "single_factoid_answer":true,
+  "minimal_span_certain":true,
+  "basis":"evidence-specific explanation of the decision"
+}]}
 """.strip()
 
 
@@ -192,7 +210,10 @@ def digest(value: Any) -> str:
 
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False, default=str) + "\n")
+    path.write_text(
+        json.dumps(value, indent=2, ensure_ascii=False, default=str) + "\n",
+        encoding="utf-8",
+    )
 
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -220,6 +241,15 @@ def read_questions(path: Path) -> list[dict[str, Any]]:
 def weak_surface(value: str) -> str:
     # Deliberately preserve punctuation and hyphens.
     return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+
+
+def normalized_span_contains(container: str, span: str) -> bool:
+    """Return whether a normalized span occurs at complete word boundaries."""
+    container_key = weak_surface(container)
+    span_key = weak_surface(span)
+    if not span_key:
+        return False
+    return bool(re.search(rf"(?<!\w){re.escape(span_key)}(?!\w)", container_key))
 
 
 def question_tokens(value: str) -> set[str]:
@@ -264,13 +294,51 @@ def answer_type_mismatch(answer_type: str, answer: str) -> bool:
     )
 
 
-def normalized_span_contains(container: str, span: str) -> bool:
-    """Containment with punctuation preserved and alphanumeric boundaries guarded."""
-    container_key = weak_surface(container)
-    span_key = weak_surface(span)
-    if not span_key:
-        return False
-    return bool(re.search(rf"(?<!\w){re.escape(span_key)}(?!\w)", container_key))
+MULTI_ANSWER_NOUN_RE = re.compile(
+    r"\b(?:genes|drugs|proteins|organisms|compounds|features|modifications|"
+    r"processes|activities|alterations|partners|pathways|symptoms|factors|"
+    r"variants|mutations|receptors|enzymes|molecules|methods|conditions|"
+    r"diseases|species|athletes|targets|markers|subtypes|stages|types|"
+    r"therapies|medications|regions|organs|techniques|bacteria|abnormalities|"
+    r"cells|roles|events|elements)\b",
+    flags=re.I,
+)
+
+
+def question_requests_multiple_answers(question: str) -> bool:
+    """Flag questions whose grammar explicitly requests several independent targets."""
+    question = question.strip()
+    if re.search(r"\b(?:which|what)\s+(?:two|three|four|five|\d+)\b", question, flags=re.I):
+        return True
+    match = re.match(r"^(?:which|what)\s+(.+)", question, flags=re.I)
+    if match:
+        # Inspect the requested noun phrase, stopping before a common auxiliary.
+        # This avoids treating context such as "Which receptor is involved in
+        # diseases?" as a request for multiple receptors.
+        head = re.split(
+            r"\b(?:is|are|was|were|does|do|did|has|have|had|can|could|may|"
+            r"might|will|would|should)\b",
+            match.group(1),
+            maxsplit=1,
+            flags=re.I,
+        )[0]
+        return bool(MULTI_ANSWER_NOUN_RE.search(head))
+    return False
+
+
+def answer_boundary_key(value: str) -> str:
+    """Normalize only harmless outer articles and terminal punctuation."""
+    value = weak_surface(value).strip(" \t\r\n.,;:")
+    return re.sub(r"^(?:a|an|the)\s+", "", value, count=1)
+
+
+def verification_match_type(intended: str, extracted: str) -> str:
+    """Keep automatic agreement strict while allowing a leading article variant."""
+    if weak_surface(intended) == weak_surface(extracted):
+        return "exact"
+    if answer_boundary_key(intended) == answer_boundary_key(extracted):
+        return "boundary_variant"
+    return "mismatch"
 
 
 def pubmed_id_from_text(value: str) -> str | None:
@@ -641,14 +709,31 @@ def validate_verification(
     expected = {
         "synthetic_question_id",
         "status",
+        "candidate_answers",
         "extracted_answer",
         "resource_id",
         "unique_answer",
         "explicit_relation",
+        "single_factoid_answer",
+        "minimal_span_certain",
         "basis",
     }
     resource_by_id = {resource["resource_id"]: resource for resource in evidence_pack}
     wanted_ids = [f"{source['synthetic_source_id']}::q{i}" for i in range(1, len(items) + 1)]
+
+    def canonical_resource_id(value: Any, index: int) -> str:
+        resource_id = str(value or "")
+        if resource_id and resource_id not in resource_by_id:
+            matching_ids = [
+                candidate_id
+                for candidate_id, resource in resource_by_id.items()
+                if str(resource.get("pubmed_id") or "") == resource_id
+            ]
+            if len(matching_ids) == 1:
+                return matching_ids[0]
+            raise ValueError(f"verification item {index} cites unknown resource")
+        return resource_id
+
     for index, record in enumerate(records):
         if not isinstance(record, dict) or set(record) != expected:
             raise ValueError(f"verification item {index} has wrong keys")
@@ -658,30 +743,122 @@ def validate_verification(
             raise ValueError(f"verification item {index} has invalid status")
         if not isinstance(record.get("extracted_answer"), str):
             raise ValueError(f"verification item {index} extracted_answer must be string")
-        resource_id = str(record.get("resource_id") or "")
-        if resource_id and resource_id not in resource_by_id:
-            # The evidence labels show both a compact resource number and PMID.
-            # Accept a PMID citation only when it maps unambiguously to one
-            # supplied resource, then canonicalize it to the resource number.
-            matching_ids = [
-                candidate_id
-                for candidate_id, resource in resource_by_id.items()
-                if str(resource.get("pubmed_id") or "") == resource_id
-            ]
-            if len(matching_ids) == 1:
-                resource_id = matching_ids[0]
-                record["resource_id"] = resource_id
-            else:
-                raise ValueError(f"verification item {index} cites unknown resource")
-        if not isinstance(record.get("unique_answer"), bool) or not isinstance(record.get("explicit_relation"), bool):
+        raw_candidates = record.get("candidate_answers")
+        if not isinstance(raw_candidates, list):
+            raise ValueError(f"verification item {index} candidate_answers must be a list")
+        candidates: list[dict[str, str]] = []
+        seen_candidates: set[tuple[str, str]] = set()
+        response_inconsistent = False
+        for candidate_index, candidate in enumerate(raw_candidates):
+            if not isinstance(candidate, dict) or set(candidate) != {"answer", "resource_id"}:
+                raise ValueError(
+                    f"verification item {index} candidate {candidate_index} has wrong keys"
+                )
+            if not isinstance(candidate.get("answer"), str) or not candidate["answer"].strip():
+                raise ValueError(
+                    f"verification item {index} candidate {candidate_index} answer is empty"
+                )
+            candidate["answer"] = candidate["answer"].strip()
+            candidate_resource_id = canonical_resource_id(candidate.get("resource_id"), index)
+            if not candidate_resource_id:
+                raise ValueError(
+                    f"verification item {index} candidate {candidate_index} lacks a resource"
+                )
+            candidate["resource_id"] = candidate_resource_id
+            if candidate["answer"] not in resource_by_id[candidate_resource_id]["text"]:
+                # A malformed Unicode escape or an over-long paraphrase should
+                # never keep a question out of the completed audit indefinitely.
+                # Drop it and force this item to review; it cannot be accepted.
+                response_inconsistent = True
+                continue
+            candidate_key = (weak_surface(candidate["answer"]), candidate_resource_id)
+            if candidate_key in seen_candidates:
+                raise ValueError(f"verification item {index} repeats a candidate answer")
+            seen_candidates.add(candidate_key)
+            candidates.append(candidate)
+        record["candidate_answers"] = candidates
+
+        boolean_keys = (
+            "unique_answer",
+            "explicit_relation",
+            "single_factoid_answer",
+            "minimal_span_certain",
+        )
+        if any(not isinstance(record.get(key), bool) for key in boolean_keys):
             raise ValueError(f"verification item {index} boolean checks are invalid")
         if not isinstance(record.get("basis"), str) or not record["basis"].strip():
             raise ValueError(f"verification item {index} basis is empty")
-        if record["status"] == "accepted":
-            if not resource_id or not record["extracted_answer"].strip():
-                raise ValueError(f"accepted verification item {index} lacks answer/resource")
+        record["basis"] = record["basis"].strip()
+        if weak_surface(record["basis"]) in {
+            "one concise sentence",
+            "evidence-specific explanation of the decision",
+        } or len(question_tokens(record["basis"])) < 5:
+            raise ValueError(f"verification item {index} basis is a placeholder")
+
+        record["extracted_answer"] = record["extracted_answer"].strip()
+        resource_id = canonical_resource_id(record.get("resource_id"), index)
+        record["resource_id"] = resource_id
+        if bool(record["extracted_answer"]) != bool(resource_id):
+            raise ValueError(
+                f"verification item {index} answer and resource must both be present or empty"
+            )
+        if record["extracted_answer"]:
             if record["extracted_answer"] not in resource_by_id[resource_id]["text"]:
-                raise ValueError(f"verification answer {index} is not an exact cited-resource span")
+                response_inconsistent = True
+                record["extracted_answer"] = ""
+                record["resource_id"] = ""
+                resource_id = ""
+            else:
+                selected_key = (weak_surface(record["extracted_answer"]), resource_id)
+                if selected_key not in seen_candidates:
+                    # Preserve the exact cited span for audit, but force review
+                    # because the model contradicted its own enumeration.
+                    candidates.append(
+                        {"answer": record["extracted_answer"], "resource_id": resource_id}
+                    )
+                    seen_candidates.add(selected_key)
+                    response_inconsistent = True
+
+        # Candidate enumeration is more trustworthy than a redundant model
+        # boolean. Derive uniqueness locally after conservative normalization.
+        record["unique_answer"] = len(candidates) == 1
+
+        question_is_plural = question_requests_multiple_answers(items[index]["question"])
+        obvious_list = bool(
+            record["extracted_answer"] and is_list_like_answer(record["extracted_answer"])
+        )
+        coordinated_answer = bool(
+            record["extracted_answer"]
+            and re.search(r"\b(?:and|or)\b", record["extracted_answer"], flags=re.I)
+        )
+        plural_enumeration = bool(
+            question_is_plural
+            and (len(candidates) > 1 or obvious_list or coordinated_answer)
+        )
+        can_accept = bool(
+            len(candidates) == 1
+            and record["unique_answer"]
+            and record["explicit_relation"]
+            and record["single_factoid_answer"]
+            and record["minimal_span_certain"]
+            and not plural_enumeration
+            and not obvious_list
+            and not response_inconsistent
+        )
+        if record["status"] == "accepted" and not can_accept:
+            # Preserve a semantically useful response and send it to review.
+            # Retrying cannot improve facts already established by the model's
+            # candidate enumeration and boolean checks.
+            record["status"] = "review"
+        if record["status"] == "accepted":
+            sole_candidate = candidates[0]
+            if (
+                record["extracted_answer"] != sole_candidate["answer"]
+                or resource_id != sole_candidate["resource_id"]
+            ):
+                raise ValueError(
+                    f"verification item {index} accepted answer must equal its sole candidate"
+                )
     return value
 
 
@@ -777,7 +954,22 @@ class CachedJsonCaller:
         feedback = ""
         if error_path.exists():
             previous = json.loads(error_path.read_text(encoding="utf-8"))
-            if previous.get("error"):
+            previous_value = previous.get("last_value")
+            if previous_value is not None:
+                try:
+                    validator(previous_value)
+                except Exception as recovery_error:
+                    feedback = (
+                        f"A previous response failed validation: {recovery_error}. "
+                        "Start with a corrected complete JSON object."
+                    )
+                else:
+                    cache_path.write_text(
+                        json.dumps(previous_value, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8",
+                    )
+                    return previous_value, "recovered"
+            elif previous.get("error"):
                 feedback = (
                     f"A previous run failed validation: {previous['error']}. "
                     "Start with a corrected complete JSON object."
@@ -795,7 +987,10 @@ class CachedJsonCaller:
                 value = self.call_api(prompt, api_key)
                 last_value = value
                 validator(value)
-                cache_path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
+                cache_path.write_text(
+                    json.dumps(value, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
                 return value, "api"
             except Exception as exc:
                 last_error = exc
@@ -873,9 +1068,20 @@ def run_generation(args: argparse.Namespace, *, dry_run: bool = False) -> dict[s
     existing.update({row["synthetic_source_id"]: row for row in rows})
     write_jsonl(path, [existing[key] for key in sorted(existing)])
     write_json(Path(args.output_root) / "generation_failures.json", failures)
+    attempted_or_cached_ids = set(existing) | {
+        row["synthetic_source_id"] for row in failures
+    }
+    unprocessed_ids = sorted(
+        source["synthetic_source_id"]
+        for source in sources
+        if source["synthetic_source_id"] not in attempted_or_cached_ids
+    )
     summary = {
-        "status": "complete" if len(existing) == len(sources) else "partial",
+        "status": "complete" if not unprocessed_ids else "partial",
         "selected_source_count": len(sources),
+        "attempted_or_cached_source_count": len(attempted_or_cached_ids),
+        "unprocessed_source_count": len(unprocessed_ids),
+        "unprocessed_source_ids": unprocessed_ids,
         "generated_source_count": len(existing),
         "eligible_source_count": sum(
             bool(row.get("generation_eligible", True) and row.get("generated_items"))
@@ -982,7 +1188,14 @@ def run_verification(args: argparse.Namespace, *, dry_run: bool = False) -> dict
                 ),
                 api_key,
             )
-            output.append({**source, "verification_items": value["items"], "verification_origin": origin})
+            output.append(
+                {
+                    **source,
+                    "verification_items": value["items"],
+                    "verification_origin": origin,
+                    "verification_rubric_version": VERIFICATION_RUBRIC_VERSION,
+                }
+            )
         except Exception as exc:
             failures.append({"synthetic_source_id": source["synthetic_source_id"], "error": str(exc)})
             if "max_new_calls reached" in str(exc):
@@ -990,7 +1203,11 @@ def run_verification(args: argparse.Namespace, *, dry_run: bool = False) -> dict
         if index == 1 or index % args.progress_every == 0 or index == len(packed_sources):
             print(f"verification {index}/{len(packed_sources)} | cached/complete {len(output)} | new calls {caller.new_api_calls}")
     path = Path(args.output_root) / "verified_sources.jsonl"
-    existing = {row["synthetic_source_id"]: row for row in read_jsonl(path)}
+    existing = {
+        row["synthetic_source_id"]: row
+        for row in read_jsonl(path)
+        if row.get("verification_rubric_version") == VERIFICATION_RUBRIC_VERSION
+    }
     existing.update({row["synthetic_source_id"]: row for row in output})
     write_jsonl(path, [existing[key] for key in sorted(existing)])
     write_json(Path(args.output_root) / "verification_failures.json", failures)
@@ -1014,8 +1231,59 @@ def run_verification(args: argparse.Namespace, *, dry_run: bool = False) -> dict
     return summary
 
 
+def render_synthetic_dpo_prompt(row: dict[str, Any]) -> str:
+    resource_blocks = []
+    for resource in row["evidence_pack"]:
+        text = str(resource["text"]).strip()
+        if not re.match(r"^(?:PubMed ID|Document):", text, flags=re.I):
+            text = f"PubMed ID: {resource['pubmed_id']}\n{text}"
+        resource_blocks.append(text)
+    first_resource = resource_blocks[0] if resource_blocks else ""
+    remaining_resources = (
+        "\n" + "\n".join(resource_blocks[1:]) if len(resource_blocks) > 1 else ""
+    )
+    return (
+        f"{SFT_INSTRUCTION}\n\n"
+        f"# Question: {row['question']}\n"
+        f"# PubMed resources: {first_resource}{remaining_resources}\n"
+        "# Answer:"
+    )
+
+
 def finalize(args: argparse.Namespace) -> dict[str, Any]:
-    sources = read_jsonl(Path(args.output_root) / "verified_sources.jsonl")
+    verified_rows = read_jsonl(Path(args.output_root) / "verified_sources.jsonl")
+    sources = [
+        row
+        for row in verified_rows
+        if row.get("verification_rubric_version") == VERIFICATION_RUBRIC_VERSION
+    ]
+    if verified_rows and not sources:
+        raise ValueError(
+            f"No {VERIFICATION_RUBRIC_VERSION} results are available; rerun verification"
+        )
+    generation_summary_path = Path(args.output_root) / "generation_summary.json"
+    if generation_summary_path.exists():
+        generation_summary = json.loads(generation_summary_path.read_text(encoding="utf-8"))
+        if generation_summary.get("unprocessed_source_count", 0):
+            raise RuntimeError(
+                "Generation stopped before every selected source was attempted: "
+                f"{generation_summary['unprocessed_source_count']} sources remain. "
+                "Continue generation before exporting training data."
+            )
+    generated_rows = [
+        row
+        for row in read_jsonl(Path(args.output_root) / "generated_sources.jsonl")
+        if row.get("generation_eligible", True) and row.get("generated_items")
+    ]
+    expected_verified_ids = {row["synthetic_source_id"] for row in generated_rows}
+    available_verified_ids = {row["synthetic_source_id"] for row in sources}
+    missing_verified_ids = sorted(expected_verified_ids - available_verified_ids)
+    if missing_verified_ids:
+        raise RuntimeError(
+            "Verification is incomplete: "
+            f"{len(missing_verified_ids)} eligible generated sources are missing. "
+            "Run verify or verify_finalize again before exporting training data."
+        )
     accepted: list[dict[str, Any]] = []
     review: list[dict[str, Any]] = []
     generation_invalid_sources: dict[str, str] = {}
@@ -1030,24 +1298,19 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
         for index, generated in enumerate(source["generated_items"], 1):
             question_id = f"{source['synthetic_source_id']}::q{index}"
             verified = by_id[question_id]
-            generated_key = weak_surface(generated["answer"])
-            verified_key = weak_surface(verified["extracted_answer"])
-            if generated_key and generated_key == verified_key:
-                match_type = "exact"
-            elif normalized_span_contains(verified["extracted_answer"], generated["answer"]):
-                # The blinded verifier may return a longer clause. Accept only
-                # when the intended exact source span is wholly inside it; the
-                # reverse direction could omit an essential qualifier.
-                match_type = "verifier_superspan"
-            else:
-                match_type = "mismatch"
-            answer_match = match_type in {"exact", "verifier_superspan"}
+            match_type = verification_match_type(
+                generated["answer"], verified["extracted_answer"]
+            )
+            answer_match = match_type in {"exact", "boundary_variant"}
             target_match = str(verified["resource_id"]) == str(source["target_resource_id"])
             keep = bool(
                 not generation_error
                 and verified["status"] == "accepted"
                 and verified["unique_answer"]
                 and verified["explicit_relation"]
+                and verified["single_factoid_answer"]
+                and verified["minimal_span_certain"]
+                and len(verified["candidate_answers"]) == 1
                 and answer_match
                 and target_match
             )
@@ -1080,7 +1343,10 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
 
     output_root = Path(args.output_root)
     write_jsonl(output_root / "synthetic_accepted_all.jsonl", accepted)
-    write_jsonl(output_root / "synthetic_review.jsonl", review)
+    audit_root = output_root / "audit"
+    write_jsonl(audit_root / "synthetic_review.jsonl", review)
+    training_root = output_root / "training_ready"
+    prepared_by_split: dict[str, list[dict[str, Any]]] = {}
     for split in ("train", "validation"):
         split_rows = [row for row in accepted if row["split"] == split]
         write_jsonl(output_root / f"synthetic_{split}.jsonl", split_rows)
@@ -1096,9 +1362,60 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
             for resource_index, resource in enumerate(row["evidence_pack"], 2):
                 item[f"input_{resource_index}"] = resource["text"]
             prepared.append(item)
+        prepared_by_split[split] = prepared
         write_json(output_root / f"synthetic_{split}_prepared.json", prepared)
+        write_json(training_root / f"sft_{split}.json", prepared)
 
-    csv_path = output_root / "synthetic_review.csv"
+    prepared_all = prepared_by_split["train"] + prepared_by_split["validation"]
+    write_json(training_root / "sft_all.json", prepared_all)
+
+    accepted_by_source: dict[str, list[dict[str, Any]]] = {}
+    for row in accepted:
+        accepted_by_source.setdefault(row["synthetic_source_id"], []).append(row)
+
+    dpo_pairs: list[dict[str, Any]] = []
+    for source_id, source_rows in sorted(accepted_by_source.items()):
+        # Two strict accepted relations from the same evidence pack give a
+        # source-grounded hard negative in each direction. A single accepted
+        # question is useful for SFT but cannot safely form a DPO pair.
+        if len(source_rows) != QUESTIONS_PER_SOURCE:
+            continue
+        source_rows = sorted(source_rows, key=lambda row: row["synthetic_question_id"])
+        if len({weak_surface(row["answer"]) for row in source_rows}) != QUESTIONS_PER_SOURCE:
+            continue
+        for chosen_row, sibling_row in (
+            (source_rows[0], source_rows[1]),
+            (source_rows[1], source_rows[0]),
+        ):
+            dpo_pairs.append(
+                {
+                    "pair_id": f"{chosen_row['synthetic_question_id']}::cross_relation",
+                    "question_id": chosen_row["synthetic_question_id"],
+                    "synthetic_source_id": source_id,
+                    "split": chosen_row["split"],
+                    "pair_type": "synthetic_verified_cross_relation_negative",
+                    "prompt": render_synthetic_dpo_prompt(chosen_row),
+                    "chosen": chosen_row["output"],
+                    "rejected": sibling_row["output"],
+                    "chosen_answer": chosen_row["answer"],
+                    "rejected_answer": sibling_row["answer"],
+                    "negative_question_id": sibling_row["synthetic_question_id"],
+                    "negative_policy": (
+                        "The rejected answer is the other strictly verified relation from "
+                        "the same evidence pack; blinded verification found one unique answer "
+                        "for the current question."
+                    ),
+                }
+            )
+    for split in ("train", "validation"):
+        write_jsonl(
+            training_root / f"dpo_{split}.jsonl",
+            [row for row in dpo_pairs if row["split"] == split],
+        )
+    write_jsonl(training_root / "dpo_all.jsonl", dpo_pairs)
+
+    csv_path = audit_root / "synthetic_review.csv"
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         fields = [
             "synthetic_question_id", "split", "evidence_arm", "question", "answer",
@@ -1134,25 +1451,68 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
         "accepted_split_counts": dict(Counter(row["split"] for row in accepted)),
         "accepted_arm_counts": dict(Counter(row["evidence_arm"] for row in accepted)),
         "accepted_answer_type_counts": dict(Counter(row["answer_type"] for row in accepted)),
+        "training_ready_root": str(training_root.resolve()),
+        "sft_training_question_count": len(prepared_all),
+        "dpo_training_pair_count": len(dpo_pairs),
+        "dpo_split_counts": dict(Counter(row["split"] for row in dpo_pairs)),
+        "dpo_pair_policy": "strictly verified cross-relation negatives from the same evidence pack",
+        "ineligible_and_rejected_excluded_from_training": True,
         "source_overlap_between_splits": len(
             {row["synthetic_source_id"] for row in accepted if row["split"] == "train"}
             & {row["synthetic_source_id"] for row in accepted if row["split"] == "validation"}
         ),
         "normalization": "NFKC + casefold + whitespace collapse; punctuation and hyphens preserved",
         "answer_agreement_rule": (
-            "exact weak-surface match or intended answer wholly contained in a longer "
-            "verifier span; reverse containment is rejected"
+            "exact weak-surface match or a boundary-only variant after removing one "
+            "leading article and terminal punctuation; longer verifier clauses are rejected"
         ),
         "real_dev_unchanged": True,
         "real_test_unchanged": True,
     }
     write_json(output_root / "final_summary.json", summary)
+    write_json(
+        training_root / "manifest.json",
+        {
+            "status": "training_ready",
+            "created_at": summary["created_at"],
+            "source_final_summary": str((output_root / "final_summary.json").resolve()),
+            "sft": {
+                "all": "sft_all.json",
+                "train": "sft_train.json",
+                "validation": "sft_validation.json",
+                "counts": {
+                    "all": len(prepared_all),
+                    "train": len(prepared_by_split["train"]),
+                    "validation": len(prepared_by_split["validation"]),
+                },
+            },
+            "dpo": {
+                "all": "dpo_all.jsonl",
+                "train": "dpo_train.jsonl",
+                "validation": "dpo_validation.jsonl",
+                "counts": {
+                    "all": len(dpo_pairs),
+                    "train": sum(row["split"] == "train" for row in dpo_pairs),
+                    "validation": sum(row["split"] == "validation" for row in dpo_pairs),
+                },
+                "pair_policy": summary["dpo_pair_policy"],
+            },
+            "quality_gate": (
+                "Only strict verifier-agreed questions are exported. DPO requires both "
+                "questions from a source to pass; all other records remain audit-only."
+            ),
+        },
+    )
     return summary
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", choices=["prepare", "generate", "verify", "finalize", "all"], default="prepare")
+    parser.add_argument(
+        "--phase",
+        choices=["prepare", "generate", "verify", "verify_finalize", "finalize", "all"],
+        default="prepare",
+    )
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--dev-source", type=Path, default=DEFAULT_DEV_SOURCE)
     parser.add_argument("--test-dir", type=Path, default=DEFAULT_TEST_DIR)
@@ -1205,9 +1565,9 @@ def main() -> None:
         summaries.append(prepare_manifest(args))
     if args.phase in {"generate", "all"}:
         summaries.append(run_generation(args, dry_run=args.dry_run))
-    if args.phase in {"verify", "all"}:
+    if args.phase in {"verify", "verify_finalize", "all"}:
         summaries.append(run_verification(args, dry_run=args.dry_run))
-    if args.phase in {"finalize", "all"} and not args.dry_run:
+    if args.phase in {"verify_finalize", "finalize", "all"} and not args.dry_run:
         summaries.append(finalize(args))
     print(json.dumps(summaries, indent=2, ensure_ascii=False))
 

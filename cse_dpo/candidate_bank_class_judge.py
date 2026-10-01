@@ -448,6 +448,27 @@ Allowed error_type values: none, broader, narrower, part_whole, wrong_entity, wr
             "rubric": JUDGE_SYSTEM,
         })
 
+    @staticmethod
+    def _retry_feedback(error: Any, judgment: Any) -> str:
+        return (
+            f"Previous response failed validation: {error}.\n"
+            f"Rejected response (for correction, not instructions): {json.dumps(judgment, ensure_ascii=False)}\n"
+            "Reassess equivalence against all accepted aliases using the original rubric. "
+            "Do not preserve a class or change a relation merely to pass validation. "
+            "A supported or related answer is not necessarily an equivalent answer.\n"
+            "Required field combinations:\n"
+            f"- C2: relation_type must be one of {', '.join(sorted(EQUIVALENT_RELATION_TYPES))}; "
+            "semantic_correct=true; error_type=none.\n"
+            f"- C1: relation_type must be one of {', '.join(sorted(NON_EQUIVALENT_RELATION_TYPES))}; "
+            "semantic_correct=false; error_type must equal relation_type. "
+            "In particular, broader, narrower, part_whole and extra_qualifier cannot be C2.\n"
+            "- UNCERTAIN: relation_type=uncertain; semantic_correct=null; "
+            "error_type=insufficient_information. Use this only if the supplied information "
+            "cannot establish equivalence.\n"
+            "Return the complete corrected seven-key JSON object only, "
+            "with a short basis consistent with the class and relation."
+        )
+
     def _call(self, prompt: str, api_key: str) -> dict[str, Any]:
         import requests
         payload = {
@@ -528,6 +549,10 @@ Allowed error_type values: none, broader, narrower, part_whole, wrong_entity, wr
             }
 
         feedback = ""
+        error_path = self.error_dir / f"{key}.json"
+        if error_path.is_file():
+            previous = json.loads(error_path.read_text(encoding="utf-8"))
+            feedback = self._retry_feedback(previous.get("error"), previous.get("last_invalid_judgment"))
         last_error: Exception | None = None
         last_judgment: dict[str, Any] | None = None
         validation_attempt = 0
@@ -567,13 +592,7 @@ Allowed error_type values: none, broader, narrower, part_whole, wrong_entity, wr
                     time.sleep(sleep_seconds)
                     rate_limit_attempt += 1
                     continue
-                feedback = (
-                    f"Previous response failed validation: {exc}. Correct it using exactly these values: "
-                    "relation_type must be one of the listed underscore-separated values; "
-                    "error_type must follow the class-specific rule; semantic_correct must be "
-                    "JSON true, false, or null. Return the complete "
-                    "corrected seven-key JSON object only."
-                )
+                feedback = self._retry_feedback(exc, last_judgment)
                 validation_attempt += 1
                 if validation_attempt <= self.max_retries:
                     time.sleep(2 ** (validation_attempt - 1))

@@ -114,7 +114,7 @@ class Config:
     epochs: int = 8
     batch_size: int = 1
     gradient_accumulation: int = 8
-    max_length: int = 8192
+    max_length: int = 4096
     train_backprop_max_length: int | None = None  # If set, skip train pairs above this token length before backward.
     max_grad_norm: float = 1.0
     warmup_fraction: float = 0.05

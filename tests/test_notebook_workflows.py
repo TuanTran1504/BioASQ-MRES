@@ -5,6 +5,8 @@ import hashlib
 import contextlib
 import io
 import zipfile
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -75,11 +77,87 @@ def test_existing_output_is_never_reused(tmp_path):
         execute(preview, run=True)
 
 
+def test_worker_failure_exposes_diagnostic_and_preserves_log(tmp_path, monkeypatch):
+    from src.notebook_workflows import runner
+
+    source = tmp_path / "gold.json"
+    source.write_text('{"questions":[]}', encoding="utf-8")
+    preview = plan("evidence_coverage", {"sources": [str(source)]}, project_root=tmp_path)
+    popen = subprocess.Popen
+    diagnostic = "RuntimeError: Annotation is incomplete: C2 must use an equivalent relation_type"
+
+    def failing_worker(command, **kwargs):
+        return popen([sys.executable, "-c",
+                      f"print('progress\\n' * 30); print({diagnostic!r}); raise SystemExit(7)"],
+                     **kwargs)
+
+    monkeypatch.setattr(runner.subprocess, "Popen", failing_worker)
+    with pytest.raises(subprocess.CalledProcessError) as caught:
+        execute(preview, run=True)
+    error = caught.value
+    run_dir = Path(preview["run_dir"])
+    assert error.returncode == 7
+    assert diagnostic in str(error)
+    assert str(run_dir / "run.log") in str(error)
+    assert len(error.output.splitlines()) == 20
+    assert (run_dir / "run.log").read_text().count("progress") == 30
+    assert json.loads((run_dir / "status.json").read_text())["status"] == "failed"
+
+
+@pytest.mark.parametrize("origin,basis,counts", [
+    ("error", "C2 must use an equivalent relation_type", "1 failed, 0 deferred"),
+    ("deferred", "Call budget reached", "0 failed, 1 deferred"),
+])
+def test_incomplete_judgments_explain_notebook_recovery(tmp_path, monkeypatch, origin, basis, counts):
+    from cse_dpo import annotate_split_dpo_candidate_bank as driver
+
+    source = tmp_path / "input.json"
+    source.write_text("[]", encoding="utf-8")
+    out = tmp_path / "judgments"
+    monkeypatch.setattr(sys, "argv", ["judge", "--bank", str(source), "--questions", str(source),
+                                     "--api-key-file", str(source), "--output-root", str(out)])
+    monkeypatch.setattr(driver, "prepare_records", lambda *a, **kw: ([], {}))
+    monkeypatch.setattr(driver.CandidateBankClassJudge, "run", lambda self: (
+        [{"origin": origin, "basis": basis}], {"status": "incomplete"}))
+    with pytest.raises(RuntimeError) as caught:
+        driver.main()
+    message = str(caught.value)
+    assert counts in message
+    assert f"previous_judgments={str(out)!r}" in message
+    if origin == "error":
+        assert basis in message
+    assert not (out / "dpo_pairs.jsonl").exists()
+
+
 def test_mutated_plan_is_rejected_before_execution(tmp_path):
     preview = plan("evidence_coverage", project_root=tmp_path)
     preview["run_dir"] = str(tmp_path / "other")
     with pytest.raises(ValueError, match="Plan changed"):
         execute(preview, run=True)
+
+
+def test_judge_worker_copies_cache_and_feedback_without_reusing_rows(tmp_path, monkeypatch):
+    from src.notebook_workflows import worker
+
+    previous = tmp_path / "previous"
+    for folder in ("cache", "errors"):
+        (previous / folder).mkdir(parents=True)
+        (previous / folder / "key.json").write_text('{"saved":true}', encoding="utf-8")
+    (previous / "candidate_class_judgments.jsonl").write_text("old rows", encoding="utf-8")
+    output = tmp_path / "new" / "judgments"
+    preview = {
+        "method": "judge_candidates", "run_dir": str(output.parent), "project_root": str(tmp_path),
+        "parameters": {"previous_judgments": str(previous)}, "outputs": {"output_root": str(output)},
+        "command": [sys.executable, "-m", "cse_dpo.annotate_split_dpo_candidate_bank"],
+    }
+    path = tmp_path / "plan.json"
+    path.write_text(json.dumps(preview), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["worker", str(path)])
+    monkeypatch.setattr(worker.runpy, "run_module", lambda *a, **kw: None)
+    worker.main()
+    for folder in ("cache", "errors"):
+        assert (output / folder / "key.json").read_bytes() == (previous / folder / "key.json").read_bytes()
+    assert not (output / "candidate_class_judgments.jsonl").exists()
 
 
 def test_aliases_cannot_leak_between_sft_train_and_dev(tmp_path):
@@ -162,7 +240,10 @@ def test_changed_input_requires_fresh_preview(tmp_path):
 def test_generated_notebooks_execute_only_previews():
     from scripts.build_workflow_notebooks import WORKFLOWS, build
     notebooks = sorted((ROOT / "notebooks").glob("*.ipynb"))
-    assert len(notebooks) == len(WORKFLOWS) == 8
+    assert len(WORKFLOWS) == 8
+    assert {p.stem for p in notebooks} == {w[0] for w in WORKFLOWS} | {
+        "09_controlled_answer_variants", "10_gpt41mini_coverage_comparison",
+        "11_sft_training_plot", "12_qwen25_3b_base_expansion"}
     # Saved notebooks contain user-edited RUN flags and optional display cells.
     # Exercise the shipped defaults without executing users' experiment code.
     with patch("subprocess.Popen", side_effect=AssertionError("Preview started a process")):

@@ -4,6 +4,22 @@ Eight notebooks share the same configuration and execution layer. Select a prese
 set input paths in **OVERRIDES**, and inspect the preview. Nothing executes until
 **RUN=True**; API work also requires **ALLOW_API=True**.
 
+Notebook 09 is a separate controlled-expression pilot with its own preview, budget,
+cache, verification and export cells. Rebuild only that notebook with
+`python scripts/build_answer_variants_notebook.py`; the eight-workflow builder
+leaves it alone.
+
+Notebook 10 compares GPT-4.1 mini rule-guided expansion (up to ten expressions in
+one request) with ten independent high-temperature single-answer requests on all
+160 original dev questions. It reports gold coverage using the official matcher,
+paired gains/losses and token usage, without a verifier or reranker. Its default
+budget is 1,760 API requests and execution is off. Rebuild only it with
+`python scripts/build_coverage_comparison_notebook.py`.
+
+Notebook 11 creates the publication-style SFT training comparison from saved
+0.5B and 3B run histories without loading either model. Rebuild only it with
+`python scripts/build_sft_training_plot_notebook.py`.
+
 | Notebook | Main variants |
 |---|---|
 | [01 Data preparation](01_data_preparation.ipynb) | Snippet filtering, full-resource data, train/dev and SFT/DPO splits, evidence exports |
@@ -14,6 +30,9 @@ set input paths in **OVERRIDES**, and inspect the preview. Nothing executes unti
 | [06 Evaluation](06_evaluation.ipynb) | Dev/test, multiple models, greedy, sampled aggregation, conditioned sampling, API baselines |
 | [07 Analysis](07_analysis.ipynb) | Bank comparisons, evidence coverage, model/preference diagnostics, Stage 1 audits |
 | [08 Synthetic QA](08_synthetic_qa.ipynb) | Prepare, generate, verify, finalize; generator/verifier variants |
+| [09 Controlled answer variants](09_controlled_answer_variants.ipynb) | Gold-seeded training construction; prediction-seeded expansion; explicit relation/direction controls; verification; optional reranker; top-1/top-5 diagnostics and training exports |
+| [10 GPT-4.1 mini coverage comparison](10_gpt41mini_coverage_comparison.ipynb) | Full dev160: rule-guided expansion versus ten high-temperature single-answer draws; official candidate matching and oracle coverage |
+| [11 SFT training plot](11_sft_training_plot.ipynb) | Reproducible optimization, validation-loss and generated-dev MRR comparison for saved 0.5B/3B SFT runs |
 
 ## Your Qwen 0.5B / 3B experiment
 
@@ -76,6 +95,13 @@ Do not use the alias-expanded SFT file to generate candidate banks.
 Staged DPO defaults to a smoke run. Data/preview checks do not replace CUDA
 validation. Java is required for official scoring. Install the selected
 operation's normal project dependencies in the notebook kernel environment.
+
+Notebook 06 can evaluate local adapters and OpenAI candidate models in one run.
+Use `openai:<model-name>` inside the same `model_ref` list as local models.
+The grounded-semantic option classifies non-exact factoid answers and separately
+checks whether supplied snippets support them. Candidate generation and judging
+use separate explicit API budgets and reusable cache directories; neither API is
+enabled unless `ALLOW_API=True`.
 
 ## Historical experiments and maintenance
 

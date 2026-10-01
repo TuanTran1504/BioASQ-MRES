@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import uuid
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,37 @@ ROOT = Path(__file__).resolve().parents[2]
 BLOCKED_OPTIONS = {"overwrite", "overwrite_merged", "resume_from_checkpoint", "resume_from",
                    "all_registry_runs", "archive_incomplete_chunks"}
 SPECIAL_OPTIONS = {"synthetic_qa": {"prepared_run"}, "judge_candidates": {"previous_judgments"}}
+
+
+class WorkflowExecutionError(subprocess.CalledProcessError):
+    """Keep the worker's diagnostic visible in truncated notebook tracebacks."""
+
+    def __init__(self, returncode, command, *, log_path, output):
+        super().__init__(returncode, command, output=output)
+        self.log_path = log_path
+
+    def __str__(self):
+        return (
+            f"Workflow worker exited with code {self.returncode}.\n"
+            f"Worker output (last lines):\n{self.output.rstrip()}\n"
+            f"Full log: {self.log_path}"
+        )
+
+
+def _openai_model_refs(params):
+    return [
+        str(value)
+        for value in (params.get("model_ref") or [])
+        if str(value).casefold().startswith("openai:")
+    ]
+
+
+def _local_model_refs(params):
+    return [
+        str(value)
+        for value in (params.get("model_ref") or [])
+        if not str(value).casefold().startswith("openai:")
+    ]
 
 
 def available_methods(category=None):
@@ -164,6 +196,19 @@ def _validate_semantics(method, params, schema):
               "gpt_reasoning": "question_limit", "dev_evidence": "max_new_calls"}.get(method)
     if budget and (type(params.get(budget)) is not int or params[budget] <= 0):
         raise ValueError(f"{budget} must be an explicit positive limit.")
+    if method == "local_evaluation":
+        if (params.get("openai_model") or _openai_model_refs(params)) and (
+            type(params.get("max_new_api_calls")) is not int or params["max_new_api_calls"] <= 0
+        ):
+            raise ValueError("OpenAI candidates require max_new_api_calls to be a positive integer.")
+        if params.get("semantic_judge") and (
+            type(params.get("semantic_judge_max_new_calls")) is not int
+            or params["semantic_judge_max_new_calls"] <= 0
+        ):
+            raise ValueError(
+                "Grounded semantic evaluation requires semantic_judge_max_new_calls "
+                "to be a positive integer."
+            )
     if not METHODS[method].module:
         for key, default in METHODS[method].parameters.items():
             if type(default) is bool and type(params.get(key)) is not bool:
@@ -249,6 +294,10 @@ def plan(method, parameters=None, *, run_name=None, project_root=None):
     for key in required:
         if params.get(key) in (None, "", [], {}):
             missing.append(f"Set {key}")
+    if method == "local_evaluation" and not (
+        params.get("model_ref") or params.get("all_registry_runs") or params.get("openai_model")
+    ):
+        missing.append("Set model_ref, openai_model, or all_registry_runs")
     for key in spec.inputs:
         value = params.get(key)
         if value is None:
@@ -278,7 +327,7 @@ def plan(method, parameters=None, *, run_name=None, project_root=None):
     outputs = {key: str(run_dir / relative) for key, relative in spec.outputs.items()}
     needs_api = spec.api
     if method == "synthetic_qa":
-        needs_api = params["phase"] in {"generate", "verify", "all"}
+        needs_api = params["phase"] in {"generate", "verify", "verify_finalize", "all"}
     if method == "evidence_annotation":
         if params["phase"] not in {"annotate", "export"}:
             raise ValueError("phase must be annotate or export")
@@ -291,6 +340,10 @@ def plan(method, parameters=None, *, run_name=None, project_root=None):
         needs_api = bool(params.get("semantic_judge_enabled"))
         if needs_api and not params.get("semantic_judge_max_new_calls"):
             raise ValueError("API-assisted checkpoint selection requires semantic_judge_max_new_calls.")
+    if method == "local_evaluation":
+        needs_api = bool(
+            params.get("openai_model") or _openai_model_refs(params) or params.get("semantic_judge")
+        )
     if "train_input" in inputs and "eval_input" in inputs and not missing:
         train_ids = set().union(*(question_ids(p) for p in inputs["train_input"]))
         dev_ids = set().union(*(question_ids(p) for p in inputs["eval_input"]))
@@ -324,10 +377,13 @@ def plan(method, parameters=None, *, run_name=None, project_root=None):
         values = {key: value for key, value in params.items() if key not in specials}
         values.update(outputs)
         command = _argv(spec.module, values, schema)
+    uses_gpu = spec.gpu
+    if method == "local_evaluation":
+        uses_gpu = bool(_local_model_refs(params) or params.get("all_registry_runs"))
     result = {"version": 1, "method": method, "category": spec.category, "project_root": str(root),
               "run_dir": str(run_dir), "parameters": params, "outputs": outputs,
               "inputs": inputs, "command": command, "missing": missing,
-              "gpu": spec.gpu, "api": needs_api, "description": spec.description}
+              "gpu": uses_gpu, "api": needs_api, "description": spec.description}
     result["input_sha256"] = {
         path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
         for paths in inputs.values() for path in paths if Path(path).is_file()
@@ -372,18 +428,22 @@ def execute(preview, *, run=False, allow_api=False):
     status = {"status": "running", "method": preview["method"], "fingerprint": preview["fingerprint"]}
     status_path = run_dir / "status.json"
     status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
+    log_path = run_dir / "run.log"
+    output_tail = deque(maxlen=20)
     try:
-        with (run_dir / "run.log").open("w", encoding="utf-8") as log:
+        with log_path.open("w", encoding="utf-8") as log:
             process = subprocess.Popen(command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        text=True, encoding="utf-8", errors="replace")
             try:
                 for line in process.stdout:
+                    output_tail.append(line[-2000:])
                     log.write(line)
                     log.flush()
                     print(line, end="", flush=True)
                 returncode = process.wait()
                 if returncode:
-                    raise subprocess.CalledProcessError(returncode, command)
+                    raise WorkflowExecutionError(
+                        returncode, command, log_path=log_path, output="".join(output_tail))
             except BaseException:
                 process.terminate()
                 process.wait()

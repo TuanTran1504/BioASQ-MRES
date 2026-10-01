@@ -33,13 +33,14 @@ open_ai_api.txt
 # Generated experiment outputs, checkpoints, and local ablations.
 /Artifacts/
 /Abalations/
-/unsloth_compiled_cache/
+**/unsloth_compiled_cache/
 wandb/
 runs/
 trainer_output/
 checkpoint-*/
 cache/
 errors/
+/output.png
 
 # Downloaded base models. Keep only portable metadata and documentation.
 /models/*/

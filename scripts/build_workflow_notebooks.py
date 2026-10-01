@@ -55,10 +55,16 @@ rationale_from_base/rationale_continued take accepted rationale_bank, question-l
 
 Staged presets require base_model, initial_adapter, staged_root and dev_source_input. Set model_preset to qwen25_05b or qwen25_3b. The staged directory must contain all three stage files, even if a selected stage is empty. stage1/two_stage/three_stage set the stopping point; stage_settings overrides per-stage hyperparameters.
 
+This notebook is preconfigured for the current C3>C1 experiment. It deduplicates and combines the 0.5B and 3B C3>C1 pair banks, then creates two independent stage1 plans that use that same combined dataset. stop_after_stage=concept_learning prevents C3>C2 and C2>C1 pairs from entering either run. The shared 160-question dev split is used only for checkpoint selection.
+
 **Staged presets default to smoke_test=True.** After checking a smoke run, set False for full training. stage2_retention needs a completed Stage 1 adapter plus tie-aware data; it skips concept learning but may use its pairs as retention anchors. cal_dpo, apo_zero and adaptive_nll select other objectives.
 
 softmax/representative require question_classes_with_reference_jsonl, not ordinary pairs. error_aware takes accepted C1/gold rationales and Stage 1 pairs; it prepares data unless its separate train=True parameter is set. Every run is fresh; checkpoints are not silently resumed.""",
-    "evaluation": """greedy, sample10_frequency, sample5_union and direct_top5 share the official evaluation CLI. model_ref and eval_input are lists. Use dev data for comparisons and official test batches only after selection. Multiple model refs compare SFT/DPO/base models under identical settings.
+    "evaluation": """greedy, sample10_frequency, sample5_union and direct_top5 share the unified evaluation CLI. model_ref and eval_input are lists. Use dev data for comparisons and official test batches only after selection. Multiple model refs compare SFT/DPO/base models under identical settings. The factoid workflow standardizes local generation, SFT selection, DPO selection and final official evaluation at max_seq_length=4096.
+
+grounded_semantic adds a closed-snippet LLM judge for factoids. It reports semantic accuracy/MRR and the stricter grounded-semantic accuracy/MRR, where an answer must both match the accepted answer scope and be supported by the supplied snippets. Exact aliases are handled deterministically; only non-exact candidates use the judge API. semantic_judge_max_new_calls is one shared budget across all candidate models, and semantic_judge_cache_dir can reuse a prior cache. Grounded evaluation rejects locally truncated prompts because judging evidence that the candidate model could not see would be invalid; keep the 4096-token standard and use resource limits or sequential windows for a separate grounded evaluation.
+
+gpt_candidate_pilot evaluates an OpenAI model as a candidate using the same prompt bundle and official scorer. model_ref is unified: use local paths/aliases normally and prefix API models with openai:, for example openai:gpt-4.1-mini-2025-04-14. The older openai_model option remains accepted. local_and_gpt_grounded_pilot adds API candidate generation and grounded judging. OpenAI candidate calls and judge calls have separate hard budgets. Increase limit and both budgets for a full run. Candidate and judge models are independently configurable; use a different judge family for a publication-quality comparison when possible.
 
 compare_sampling creates one shared independent bank for first-five and frequency ranking, optionally adding greedy/direct-top-five runs. Its source is one prepared/raw file and model_ref one string. history_conditioned takes local base_model, adapter, prepared source and a frozen raw_generations.jsonl bank in the existing comparison schema.
 
@@ -99,6 +105,125 @@ def build(category, title, preset):
 #     {"label": "qwen05b", "overrides": {"model_name": "Qwen/Qwen2.5-0.5B-Instruct"}},
 #     {"label": "qwen3b", "overrides": {"model_name": "Qwen/Qwen2.5-3B-Instruct"}},
 # ]
+'''
+    if category == "dpo":
+        extra = '''
+# Current experiment: train both SFT models on the same combined C3>C1 pairs.
+# RUN remains False so the cell first creates two reviewable plans. Set it to
+# True and rerun this cell plus the cells below to launch the full runs.
+from src.notebook_workflows.dpo_inputs import build_c3_c1_union
+
+PRESET = "stage1"
+SOURCE_STAGED_ROOTS = [
+    PROJECT_ROOT
+    / "Artifacts/notebook_runs/pairs/judge_candidates"
+    / "20260929-030110-87693ae1/judgments/staged_curriculum_pairs",
+    PROJECT_ROOT
+    / "Artifacts/notebook_runs/pairs/judge_candidates"
+    / "20260929-030110-b9ec9c29/judgments/staged_curriculum_pairs",
+]
+COMBINED_STAGED_ROOT = (
+    PROJECT_ROOT
+    / "Artifacts/notebook_inputs/dpo"
+    / "c3_over_c1_combined_qwen25_05b_3b"
+)
+COMBINED_SUMMARY = build_c3_c1_union(
+    SOURCE_STAGED_ROOTS,
+    COMBINED_STAGED_ROOT,
+    source_labels=["qwen25_05b_bank", "qwen25_3b_bank"],
+)
+print("Combined C3>C1 dataset:", json.dumps(COMBINED_SUMMARY, indent=2))
+
+OVERRIDES = {
+    "dev_source_input": str(
+        PROJECT_ROOT
+        / "data/BioASQ_factoid_sft_prepared"
+        / "split_first_train90_dev10_supported_train_seed3407"
+        / "dev_prepared.json"
+    ),
+    "objective": "dpo",
+    "stop_after_stage": "concept_learning",
+    "smoke_test": False,
+    "max_length": 4096,
+    "generated_eval_max_seq_length": 4096,
+    "semantic_judge_enabled": False,
+}
+VARIANTS = [
+    {
+        "label": "qwen25_05b_c3_over_c1",
+        "overrides": {
+            "model_preset": "qwen25_05b",
+            "base_model": "unsloth/qwen2.5-0.5b-instruct-unsloth-bnb-4bit",
+            "initial_adapter": str(
+                PROJECT_ROOT
+                / "Artifacts/notebook_runs/sft/answer_sft"
+                / "20260927-143545-67f7a338/adapter"
+            ),
+            "staged_root": str(COMBINED_STAGED_ROOT),
+        },
+    },
+    {
+        "label": "qwen25_3b_c3_over_c1",
+        "overrides": {
+            "model_preset": "qwen25_3b",
+            "base_model": "unsloth/qwen2.5-3b-instruct-unsloth-bnb-4bit",
+            "initial_adapter": str(
+                PROJECT_ROOT
+                / "Artifacts/notebook_runs/sft/answer_sft"
+                / "20260927-143545-3fca1c3d/adapter"
+            ),
+            "staged_root": str(COMBINED_STAGED_ROOT),
+        },
+    },
+]
+'''
+    if category == "evaluation":
+        extra = '''
+# Current experiment: compare the two saved SFT adapters under the repaired
+# semantic rubric, using full GPT-4.1 as one independent judge.
+DATA = (
+    PROJECT_ROOT
+    / "data/BioASQ_factoid_sft_prepared"
+    / "split_first_train90_dev10_supported_train_seed3407"
+)
+GOLD_ONLY_SFT_05B = (
+    PROJECT_ROOT
+    / "Artifacts/notebook_runs/sft/answer_sft"
+    / "20260927-143545-67f7a338/adapter"
+)
+GOLD_ONLY_SFT_3B = (
+    PROJECT_ROOT
+    / "Artifacts/notebook_runs/sft/answer_sft"
+    / "20260927-143545-3fca1c3d/adapter"
+)
+
+OVERRIDES = {
+    "eval_input": [str(DATA / "dev_prepared.json")],
+    "max_seq_length": 4096,
+    "model_ref": [str(GOLD_ONLY_SFT_05B), str(GOLD_ONLY_SFT_3B)],
+    "score_backend": "bioasq_java",
+
+    # The first 15 resources retain all 121 source-level extractable dev
+    # questions. The longest rendered Qwen prompt is about 3,629 tokens, so the
+    # candidate and judge see matching evidence without 4,096-token truncation.
+    "max_resources": 15,
+    "max_resource_chars": 0,
+
+    # The v2 paired semantic_relation schema prevents contradictory combinations
+    # such as semantic_label=equivalent with relation_type=narrower.
+    "semantic_judge": True,
+    "semantic_judge_model": "gpt-4.1-2025-04-14",
+    "semantic_judge_api_key_file": str(PROJECT_ROOT / "open_ai_api.txt"),
+    "semantic_judge_max_new_calls": 650,
+    "semantic_judge_max_retries": 2,
+    "semantic_judge_cache_dir": None,
+    "limit": 160,
+}
+
+# Execution and API permission remain off until the plan has been reviewed.
+RUN = False
+ALLOW_API = False
+VARIANTS = [{"label": "sft_05b_vs_3b_new_gpt41_judge", "overrides": {}}]
 '''
     cells = [
         cell("markdown", f"# {title}\n\n{GUIDES[category]}\n\n"
