@@ -74,6 +74,24 @@ def test_multi_model_configs_keep_the_same_expansion_protocol():
         assert config["temperature"] == 0.0
 
 
+def test_qwen_v2_prompt_targets_observed_surface_failures_without_gold():
+    prompt = (BUNDLE / "prompts/equivalent_expansion_v2.txt").read_text(encoding="utf-8")
+    config = json.loads(
+        (BUNDLE / "configs/equivalent_expansion_qwen3_8b_v2.json").read_text()
+    )
+
+    assert "exact phrase from a supplied snippet" in prompt
+    assert "fuller evidence-grounded clause" in prompt
+    assert "range endpoints" in prompt
+    assert "coordinated members" in prompt
+    assert "trademark-text" in prompt
+    assert "gold" not in prompt.casefold()
+    assert config["prompt"] == "prompts/equivalent_expansion_v2.txt"
+    assert config["prompt_version"] == "equivalent-expansion-v2"
+    assert config["response_mode"] == "equivalent"
+    assert config["chat_template_kwargs"] == {"enable_thinking": False}
+
+
 def test_render_prompt_passes_model_specific_chat_template_options():
     runner = load_runner()
 

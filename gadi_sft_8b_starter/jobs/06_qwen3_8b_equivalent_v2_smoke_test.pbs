@@ -1,0 +1,35 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=50GB
+#PBS -l walltime=00:30:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq-qwen8-v2-smoke
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+
+cd "${PBS_O_WORKDIR}"
+nvidia-smi
+python3 scripts/verify_expansion_bundle.py \
+  --config configs/equivalent_expansion_qwen3_8b_v2.json
+python3 scripts/run_extractive_expansion_8b.py \
+  --config configs/equivalent_expansion_qwen3_8b_v2.json \
+  --output-parent outputs/model_comparison \
+  --limit 4 \
+  --run-name "qwen3-8b-equivalent-v2-smoke-${PBS_JOBID}"

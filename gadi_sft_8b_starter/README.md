@@ -173,3 +173,25 @@ Copy each completed directory from `outputs/model_comparison/` back to the local
 ```
 
 Compare coverage at 1, 5, and 10, parse success, unique candidates per question, runtime, and peak GPU memory. Also measure the union with GPT-4.1 mini and the existing Llama-3.1-8B run: a model with lower standalone coverage can still be valuable if it covers questions the other generators miss.
+
+## Multi-surface equivalent-expansion follow-up
+
+The first cross-model comparison showed that many official misses contained a
+semantically plausible answer but failed to reproduce the accepted surface. The v2
+prompt remains gold-blind and tests a targeted remedy: it explicitly requests minimal
+answers, exact evidence phrases, full clause forms, coordinated answers, complete
+numeric ranges, abbreviations, parenthetical forms, and harmless typography variants.
+It uses Qwen3-8B so the result can be compared directly with the v1 Qwen run.
+
+Run the four-question smoke test and inspect its status before submitting all 160
+questions:
+
+```bash
+QWEN_V2_SMOKE=$(qsub jobs/06_qwen3_8b_equivalent_v2_smoke_test.pbs)
+qstat -fx "$QWEN_V2_SMOKE" | grep -E 'job_state|Exit_status|resources_used'
+
+qsub jobs/run_equivalent_expansion_qwen3_8b_v2.pbs
+```
+
+Treat this as a prompt ablation selected from development-set error analysis. Report it
+as exploratory evidence and freeze the chosen prompt before the locked test evaluation.
