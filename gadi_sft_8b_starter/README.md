@@ -196,13 +196,18 @@ qsub jobs/run_equivalent_expansion_qwen3_8b_v2.pbs
 Treat this as a prompt ablation selected from development-set error analysis. Report it
 as exploratory evidence and freeze the chosen prompt before the locked test evaluation.
 
-## Biomedical neural reranker pilot
+## Long-context neural reranker pilot
 
-The neural pilot fine-tunes a pinned BiomedBERT cross-encoder with a question-listwise
-loss. Its encoded input contains the question, one candidate, and up to four
-lexically selected snippets. Source identity, source rank, and gold aliases are not
-model inputs. Questions without an accepted candidate are excluded from the ranking
-loss but are still ranked during evaluation.
+The neural pilot uses the pinned Qwen3-Reranker-0.6B checkpoint. Each encoded input
+contains the question, one candidate, and every supplied snippet in its original
+order. The tokenizer preflight fails if any input exceeds 8,192 tokens; evidence is
+never selected, dropped, or silently truncated. Source identity, source rank, and gold
+aliases are not model inputs.
+
+Run the pretrained reranker zero-shot first. The fine-tuned condition uses LoRA and a
+within-question pairwise ranking loss: accepted candidates are preferred to hard
+negatives from the same authentic slate. Questions without an accepted candidate are
+excluded from the training loss but are still ranked during evaluation.
 
 The current pilot bundle is development-only and contains 7,362 candidates for 160
 questions. Before submitting a job, make sure these local files have been copied to
@@ -223,24 +228,37 @@ source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
 export HF_HOME="/scratch/nl78/${USER}/hf_cache"
 export HF_HUB_CACHE="${HF_HOME}/hub"
 unset HF_HUB_OFFLINE TRANSFORMERS_OFFLINE
-hf download microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext \
-  --revision b857e516dbf8a3a8bd9d03888e54d0618cd36eab \
+hf download Qwen/Qwen3-Reranker-0.6B \
+  --revision fd9fb1d26c07223ced488065909faf522e29cc7d \
   --cache-dir "${HF_HUB_CACHE}"
 ```
 
-Validate the data without loading the model, then run the one-fold smoke test:
+Validate the data without loading the model, then use the cached tokenizer to prove
+that all 7,362 candidate inputs fit without truncation:
 
 ```bash
-python3 scripts/train_neural_cross_encoder_reranker.py --validate-only
-RERANKER_SMOKE=$(qsub jobs/07_biomedbert_reranker_smoke_test.pbs)
+python3 scripts/run_qwen3_reranker.py --mode validate
+python3 scripts/run_qwen3_reranker.py --mode preflight --local-files-only
+```
+
+For the fixed development pool, the pinned tokenizer produced a median length of 581
+tokens, a 95th percentile of 2,593, and a maximum of 4,437. All inputs fit within the
+8,192-token runtime limit while retaining every snippet.
+
+Run the smoke test, which deliberately selects the longest training and held-out
+questions to exercise worst-case GPU memory:
+
+```bash
+RERANKER_SMOKE=$(qsub jobs/07_qwen3_reranker_smoke_test.pbs)
 qstat -fx "$RERANKER_SMOKE" | grep -E 'job_state|Exit_status|resources_used'
 ```
 
-Inspect the smoke-test `status.json`, log, and rankings before launching all five
-question-level folds:
+Inspect the smoke-test `status.json`, log, token preflight, and rankings. If it passes,
+run the full zero-shot baseline before launching all five LoRA folds:
 
 ```bash
-qsub jobs/train_biomedbert_reranker_cv.pbs
+qsub jobs/evaluate_qwen3_reranker_zero_shot.pbs
+qsub jobs/train_qwen3_reranker_cv.pbs
 ```
 
 The cross-validation result is exploratory because the candidate pool and its
