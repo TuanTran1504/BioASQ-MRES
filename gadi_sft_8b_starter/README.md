@@ -195,3 +195,54 @@ qsub jobs/run_equivalent_expansion_qwen3_8b_v2.pbs
 
 Treat this as a prompt ablation selected from development-set error analysis. Report it
 as exploratory evidence and freeze the chosen prompt before the locked test evaluation.
+
+## Biomedical neural reranker pilot
+
+The neural pilot fine-tunes a pinned BiomedBERT cross-encoder with a question-listwise
+loss. Its encoded input contains the question, one candidate, and up to four
+lexically selected snippets. Source identity, source rank, and gold aliases are not
+model inputs. Questions without an accepted candidate are excluded from the ranking
+loss but are still ranked during evaluation.
+
+The current pilot bundle is development-only and contains 7,362 candidates for 160
+questions. Before submitting a job, make sure these local files have been copied to
+the same relative paths on Gadi:
+
+```text
+Artifacts/reranker_pilot/20261002-023517-tfidf-logistic/candidate_pool_labeled.jsonl
+gadi_sft_8b_starter/outputs/model_comparison/20261002-000810-gemma3-27b-equivalent-dev160-180316747-gadi-pbs/examples.jsonl
+```
+
+Cache the pinned checkpoint once from a Gadi login node while network access is
+enabled:
+
+```bash
+module purge
+module load python3/3.12.13
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+unset HF_HUB_OFFLINE TRANSFORMERS_OFFLINE
+hf download microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext \
+  --revision b857e516dbf8a3a8bd9d03888e54d0618cd36eab \
+  --cache-dir "${HF_HUB_CACHE}"
+```
+
+Validate the data without loading the model, then run the one-fold smoke test:
+
+```bash
+python3 scripts/train_neural_cross_encoder_reranker.py --validate-only
+RERANKER_SMOKE=$(qsub jobs/07_biomedbert_reranker_smoke_test.pbs)
+qstat -fx "$RERANKER_SMOKE" | grep -E 'job_state|Exit_status|resources_used'
+```
+
+Inspect the smoke-test `status.json`, log, and rankings before launching all five
+question-level folds:
+
+```bash
+qsub jobs/train_biomedbert_reranker_cv.pbs
+```
+
+The cross-validation result is exploratory because the candidate pool and its
+formatting branches were selected using this development set. Do not report a model
+trained on all 160 questions as independently evaluated on the same questions.
