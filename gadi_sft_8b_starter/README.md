@@ -265,6 +265,24 @@ The full cross-validation job saves each fold's LoRA adapter under
 `fold-<n>/adapter/` together with its held-out rankings and summary. The smoke job
 does not retain its temporary adapter.
 
+The evidence-plus-metadata condition retains every snippet and additionally encodes
+only fields available at inference: generator sources and ranks, source agreement,
+relation and surface-operation types, format-variant status, literal evidence
+occurrence, and candidate length. Gold aliases and exact labels remain excluded from
+the model input. Preflight this condition, then launch its full five-fold run:
+
+```bash
+python3 scripts/run_qwen3_reranker.py \
+  --mode preflight \
+  --encode-source-metadata \
+  --local-files-only
+
+qsub jobs/train_qwen3_reranker_metadata_cv.pbs
+```
+
+This is a full 160-question cross-validation experiment. The earlier six-question
+smoke run is used only to validate execution and is not used to estimate accuracy.
+
 The cross-validation result is exploratory because the candidate pool and its
 formatting branches were selected using this development set. Do not report a model
 trained on all 160 questions as independently evaluated on the same questions.

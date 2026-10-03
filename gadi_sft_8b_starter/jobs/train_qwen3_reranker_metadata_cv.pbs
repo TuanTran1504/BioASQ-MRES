@@ -1,0 +1,41 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=20GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq-qwen-meta-cv
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+cd "${PBS_O_WORKDIR}"
+nvidia-smi
+python3 scripts/run_qwen3_reranker.py \
+  --mode train-cv \
+  --epochs 2 \
+  --max-length 8192 \
+  --max-negatives-per-positive 4 \
+  --eval-batch-size 1 \
+  --gradient-accumulation-steps 8 \
+  --learning-rate 2e-4 \
+  --encode-source-metadata \
+  --save-fold-adapters \
+  --local-files-only \
+  --run-name "qwen3-reranker-metadata-cv-${PBS_JOBID}"

@@ -6,9 +6,11 @@ supplied snippet in original order. Inputs that exceed the configured context
 limit fail preflight; evidence is never selected, dropped, or truncated.
 
 Gold-derived exact-match labels define training pairs and evaluation only.
-Gold aliases, source identities, and source ranks are never encoded. Questions
-without an accepted candidate are excluded from the pairwise training loss but
-are still ranked during evaluation.
+Gold aliases are never encoded. Source, rank, relation, format, and literal
+evidence-occurrence metadata can be encoded in an explicit ablation because
+these fields are available at inference. Questions without an accepted
+candidate are excluded from the pairwise training loss but are still ranked
+during evaluation.
 """
 
 from __future__ import annotations
@@ -50,6 +52,20 @@ DEFAULT_INSTRUCTION = (
     "by the evidence. Treat synonymous biomedical names and numerically equivalent "
     "forms as correct, but reject related, broader, narrower, or contradictory concepts."
 )
+INFERENCE_METADATA_FIELDS = [
+    "generator sources",
+    "source ranks",
+    "independent generator count",
+    "best source rank",
+    "reciprocal-rank sum",
+    "relation types",
+    "surface operations",
+    "format-variant indicator",
+    "literal evidence occurrence",
+    "supporting snippet count",
+    "candidate word count",
+    "candidate character count",
+]
 PREFIX = (
     '<|im_start|>system\nJudge whether the Document meets the requirements based on the '
     'Query and the Instruct provided. Note that the answer can only be "yes" or "no".'
@@ -130,18 +146,69 @@ def format_document(example: dict[str, Any]) -> str:
     return "Supplied evidence snippets:\n" + "\n".join(parts)
 
 
+def format_candidate_metadata(
+    example: dict[str, Any],
+    row: dict[str, Any],
+) -> str:
+    """Serialize only candidate attributes available during inference."""
+    answer = clean(row["answer"])
+    sources = sorted(clean(source) for source in row.get("sources", []) if clean(source))
+    base_sources = sorted({source.removeprefix("format::") for source in sources})
+    source_ranks = {
+        clean(source): int(rank)
+        for source, rank in row.get("source_ranks", {}).items()
+        if clean(source)
+    }
+    ordered_ranks = sorted(source_ranks.items())
+    positive_ranks = [rank for rank in source_ranks.values() if rank > 0]
+    relation_types = sorted({
+        clean(value) for value in row.get("relation_types", []) if clean(value)
+    })
+    surface_operations = sorted({
+        clean(value) for value in row.get("surface_operations", []) if clean(value)
+    })
+    snippet_hits = sum(
+        bool(answer) and key(answer) in key(snippet["text"])
+        for snippet in example["snippets"]
+    )
+    reciprocal_rank_sum = sum(1.0 / rank for rank in positive_ranks)
+    rank_text = ", ".join(f"{source}={rank}" for source, rank in ordered_ranks) or "none"
+    return "\n".join([
+        "Candidate provenance and inference-time features:",
+        f"- Generator sources: {', '.join(sources) or 'none'}",
+        f"- Source ranks: {rank_text}",
+        f"- Independent generator count: {len(base_sources)}",
+        f"- Best source rank: {min(positive_ranks) if positive_ranks else 'none'}",
+        f"- Reciprocal-rank sum: {reciprocal_rank_sum:.6f}",
+        f"- Relation types: {', '.join(relation_types) or 'none'}",
+        f"- Surface operations: {', '.join(surface_operations) or 'none'}",
+        f"- Automatically generated format variant: {'yes' if row.get('is_format_variant') else 'no'}",
+        f"- Literal occurrence in supplied evidence: {'yes' if snippet_hits else 'no'}",
+        f"- Supporting snippet count: {snippet_hits}",
+        f"- Candidate word count: {len(answer.split())}",
+        f"- Candidate character count: {len(answer)}",
+    ])
+
+
 def format_reranker_body(
     example: dict[str, Any],
     candidate: str,
     *,
     instruction: str = DEFAULT_INSTRUCTION,
+    candidate_row: dict[str, Any] | None = None,
+    encode_source_metadata: bool = False,
 ) -> str:
     query = (
         f"Biomedical factoid question: {clean(example['question'])}\n"
         f"Candidate answer: {clean(candidate)}"
     )
+    metadata = ""
+    if encode_source_metadata:
+        if candidate_row is None:
+            raise ValueError("candidate_row is required when source metadata is encoded")
+        metadata = "\n" + format_candidate_metadata(example, candidate_row)
     return (
-        f"<Instruct>: {instruction}\n<Query>: {query}\n"
+        f"<Instruct>: {instruction}\n<Query>: {query}{metadata}\n"
         f"<Document>: {format_document(example)}"
     )
 
@@ -263,10 +330,18 @@ def seed_everything(seed: int) -> None:
 
 
 class PromptEncoder:
-    def __init__(self, tokenizer: Any, max_length: int, instruction: str):
+    def __init__(
+        self,
+        tokenizer: Any,
+        max_length: int,
+        instruction: str,
+        *,
+        encode_source_metadata: bool = False,
+    ):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.instruction = instruction
+        self.encode_source_metadata = encode_source_metadata
         self.prefix_tokens = tokenizer.encode(PREFIX, add_special_tokens=False)
         self.suffix_tokens = tokenizer.encode(SUFFIX, add_special_tokens=False)
         self.no_token_id = self._single_token_id("no")
@@ -278,8 +353,14 @@ class PromptEncoder:
             raise ValueError(f"Expected {text!r} to be one token, got {values}")
         return int(values[0])
 
-    def encode(self, example: dict[str, Any], candidate: str) -> list[int]:
-        body = format_reranker_body(example, candidate, instruction=self.instruction)
+    def encode(self, example: dict[str, Any], row: dict[str, Any]) -> list[int]:
+        body = format_reranker_body(
+            example,
+            row["answer"],
+            instruction=self.instruction,
+            candidate_row=row,
+            encode_source_metadata=self.encode_source_metadata,
+        )
         body_tokens = self.tokenizer.encode(body, add_special_tokens=False)
         values = self.prefix_tokens + body_tokens + self.suffix_tokens
         if len(values) > self.max_length:
@@ -342,7 +423,11 @@ def preflight_lengths(
     overflow = []
     for row in pool_rows:
         body = format_reranker_body(
-            examples[row["question_id"]], row["answer"], instruction=encoder.instruction
+            examples[row["question_id"]],
+            row["answer"],
+            instruction=encoder.instruction,
+            candidate_row=row,
+            encode_source_metadata=encoder.encode_source_metadata,
         )
         length = (
             len(encoder.prefix_tokens)
@@ -441,7 +526,7 @@ def score_questions(
             scores = []
             for start in range(0, len(rows), batch_size):
                 batch_rows = rows[start : start + batch_size]
-                encoded = [encoder.encode(examples[qid], row["answer"]) for row in batch_rows]
+                encoded = [encoder.encode(examples[qid], row) for row in batch_rows]
                 batch = encoder.batch(encoded, device)
                 with torch.amp.autocast("cuda", dtype=torch.float16, enabled=device.type == "cuda"):
                     values = model_scores(model, batch, encoder)
@@ -524,8 +609,8 @@ def train_fold(
             pair = pairs[pair_index]
             qid = pair["question_id"]
             encoded = [
-                encoder.encode(examples[qid], pair["positive"]["answer"]),
-                encoder.encode(examples[qid], pair["negative"]["answer"]),
+                encoder.encode(examples[qid], pair["positive"]),
+                encoder.encode(examples[qid], pair["negative"]),
             ]
             batch = encoder.batch(encoded, device)
             with torch.amp.autocast("cuda", dtype=torch.float16, enabled=device.type == "cuda"):
@@ -650,6 +735,7 @@ def main() -> None:
         default=True,
     )
     parser.add_argument("--save-fold-adapters", action="store_true")
+    parser.add_argument("--encode-source-metadata", action="store_true")
     parser.add_argument("--allow-cpu", action="store_true")
     parser.add_argument("--smoke-test", action="store_true")
     args = parser.parse_args()
@@ -684,14 +770,22 @@ def main() -> None:
         "all_snippets_encoded_in_original_order": True,
         "evidence_truncation": False,
         "gold_blind_input": True,
-        "source_metadata_encoded": False,
+        "source_metadata_encoded": args.encode_source_metadata,
+        "inference_metadata_fields": (
+            INFERENCE_METADATA_FIELDS if args.encode_source_metadata else []
+        ),
     }
     if args.mode == "validate":
         print(json.dumps(base_preflight, indent=2))
         return
 
     tokenizer = load_tokenizer(args)
-    encoder = PromptEncoder(tokenizer, args.max_length, args.instruction)
+    encoder = PromptEncoder(
+        tokenizer,
+        args.max_length,
+        args.instruction,
+        encode_source_metadata=args.encode_source_metadata,
+    )
     length_preflight = preflight_lengths(encoder, pool_rows, examples)
     full_preflight = {**base_preflight, "token_lengths": length_preflight}
     if not length_preflight["all_inputs_fit_without_truncation"]:
@@ -786,7 +880,12 @@ def main() -> None:
                 "model": args.model,
                 "revision": args.revision,
                 "objective": "within-question pairwise logistic ranking loss",
-                "input": "question + candidate + every supplied snippet in original order",
+                "input": (
+                    "question + candidate + inference-time metadata + every supplied snippet "
+                    "in original order"
+                    if args.encode_source_metadata
+                    else "question + candidate + every supplied snippet in original order"
+                ),
                 "selected_folds": selected_folds,
                 "folds": fold_summaries,
                 "metrics": {

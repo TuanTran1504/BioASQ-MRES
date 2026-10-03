@@ -31,6 +31,9 @@ def candidate(qid, answer, label, sources=None, rank=1):
         "label": label,
         "sources": sources,
         "source_ranks": {source: rank for source in sources},
+        "relation_types": ["original"],
+        "surface_operations": [],
+        "is_format_variant": False,
     }
 
 
@@ -49,6 +52,42 @@ def test_reranker_body_contains_question_candidate_and_all_evidence():
     assert "[Snippet 1]" in body
     assert "[Snippet 2]" in body
     assert "[Snippet 3]" in body
+
+
+def test_metadata_condition_encodes_only_inference_available_candidate_fields():
+    row = candidate(
+        "q1",
+        "kinase ABC",
+        1,
+        sources=["gpt_equivalent", "format::qwen3_8b"],
+        rank=2,
+    )
+    row["relation_types"] = ["original", "abbreviation"]
+    row["surface_operations"] = ["terminal_punctuation"]
+    row["is_format_variant"] = True
+    row["gold_aliases"] = ["SECRET_GOLD_ALIAS"]
+    body = QR.format_reranker_body(
+        example(),
+        row["answer"],
+        candidate_row=row,
+        encode_source_metadata=True,
+    )
+    assert "Generator sources: format::qwen3_8b, gpt_equivalent" in body
+    assert "Independent generator count: 2" in body
+    assert "Source ranks: format::qwen3_8b=2, gpt_equivalent=2" in body
+    assert "Relation types: abbreviation, original" in body
+    assert "Surface operations: terminal_punctuation" in body
+    assert "Automatically generated format variant: yes" in body
+    assert "Literal occurrence in supplied evidence: yes" in body
+    assert "SECRET_GOLD_ALIAS" not in body
+    assert "Gold" not in body
+
+
+def test_evidence_only_condition_does_not_encode_metadata():
+    row = candidate("q1", "kinase ABC", 1, sources=["gpt_equivalent"])
+    body = QR.format_reranker_body(example(), row["answer"], candidate_row=row)
+    assert "Candidate provenance" not in body
+    assert "gpt_equivalent" not in body
 
 
 def test_training_pairs_exclude_all_negative_questions_and_cap_negatives():
