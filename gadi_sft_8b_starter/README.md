@@ -261,6 +261,10 @@ qsub jobs/evaluate_qwen3_reranker_zero_shot.pbs
 qsub jobs/train_qwen3_reranker_cv.pbs
 ```
 
+The full cross-validation job saves each fold's LoRA adapter under
+`fold-<n>/adapter/` together with its held-out rankings and summary. The smoke job
+does not retain its temporary adapter.
+
 The cross-validation result is exploratory because the candidate pool and its
 formatting branches were selected using this development set. Do not report a model
 trained on all 160 questions as independently evaluated on the same questions.

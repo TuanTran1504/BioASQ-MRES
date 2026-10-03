@@ -35,5 +35,6 @@ python3 scripts/run_qwen3_reranker.py \
   --eval-batch-size 1 \
   --gradient-accumulation-steps 8 \
   --learning-rate 2e-4 \
+  --save-fold-adapters \
   --local-files-only \
   --run-name "qwen3-reranker-cv-${PBS_JOBID}"
