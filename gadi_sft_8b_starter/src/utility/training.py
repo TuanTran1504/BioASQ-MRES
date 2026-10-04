@@ -973,7 +973,9 @@ def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
         loftq_config=None,
     )
 
-    if clean_text(args.prompt_format).lower() == "chat":
+    if clean_text(args.prompt_format).lower() == "chat" and not bool(
+        getattr(args, "preserve_native_chat_template", False)
+    ):
         tokenizer = get_chat_template(
             tokenizer,
             chat_template=args.chat_template,

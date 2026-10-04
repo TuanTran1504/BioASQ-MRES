@@ -27,9 +27,19 @@ def build_sharegpt_conversation(example: Dict[str, Any]) -> Dict[str, Any]:
     return {"conversations": conversation}
 
 
-def formatting_prompts_func(examples: Dict[str, Any], tokenizer: Any) -> Dict[str, List[str]]:
+def formatting_prompts_func(
+    examples: Dict[str, Any],
+    tokenizer: Any,
+    chat_template_kwargs: Dict[str, Any] | None = None,
+) -> Dict[str, List[str]]:
+    chat_template_kwargs = chat_template_kwargs or {}
     texts = [
-        tokenizer.apply_chat_template(conversation, tokenize=False, add_generation_prompt=False)
+        tokenizer.apply_chat_template(
+            conversation,
+            tokenize=False,
+            add_generation_prompt=False,
+            **chat_template_kwargs,
+        )
         for conversation in examples["conversations"]
     ]
     return {"text": texts}
@@ -104,9 +114,18 @@ def prepare_dataset(
     prompt_format: str,
     response_template: str | None = None,
     response_template_trim_tokens: int = 0,
+    chat_template_kwargs: Dict[str, Any] | None = None,
 ) -> Dataset:
     num_proc = max(1, int(num_proc))
-    dataset = Dataset.from_list(rows)
+    is_message_dataset = bool(rows) and all(
+        isinstance(row.get("messages"), list) for row in rows
+    )
+    if is_message_dataset:
+        dataset = Dataset.from_list(
+            [{"conversations": row["messages"]} for row in rows]
+        )
+    else:
+        dataset = Dataset.from_list(rows)
 
     if clean_text(prompt_format).lower() == "unitor_plain":
         eos_token = clean_text(getattr(tokenizer, "eos_token", ""))
@@ -134,7 +153,8 @@ def prepare_dataset(
         )
         return dataset
 
-    dataset = dataset.map(build_sharegpt_conversation, num_proc=num_proc)
+    if not is_message_dataset:
+        dataset = dataset.map(build_sharegpt_conversation, num_proc=num_proc)
     dataset = standardize_sharegpt(dataset)
 
     # Tokenizers / processors from transformers + unsloth are often not picklable
@@ -144,7 +164,10 @@ def prepare_dataset(
         formatting_prompts_func,
         batched=True,
         num_proc=1,
-        fn_kwargs={"tokenizer": tokenizer},
+        fn_kwargs={
+            "tokenizer": tokenizer,
+            "chat_template_kwargs": chat_template_kwargs or {},
+        },
     )
 
     # Pre-tokenize here so TRL sees an already processed dataset with input_ids
