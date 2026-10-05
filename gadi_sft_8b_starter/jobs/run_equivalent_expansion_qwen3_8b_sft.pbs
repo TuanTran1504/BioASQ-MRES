@@ -1,0 +1,52 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=04:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq-qwen8-sft-equiv
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+
+cd "${PBS_O_WORKDIR}"
+
+if [[ -z "${EXP_SFT_ADAPTER:-}" ]]; then
+  EXP_SFT_ADAPTER="$(
+    find outputs/expansion_sft \
+      -mindepth 2 -maxdepth 2 -type d \
+      -path '*/qwen3-8b-expansion-sft-[0-9]*.gadi-pbs/adapter' \
+      -exec test -f '{}/training_complete.json' ';' -print |
+      sort |
+      tail -n 1
+  )"
+fi
+
+if [[ -z "${EXP_SFT_ADAPTER}" || ! -f "${EXP_SFT_ADAPTER}/adapter_config.json" ]]; then
+  echo "Could not find a completed expansion-SFT adapter. Set EXP_SFT_ADAPTER=/path/to/adapter." >&2
+  exit 2
+fi
+
+echo "Using expansion-SFT adapter: ${EXP_SFT_ADAPTER}"
+nvidia-smi
+
+python3 scripts/run_extractive_expansion_8b.py \
+  --config configs/equivalent_expansion_qwen3_8b.json \
+  --model-name "${EXP_SFT_ADAPTER}" \
+  --output-parent outputs/model_comparison \
+  --run-name "qwen3-8b-expansion-sft-equivalent-dev160-${PBS_JOBID}"
