@@ -254,6 +254,12 @@ def main() -> None:
         for row in base_rows
     }
 
+    def source_label(row: dict[str, Any]) -> int:
+        identity = (row["question_id"], key(row["answer"]))
+        if identity in normalized_matches:
+            return int(normalized_matches[identity])
+        return int(base_labels[identity])
+
     positive_by_question = {
         qid for qid in examples if any(row["question_id"] == qid and row["label"] for row in merged_rows)
     }
@@ -295,10 +301,7 @@ def main() -> None:
     write_jsonl(output / "new_source_labeled.jsonl", [
         {
             **row,
-            "label": int(normalized_matches.get(
-                (row["question_id"], key(row["answer"])),
-                base_labels[(row["question_id"], key(row["answer"]))],
-            )),
+            "label": source_label(row),
         }
         for row in added_rows
     ])
