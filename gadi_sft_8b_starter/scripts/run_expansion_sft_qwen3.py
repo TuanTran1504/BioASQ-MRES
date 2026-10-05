@@ -209,11 +209,6 @@ def token_preflight(
             {"question_id": qid, "tokens": length} for length, qid in overflow[:20]
         ],
     }
-    if overflow:
-        raise ValueError(
-            f"{label}: {len(overflow)} examples exceed max_seq_length={max_seq_length}; "
-            "refusing to truncate evidence or targets"
-        )
     return summary, {qid: length for length, qid in lengths}
 
 
@@ -327,6 +322,33 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
             label="validation",
         )
         preflight = {"train": train_preflight, "validation": eval_preflight}
+        overflowing = {
+            label: summary
+            for label, summary in preflight.items()
+            if summary["overflow_count"]
+        }
+        if overflowing:
+            status.update(
+                {
+                    "status": "failed_preflight",
+                    "failed_at": utc_now(),
+                    "token_preflight": preflight,
+                    "error": (
+                        "ValueError: examples exceed "
+                        f"max_seq_length={training_args.max_seq_length}; "
+                        "refusing to truncate evidence or targets"
+                    ),
+                }
+            )
+            write_json(status_path, status)
+            details = ", ".join(
+                f"{label}={summary['overflow_count']}"
+                for label, summary in overflowing.items()
+            )
+            raise ValueError(
+                f"{details} examples exceed max_seq_length={training_args.max_seq_length}; "
+                "refusing to truncate evidence or targets"
+            )
         # A smoke test should exercise the highest-memory examples rather than
         # an arbitrary prefix of the data.
         selected_train = sorted(
