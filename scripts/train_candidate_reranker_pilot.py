@@ -122,9 +122,25 @@ def conservative_surface_variants(answer: str) -> list[tuple[str, str]]:
     return variants
 
 
-def load_source_rows() -> list[dict[str, Any]]:
+def parse_extra_sources(values: list[str] | None) -> dict[str, tuple[Path, None]]:
+    sources: dict[str, tuple[Path, None]] = {}
+    for value in values or []:
+        if "=" not in value:
+            raise ValueError("--extra-source must use NAME=PATH")
+        name, raw_path = value.split("=", 1)
+        name = clean(name)
+        if not name or not re.fullmatch(r"[A-Za-z0-9_]+", name):
+            raise ValueError(f"Invalid extra source name: {name!r}")
+        path = Path(raw_path).expanduser()
+        if not path.is_absolute():
+            path = ROOT / path
+        sources[name] = (path, None)
+    return sources
+
+
+def load_source_rows(sources: dict[str, tuple[Path, str | None]]) -> list[dict[str, Any]]:
     rows = []
-    for source, (path, arm) in DEFAULT_SOURCES.items():
+    for source, (path, arm) in sources.items():
         if not path.is_file():
             raise FileNotFoundError(f"Missing candidate source {source}: {path}")
         for row in read_jsonl(path):
@@ -328,11 +344,22 @@ def main() -> None:
     parser.add_argument("--examples", type=Path, default=DEFAULT_EXAMPLES)
     parser.add_argument("--output-root", type=Path, default=ROOT / "Artifacts/reranker_pilot")
     parser.add_argument("--folds", type=int, default=5)
+    parser.add_argument(
+        "--extra-source",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="Add another candidate source JSONL. The path may be absolute or repo-relative.",
+    )
     args = parser.parse_args()
+
+    sources = {**DEFAULT_SOURCES, **parse_extra_sources(args.extra_source)}
+    global SOURCE_ORDER
+    SOURCE_ORDER = list(sources)
 
     examples_list = read_jsonl(args.examples)
     examples = {row["question_id"]: row for row in examples_list}
-    rows = merge_candidate_pool(load_source_rows())
+    rows = merge_candidate_pool(load_source_rows(sources))
     if set(examples) != {row["question_id"] for row in rows}:
         raise ValueError("Candidate pool and example question IDs do not match")
 
@@ -411,7 +438,7 @@ def main() -> None:
         "positive_candidate_count": int(labels.sum()),
         "questions_with_positive_candidate": len({row["question_id"] for row in rows if row["label"]}),
         "mean_candidates_per_question": len(rows) / len(examples),
-        "sources": {name: str(path) for name, (path, _) in DEFAULT_SOURCES.items()},
+        "sources": {name: str(path) for name, (path, _) in sources.items()},
         "format_variants": True,
         "folds": fold_summaries,
         "metrics": metrics,
