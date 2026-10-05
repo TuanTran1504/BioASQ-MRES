@@ -167,6 +167,10 @@ def add_source_to_pool(
     added_rows: list[dict[str, Any]],
     matches: dict[tuple[str, str], bool],
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    normalized_matches = {
+        (str(question_id), key(answer)): bool(value)
+        for (question_id, answer), value in matches.items()
+    }
     merged: dict[tuple[str, str], dict[str, Any]] = {}
     for row in base_rows:
         identity = (row["question_id"], key(row["answer"]))
@@ -181,7 +185,9 @@ def add_source_to_pool(
             merge_pool_metadata(merged[identity], row)
             stats["merged_existing_candidates"] += 1
             continue
-        row["label"] = int(matches[identity])
+        if identity not in normalized_matches:
+            raise KeyError(f"Official scorer returned no label for {identity}")
+        row["label"] = int(normalized_matches[identity])
         merged[identity] = row
         stats["new_unique_candidates"] += 1
         stats["new_positive_candidates"] += int(row["label"])
@@ -251,8 +257,14 @@ def main() -> None:
     positive_by_question = {
         qid for qid in examples if any(row["question_id"] == qid and row["label"] for row in merged_rows)
     }
+    normalized_matches = {
+        (str(question_id), key(answer)): bool(value)
+        for (question_id, answer), value in matches.items()
+    }
     new_positive_questions = {
-        row["question_id"] for row in rows_to_label if matches[(row["question_id"], row["answer"])]
+        row["question_id"]
+        for row in rows_to_label
+        if normalized_matches[(row["question_id"], key(row["answer"]))]
     }
     summary = {
         "status": "complete",
@@ -269,7 +281,7 @@ def main() -> None:
         "source_rows_before_deduplication": len(raw_added),
         "source_unique_candidates": len(added_rows),
         "source_new_candidates_to_score": len(rows_to_label),
-        "new_positive_candidates": int(sum(matches.values())),
+        "new_positive_candidates": int(sum(normalized_matches.values())),
         "new_positive_questions": len(new_positive_questions),
         "new_positive_question_ids": sorted(new_positive_questions),
         "merged_candidate_count": len(merged_rows),
@@ -283,8 +295,8 @@ def main() -> None:
     write_jsonl(output / "new_source_labeled.jsonl", [
         {
             **row,
-            "label": int(matches.get(
-                (row["question_id"], row["answer"]),
+            "label": int(normalized_matches.get(
+                (row["question_id"], key(row["answer"])),
                 base_labels[(row["question_id"], key(row["answer"]))],
             )),
         }
