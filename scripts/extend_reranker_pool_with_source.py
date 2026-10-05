@@ -128,6 +128,22 @@ def merge_metadata(target: dict[str, Any], row: dict[str, Any]) -> None:
     target["is_format_variant"] = target["is_format_variant"] and bool(row["is_format_variant"])
 
 
+def merge_pool_metadata(target: dict[str, Any], row: dict[str, Any]) -> None:
+    """Merge a deduplicated pool-shaped row into another pool-shaped row."""
+    for source, rank in row["source_ranks"].items():
+        if source not in target["sources"]:
+            target["sources"].append(source)
+        old_rank = target["source_ranks"].get(source)
+        target["source_ranks"][source] = min(int(rank), int(old_rank or rank))
+    for relation in row.get("relation_types", []):
+        if relation not in target["relation_types"]:
+            target["relation_types"].append(relation)
+    for operation in row.get("surface_operations", []):
+        if operation not in target["surface_operations"]:
+            target["surface_operations"].append(operation)
+    target["is_format_variant"] = target["is_format_variant"] and bool(row["is_format_variant"])
+
+
 def deduplicate_source_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     merged: dict[tuple[str, str], dict[str, Any]] = {}
     for row in rows:
@@ -162,7 +178,7 @@ def add_source_to_pool(
     for row in added_rows:
         identity = (row["question_id"], key(row["answer"]))
         if identity in merged:
-            merge_metadata(merged[identity], row)
+            merge_pool_metadata(merged[identity], row)
             stats["merged_existing_candidates"] += 1
             continue
         row["label"] = int(matches[identity])
