@@ -1,0 +1,93 @@
+{
+  "description": "Portable Gadi equivalent-expansion generations. BioASQ question text, snippets, gold answers, model weights and checkpoints are excluded.",
+  "runs": {
+    "gemma3_27b_base": {
+      "examples_file_distributed": false,
+      "export_sha256": {
+        "candidates.jsonl": "d6b47765158d4fea73cc12ad40f5dbd8e319843a9017548e97c9dcb3da19a2c7",
+        "generations.jsonl": "efc569b99792b3d4ce8ed78490de4c9a677d669b687a62d343d61a2117d1d59a",
+        "invalid_candidates.jsonl": "74f1d34a84e9c12802b03b2e7a38248c95b14b0afe89c65214150091acd82c95",
+        "status.json": "a7879c831601fc7cc2fd69d6f07bfa8a0b8cab9f6b2a430716e6723f57870f21"
+      },
+      "generation_rows": 160,
+      "question_text_removed": true,
+      "source_run_id": "20261002-000810-gemma3-27b-equivalent-dev160-180316747-gadi-pbs",
+      "source_sha256": {
+        "candidates.jsonl": "d6b47765158d4fea73cc12ad40f5dbd8e319843a9017548e97c9dcb3da19a2c7",
+        "generations.jsonl": "9a5bc668286bd215d7f50c4797875aba4b658421a752329d130c5dd93187005d",
+        "invalid_candidates.jsonl": "74f1d34a84e9c12802b03b2e7a38248c95b14b0afe89c65214150091acd82c95",
+        "status.json": "a7879c831601fc7cc2fd69d6f07bfa8a0b8cab9f6b2a430716e6723f57870f21"
+      },
+      "status": {
+        "accepted_candidates": 605,
+        "completed_questions": 160,
+        "corrected_citations": 0,
+        "expected_questions": 160,
+        "invalid_candidates": 24,
+        "parse_failures": 0,
+        "recovered_responses": 0,
+        "schema_compliant_responses": 142,
+        "status": "complete"
+      }
+    },
+    "qwen3_8b_base": {
+      "examples_file_distributed": false,
+      "export_sha256": {
+        "candidates.jsonl": "057dc270c538fe314dd5a588fefa6256fba4720986c2c00cd39bb881491bbd1d",
+        "generations.jsonl": "df776eb9916bd4556797a8a8e7ca23a607ebef35ed2ca2c71f80b65881a4e7ce",
+        "invalid_candidates.jsonl": "f1025ca3becfdc26ad2dde7a31461871d7c07387fa38d8e6fe897394c715fc87",
+        "status.json": "9f47becbe42d236443a9b4c29471a7c0dd6822db423860b47a76560bf3ed0aaf"
+      },
+      "generation_rows": 160,
+      "question_text_removed": true,
+      "source_run_id": "20261001-131348-qwen3-8b-equivalent-dev160-180287465-gadi-pbs",
+      "source_sha256": {
+        "candidates.jsonl": "057dc270c538fe314dd5a588fefa6256fba4720986c2c00cd39bb881491bbd1d",
+        "generations.jsonl": "0cf8d29f9a268da6df3d9a2cc59489480f6be244f4b1e67d95dea07db1cfeab6",
+        "invalid_candidates.jsonl": "f1025ca3becfdc26ad2dde7a31461871d7c07387fa38d8e6fe897394c715fc87",
+        "status.json": "9f47becbe42d236443a9b4c29471a7c0dd6822db423860b47a76560bf3ed0aaf"
+      },
+      "status": {
+        "accepted_candidates": 1225,
+        "completed_questions": 160,
+        "corrected_citations": 0,
+        "expected_questions": 160,
+        "invalid_candidates": 258,
+        "parse_failures": 0,
+        "recovered_responses": 2,
+        "schema_compliant_responses": 153,
+        "status": "complete"
+      }
+    },
+    "qwen3_8b_expansion_sft": {
+      "examples_file_distributed": false,
+      "export_sha256": {
+        "candidates.jsonl": "dba4f8f741bf83c3e510836dbfcadd978d09e9beaf4675ecf5b62fad4e36b71f",
+        "generations.jsonl": "04b5f57352d8c9b1eb16c6429f6d1a4f567f11f5e973e3a812e04268c058150c",
+        "invalid_candidates.jsonl": "71394534213ae4abf6753da2e2a7215645d55f135601f12239b0fc808cf31ee8",
+        "status.json": "7a9d26c5618362d3782060aad7fcab000fc4283d8221fef00be214dc10e58db2"
+      },
+      "generation_rows": 160,
+      "question_text_removed": true,
+      "source_run_id": "20261005-094031-qwen3-8b-expansion-sft-equivalent-dev160-180530756-gadi-pbs",
+      "source_sha256": {
+        "candidates.jsonl": "dba4f8f741bf83c3e510836dbfcadd978d09e9beaf4675ecf5b62fad4e36b71f",
+        "generations.jsonl": "3cb08e8aec60097a9dce14f398144204ff02a6f49ac864bf8077fbf6e2a0fbe5",
+        "invalid_candidates.jsonl": "71394534213ae4abf6753da2e2a7215645d55f135601f12239b0fc808cf31ee8",
+        "status.json": "7a9d26c5618362d3782060aad7fcab000fc4283d8221fef00be214dc10e58db2"
+      },
+      "status": {
+        "accepted_candidates": 665,
+        "completed_questions": 160,
+        "corrected_citations": 0,
+        "expected_questions": 160,
+        "invalid_candidates": 78,
+        "parse_failures": 0,
+        "recovered_responses": 1,
+        "schema_compliant_responses": 159,
+        "status": "complete"
+      }
+    }
+  },
+  "schema_version": 1
+}

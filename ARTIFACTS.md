@@ -17,4 +17,9 @@ See [the results summary](results/README.md). The exporter
 `scripts/export_main_results.py` reads the original ignored local artifacts;
 regenerating the snapshot requires those artifacts to be present.
 
+Sanitized model-generation snapshots may also be versioned under
+`results/expansion_generations/`. These snapshots omit BioASQ question text,
+snippets, gold answers, prompts, model weights and checkpoints. Their source
+artifacts remain ignored under `Artifacts/`.
+
 For sharing trained weights, use a model registry such as Hugging Face Hub or a versioned object store and document the model URL and checksum in the repository. GitHub source control should contain configuration and metadata rather than multi-gigabyte weight files.

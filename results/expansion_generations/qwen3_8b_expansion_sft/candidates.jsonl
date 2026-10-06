@@ -1,0 +1,665 @@
+{"question_id": "511a3573df1ebcce7d000018", "position": 1, "answer": "15", "relation_type": "original", "raw_position": 1}
+{"question_id": "511a3573df1ebcce7d000018", "position": 2, "answer": "fifteen", "relation_type": "numerically_equivalent", "raw_position": 2}
+{"question_id": "511a3573df1ebcce7d000018", "position": 3, "answer": "fifteen genes", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "5139b31dbee46bd34c000004", "position": 1, "answer": "experimental autoimmune encephalomyelitis (EAE)", "relation_type": "original", "raw_position": 1}
+{"question_id": "5139b31dbee46bd34c000004", "position": 2, "answer": "EAE", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5139b31dbee46bd34c000004", "position": 3, "answer": "experimental allergic encephalomyelitis", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5139b31dbee46bd34c000004", "position": 4, "answer": "experimental autoimmune encephalomyelitis", "relation_type": "spelling_or_inflection", "raw_position": 4}
+{"question_id": "5139b31dbee46bd34c000004", "position": 5, "answer": "experimental autoimmune encephalomyelitis (EAE) model", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "513ce494bee46bd34c000009", "position": 1, "answer": "autosomal dominant polycystic kidney disease", "relation_type": "original", "raw_position": 1}
+{"question_id": "513ce494bee46bd34c000009", "position": 2, "answer": "ADPKD", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "513ce494bee46bd34c000009", "position": 3, "answer": "autosomal dominant polycystic kidney disease (ADPKD)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5147c8a6d24251bc05000027", "position": 1, "answer": "galactocerebrosidase", "relation_type": "original", "raw_position": 1}
+{"question_id": "5147c8a6d24251bc05000027", "position": 2, "answer": "galactosylceramide beta-galactosidase", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5147c8a6d24251bc05000027", "position": 3, "answer": "galactocerebroside beta-galactosidase", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5147c8a6d24251bc05000027", "position": 4, "answer": "galactosylceramide beta-galactosidase (GALC)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5147c8a6d24251bc05000027", "position": 5, "answer": "galactocerebroside beta-galactosidase (GALC)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "514a0a57d24251bc05000051", "position": 1, "answer": "Flumazenil", "relation_type": "original", "raw_position": 1}
+{"question_id": "514a0a57d24251bc05000051", "position": 2, "answer": "Flumazenil (Ro 15-1788)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "514a0a57d24251bc05000051", "position": 3, "answer": "Flumazenil (1,4-imidazobenzodiazepine)", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "51596a8ad24251bc0500009e", "position": 1, "answer": "centrosome", "relation_type": "original", "raw_position": 1}
+{"question_id": "51596a8ad24251bc0500009e", "position": 2, "answer": "centrosomal protein", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "51596a8ad24251bc0500009e", "position": 3, "answer": "centrosome component", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "51596a8ad24251bc0500009e", "position": 4, "answer": "centrosome-associated protein", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "51596a8ad24251bc0500009e", "position": 5, "answer": "centrosome structural component", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "51724fca8ed59a060a000013", "position": 1, "answer": "O(n2log n)", "relation_type": "original", "raw_position": 1}
+{"question_id": "51724fca8ed59a060a000013", "position": 2, "answer": "O(n² log n)", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "51724fca8ed59a060a000013", "position": 3, "answer": "O(n^2 log n)", "relation_type": "spelling_or_inflection", "raw_position": 3}
+{"question_id": "517901bc8ed59a060a00003b", "position": 1, "answer": "programmed death-1", "relation_type": "original", "raw_position": 1}
+{"question_id": "517901bc8ed59a060a00003b", "position": 2, "answer": "programmed cell death protein 1", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "517901bc8ed59a060a00003b", "position": 3, "answer": "PD-1", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "517901bc8ed59a060a00003b", "position": 4, "answer": "programmed death receptor 1", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "517901bc8ed59a060a00003b", "position": 5, "answer": "programmed death-1 receptor", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 1, "answer": "Lysosome-associated membrane protein type 2A", "relation_type": "original", "raw_position": 1}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 2, "answer": "LAMP-2A", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 3, "answer": "lysosomal membrane protein type 2A", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 4, "answer": "lysosome-associated membrane protein 2A", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 5, "answer": "lysosomal membrane protein type 2 isoform A", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "51bdd9c2047fa84d1d000002", "position": 6, "answer": "lysosome-associated membrane protein type 2 isoform A", "relation_type": "nomenclature_variant", "raw_position": 6}
+{"question_id": "52bf1f1303868f1b06000014", "position": 1, "answer": "antioxidant enzyme", "relation_type": "original", "raw_position": 1}
+{"question_id": "52bf1f1303868f1b06000014", "position": 2, "answer": "antioxidant peroxidase", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "52bf1f1303868f1b06000014", "position": 3, "answer": "thiol-dependent peroxidase", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "52bf1f1303868f1b06000014", "position": 4, "answer": "peroxide reductant", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "52bf1f1303868f1b06000014", "position": 5, "answer": "hydrogen peroxide reductase", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "52bf1f1303868f1b06000014", "position": 6, "answer": "thiol peroxidase", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "52bf1f1303868f1b06000014", "position": 7, "answer": "peroxide scavenging enzyme", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "52f21e8f2059c6d71c00000c", "position": 1, "answer": "BRCA1 dysfunction", "relation_type": "original", "raw_position": 1}
+{"question_id": "52f21e8f2059c6d71c00000c", "position": 2, "answer": "BRCA1 mutation", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "52f21e8f2059c6d71c00000c", "position": 3, "answer": "BRCA1 inactivation", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "52f21e8f2059c6d71c00000c", "position": 4, "answer": "BRCA1 deficiency", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "52f21e8f2059c6d71c00000c", "position": 5, "answer": "BRCA1 loss of function", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "53130a77e3eabad02100000f", "position": 1, "answer": "growth hormone deficiency", "relation_type": "original", "raw_position": 1}
+{"question_id": "53130a77e3eabad02100000f", "position": 2, "answer": "GH deficiency", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "53130a77e3eabad02100000f", "position": 3, "answer": "growth hormone insufficiency", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "53161545b166e2b806000002", "position": 1, "answer": "mismatch repair", "relation_type": "original", "raw_position": 1}
+{"question_id": "53161545b166e2b806000002", "position": 2, "answer": "MMR", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "53161545b166e2b806000002", "position": 3, "answer": "mismatch repair system", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "53161545b166e2b806000002", "position": 4, "answer": "mismatch repair pathway", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "53188480b166e2b806000018", "position": 1, "answer": "epidermal growth factor receptor", "relation_type": "original", "raw_position": 1}
+{"question_id": "53188480b166e2b806000018", "position": 2, "answer": "EGFR", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "53188480b166e2b806000018", "position": 3, "answer": "epidermal growth factor receptor (EGFR)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5321bc309b2d7acc7e00000d", "position": 1, "answer": "PI3K delta", "relation_type": "original", "raw_position": 1}
+{"question_id": "5321bc309b2d7acc7e00000d", "position": 2, "answer": "phosphoinositide-3 kinase delta", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5321bc309b2d7acc7e00000d", "position": 3, "answer": "PI3K-δ", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5321bc309b2d7acc7e00000d", "position": 4, "answer": "phosphatidylinositol 3-kinase delta", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5323640b9b2d7acc7e000014", "position": 1, "answer": "NOTCH3", "relation_type": "original", "raw_position": 1}
+{"question_id": "5323640b9b2d7acc7e000014", "position": 3, "answer": "NOTCH3 gene", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5323640b9b2d7acc7e000014", "position": 4, "answer": "Notch homolog 3", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "53261e79600967d132000003", "position": 1, "answer": "Inverse correlation", "relation_type": "original", "raw_position": 1}
+{"question_id": "53261e79600967d132000003", "position": 2, "answer": "Negative correlation", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "53261e79600967d132000003", "position": 3, "answer": "Inverse relationship", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "53261e79600967d132000003", "position": 4, "answer": "Negative association", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "53372ba3d6d3ac6a34000058", "position": 1, "answer": "H3K36 trimethylation", "relation_type": "original", "raw_position": 1}
+{"question_id": "53372ba3d6d3ac6a34000058", "position": 2, "answer": "H3K36 methylation", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "53372ba3d6d3ac6a34000058", "position": 3, "answer": "H3K36 trimethyl", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "53372ba3d6d3ac6a34000058", "position": 4, "answer": "H3K36 trimethylation (H3K36me3)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "53372ba3d6d3ac6a34000058", "position": 5, "answer": "H3K36 trimethylated lysine", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "533ea8fcc45e133714000010", "position": 1, "answer": "SECIS", "relation_type": "original", "raw_position": 1}
+{"question_id": "533ea8fcc45e133714000010", "position": 2, "answer": "selenocysteine insertion sequence", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "533ea8fcc45e133714000010", "position": 3, "answer": "selenocysteine insertion sequence element", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "533ea8fcc45e133714000010", "position": 4, "answer": "selenocysteine insertion sequence element (SECIS)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "533ea8fcc45e133714000010", "position": 5, "answer": "selenocysteine insertion sequence (SECIS) element", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "54d73e223706e89528000010", "position": 1, "answer": "5-aminolevulinic acid", "relation_type": "original", "raw_position": 1}
+{"question_id": "54d73e223706e89528000010", "position": 2, "answer": "5-aminolevulic acid", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "54ede95c94afd6150400000a", "position": 1, "answer": "autosomal recessive", "relation_type": "original", "raw_position": 1}
+{"question_id": "54ede95c94afd6150400000a", "position": 2, "answer": "autosomal recessive inheritance", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "54ede95c94afd6150400000a", "position": 3, "answer": "autosomal recessive transmission", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "54ede95c94afd6150400000a", "position": 4, "answer": "autosomal recessive mode", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "54ede95c94afd6150400000a", "position": 5, "answer": "autosomal recessive pattern", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "54ede95c94afd6150400000a", "position": 6, "answer": "autosomal recessive mode of inheritance", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "54ede95c94afd6150400000a", "position": 7, "answer": "autosomal recessive inheritance pattern", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "54ede95c94afd6150400000a", "position": 8, "answer": "autosomal recessive transmission pattern", "relation_type": "synonym", "raw_position": 8}
+{"question_id": "54f2210164850a5854000001", "position": 1, "answer": "four", "relation_type": "original", "raw_position": 1}
+{"question_id": "54f2210164850a5854000001", "position": 2, "answer": "4", "relation_type": "numerically_equivalent", "raw_position": 2}
+{"question_id": "54f2210164850a5854000001", "position": 3, "answer": "four disulfide bonds", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "54f2210164850a5854000001", "position": 4, "answer": "four disulfide bridges", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "54f2210164850a5854000001", "position": 5, "answer": "four disulfide linkages", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "54f35ad864850a5854000004", "position": 1, "answer": "Semagacestat", "relation_type": "original", "raw_position": 1}
+{"question_id": "54f35ad864850a5854000004", "position": 2, "answer": "Semagacestat (LY450139)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "54f35ad864850a5854000004", "position": 3, "answer": "Semagacestat (LY-450139)", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "54f608f85f206a0c06000007", "position": 1, "answer": "transcriptional corepressor", "relation_type": "original", "raw_position": 1}
+{"question_id": "54f608f85f206a0c06000007", "position": 2, "answer": "transcriptional co-repressor", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "54f608f85f206a0c06000007", "position": 3, "answer": "transcriptional corepressor protein", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "54f608f85f206a0c06000007", "position": 4, "answer": "transcriptional co-repressor protein", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "54f89e1a06d9727f76000001", "position": 1, "answer": "CaMKII", "relation_type": "original", "raw_position": 1}
+{"question_id": "54f89e1a06d9727f76000001", "position": 2, "answer": "Ca2+/calmodulin-dependent protein kinase II", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "54f89e1a06d9727f76000001", "position": 3, "answer": "CaM kinase II", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "54f89e1a06d9727f76000001", "position": 4, "answer": "CaMK-II", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "54f89e1a06d9727f76000001", "position": 5, "answer": "Ca2+/CaM-dependent protein kinase II", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "55000cc4e9bde69634000004", "position": 1, "answer": "Hirschsprung disease", "relation_type": "original", "raw_position": 1}
+{"question_id": "55000cc4e9bde69634000004", "position": 2, "answer": "Hirschsprung's disease", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "55000cc4e9bde69634000004", "position": 3, "answer": "HSCR", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "55000cc4e9bde69634000004", "position": 4, "answer": "aganglionic megacolon", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "55000cc4e9bde69634000004", "position": 5, "answer": "Hirschsprung's disease (HSCR)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5503133ae9bde6963400001d", "position": 1, "answer": "ELA2", "relation_type": "original", "raw_position": 1}
+{"question_id": "5503133ae9bde6963400001d", "position": 2, "answer": "ELANE", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5503133ae9bde6963400001d", "position": 3, "answer": "neutrophil elastase gene", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5503133ae9bde6963400001d", "position": 5, "answer": "ELA2 gene", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "55032efde9bde69634000035", "position": 1, "answer": "calcitonin gene-related peptide receptor", "relation_type": "original", "raw_position": 1}
+{"question_id": "55032efde9bde69634000035", "position": 2, "answer": "calcitonin gene-related peptide (CGRP) receptor", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "55032efde9bde69634000035", "position": 3, "answer": "calcitonin gene-related peptide receptor (CGRP-R)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "55032efde9bde69634000035", "position": 4, "answer": "calcitonin gene-related peptide receptor (CGRP-R) antagonist", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "55054f8af73303d458000002", "position": 1, "answer": "Collagen", "relation_type": "original", "raw_position": 1}
+{"question_id": "55054f8af73303d458000002", "position": 2, "answer": "bone collagen", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "55054f8af73303d458000002", "position": 3, "answer": "bone matrix collagen", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "55054f8af73303d458000002", "position": 4, "answer": "bone collagen protein", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5519113b622b19434500000f", "position": 1, "answer": "ZEB2", "relation_type": "original", "raw_position": 1}
+{"question_id": "5519113b622b19434500000f", "position": 2, "answer": "ZFHX1B", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5519113b622b19434500000f", "position": 3, "answer": "SIP-1", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5519113b622b19434500000f", "position": 5, "answer": "zfhz1b", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5523e7837b523f2123000006", "position": 1, "answer": "cell viability", "relation_type": "original", "raw_position": 1}
+{"question_id": "5523e7837b523f2123000006", "position": 2, "answer": "cell viability assay", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5523e7837b523f2123000006", "position": 3, "answer": "cell viability testing", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5523e7837b523f2123000006", "position": 4, "answer": "cell viability determination", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5523e7837b523f2123000006", "position": 5, "answer": "cell viability measurement", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5523e7837b523f2123000006", "position": 6, "answer": "cell viability assessment", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "5523e7837b523f2123000006", "position": 7, "answer": "cell viability analysis", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "5523e7837b523f2123000006", "position": 8, "answer": "cell viability evaluation", "relation_type": "synonym", "raw_position": 8}
+{"question_id": "5523e7837b523f2123000006", "position": 9, "answer": "cell viability examination", "relation_type": "synonym", "raw_position": 9}
+{"question_id": "5523e7837b523f2123000006", "position": 10, "answer": "cell viability detection", "relation_type": "synonym", "raw_position": 10}
+{"question_id": "554140ad182542114d000003", "position": 1, "answer": "mpMoRFsDB", "relation_type": "original", "raw_position": 1}
+{"question_id": "554140ad182542114d000003", "position": 2, "answer": "mpMoRFs Database", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "554140ad182542114d000003", "position": 3, "answer": "mpMoRFs Database of Molecular Recognition Features in Membrane Proteins", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "56b397a98525abca1e000003", "position": 1, "answer": "Lipid droplets are spherical cellular inclusion devoted to lipids storage.", "relation_type": "original", "raw_position": 1}
+{"question_id": "56b397a98525abca1e000003", "position": 2, "answer": "Lipid droplets are spherical cellular inclusions devoted to lipid storage.", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "56b76f496e3f8eaf4c000002", "position": 1, "answer": "Spt-Ada-Gcn5 Acetyltransferase", "relation_type": "original", "raw_position": 1}
+{"question_id": "56b76f496e3f8eaf4c000002", "position": 2, "answer": "Spt-Ada-Gcn5-acetyltransferase", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "56bdc79bef6e394741000001", "position": 1, "answer": "Keratoconus", "relation_type": "original", "raw_position": 1}
+{"question_id": "56bdc79bef6e394741000001", "position": 2, "answer": "Keratoconus management", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "56bdc79bef6e394741000001", "position": 3, "answer": "Keratoconus treatment", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "56bdc79bef6e394741000001", "position": 4, "answer": "Keratoconus management protocol", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "56bdc79bef6e394741000001", "position": 5, "answer": "Keratoconus treatment protocol", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "56c1f021ef6e394741000048", "position": 1, "answer": "arachnoid cyst", "relation_type": "original", "raw_position": 1}
+{"question_id": "56c1f021ef6e394741000048", "position": 2, "answer": "arachnoid cysts", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "56c1f021ef6e394741000048", "position": 3, "answer": "arachnoid granulation cyst", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "56c1f021ef6e394741000048", "position": 4, "answer": "arachnoid cysts (ACs)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "56c4d14ab04e159d0e000003", "position": 1, "answer": "PiggyBac", "relation_type": "original", "raw_position": 1}
+{"question_id": "56c4d14ab04e159d0e000003", "position": 2, "answer": "PB", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "56c4d14ab04e159d0e000003", "position": 3, "answer": "piggyBac transposon", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "56c4d14ab04e159d0e000003", "position": 4, "answer": "piggyBac transposase", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 1, "answer": "Motor neurons", "relation_type": "original", "raw_position": 1}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 2, "answer": "Motoneurons", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 3, "answer": "Motor nerve cells", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 4, "answer": "Spinal motor neurons", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 5, "answer": "CNS motor neurons", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 6, "answer": "Upper motor neurons", "relation_type": "nomenclature_variant", "raw_position": 6}
+{"question_id": "56c8274f5795f9a73e00000d", "position": 7, "answer": "Lower motor neurons", "relation_type": "nomenclature_variant", "raw_position": 7}
+{"question_id": "56cdf40d5795f9a73e00003d", "position": 1, "answer": "transcription factor EB", "relation_type": "original", "raw_position": 1}
+{"question_id": "56cdf40d5795f9a73e00003d", "position": 2, "answer": "TFEB", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "56cdf40d5795f9a73e00003d", "position": 3, "answer": "transcription factor EB (TFEB)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "56d04a533975bb303a000010", "position": 1, "answer": "a receptor tyrosine kinase inhibitor", "relation_type": "original", "raw_position": 1}
+{"question_id": "56d04a533975bb303a000010", "position": 2, "answer": "a multi-kinase inhibitor", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "56d04a533975bb303a000010", "position": 3, "answer": "a fibroblast growth factor receptor inhibitor", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "56d04a533975bb303a000010", "position": 4, "answer": "a vascular endothelial growth factor receptor inhibitor", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "56d04a533975bb303a000010", "position": 5, "answer": "a tyrosine kinase inhibitor", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "56d04a533975bb303a000010", "position": 6, "answer": "a receptor tyrosine kinase inhibitor (RTKI)", "relation_type": "abbreviation_expansion", "raw_position": 6}
+{"question_id": "56d04a533975bb303a000010", "position": 7, "answer": "a multi-tyrosine kinase inhibitor", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "56e857ae42442bac75000004", "position": 1, "answer": "Zinc", "relation_type": "original", "raw_position": 1}
+{"question_id": "56e857ae42442bac75000004", "position": 2, "answer": "Zn", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "56e857ae42442bac75000004", "position": 3, "answer": "Zinc ion", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "56e857ae42442bac75000004", "position": 4, "answer": "Zinc (Zn)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "57092332cf1c325851000018", "position": 1, "answer": "ATP-dependent chromatin remodeling", "relation_type": "original", "raw_position": 1}
+{"question_id": "57092332cf1c325851000018", "position": 2, "answer": "ATP-dependent chromatin remodelling", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "57092332cf1c325851000018", "position": 3, "answer": "ATP-dependent chromatin-remodelling", "relation_type": "spelling_or_inflection", "raw_position": 3}
+{"question_id": "57092332cf1c325851000018", "position": 4, "answer": "ATP-dependent chromatin remodeling activity", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "57092332cf1c325851000018", "position": 5, "answer": "ATP-dependent chromatin-remodeling activity", "relation_type": "spelling_or_inflection", "raw_position": 5}
+{"question_id": "5710a592cf1c32585100002a", "position": 1, "answer": "CO2", "relation_type": "original", "raw_position": 1}
+{"question_id": "5710a592cf1c32585100002a", "position": 2, "answer": "carbon dioxide", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5710a592cf1c32585100002a", "position": 3, "answer": "bicarbonate", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5710a592cf1c32585100002a", "position": 4, "answer": "CO2/bicarbonate", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "571ce13f7de986d80d000011", "position": 1, "answer": "epithelial cells", "relation_type": "original", "raw_position": 1}
+{"question_id": "571ce13f7de986d80d000011", "position": 2, "answer": "epithelium", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "571ce13f7de986d80d000011", "position": 3, "answer": "epithelial cells of the skin and gastrointestinal tract", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "571ce13f7de986d80d000011", "position": 4, "answer": "epithelial cells of the upper gastrointestinal tract", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "571ce13f7de986d80d000011", "position": 5, "answer": "epithelial cells of the epidermis and gastrointestinal tract", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "571e172bbb137a4b0c000002", "position": 1, "answer": "2014", "relation_type": "original", "raw_position": 1}
+{"question_id": "571e275dbb137a4b0c000005", "position": 1, "answer": "DPP-4 inhibitors", "relation_type": "original", "raw_position": 1}
+{"question_id": "571e275dbb137a4b0c000005", "position": 2, "answer": "dipeptidyl peptidase-4 inhibitors", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "571e275dbb137a4b0c000005", "position": 3, "answer": "DPP-4 inhibitor", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "571e275dbb137a4b0c000005", "position": 4, "answer": "dipeptidyl peptidase-4 inhibitor", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "571e275dbb137a4b0c000005", "position": 5, "answer": "DPP-4 inhibitors (dipeptidyl peptidase-4 inhibitors)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5880aef4c872c95565000001", "position": 1, "answer": "CD38", "relation_type": "original", "raw_position": 1}
+{"question_id": "5880aef4c872c95565000001", "position": 2, "answer": "cluster of differentiation 38", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5880aef4c872c95565000001", "position": 3, "answer": "CD38 antigen", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5880aef4c872c95565000001", "position": 4, "answer": "CD38 molecule", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5880aef4c872c95565000001", "position": 5, "answer": "CD38 protein", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5880b073c872c95565000003", "position": 1, "answer": "Factor Xa", "relation_type": "original", "raw_position": 1}
+{"question_id": "5880b073c872c95565000003", "position": 2, "answer": "FXa", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5880b073c872c95565000003", "position": 3, "answer": "Factor Xa (FXa)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5880b073c872c95565000003", "position": 4, "answer": "Factor Xa inhibitors", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5880b073c872c95565000003", "position": 5, "answer": "Factor Xa (FXa) inhibitors", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5880e417713cbdfd3d000001", "position": 1, "answer": "Ebola virus disease", "relation_type": "original", "raw_position": 1}
+{"question_id": "5880e417713cbdfd3d000001", "position": 2, "answer": "Ebola hemorrhagic fever", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5880e417713cbdfd3d000001", "position": 3, "answer": "Ebola virus infection", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5880e417713cbdfd3d000001", "position": 4, "answer": "Ebola virus disease (EVD)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5880e417713cbdfd3d000001", "position": 5, "answer": "Ebola virus disease (EBOV)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5881f627713cbdfd3d000005", "position": 1, "answer": "DeepCAGE transcriptomics", "relation_type": "original", "raw_position": 1}
+{"question_id": "5881f627713cbdfd3d000005", "position": 2, "answer": "DeepCAGE transcriptome sequencing", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5881f627713cbdfd3d000005", "position": 3, "answer": "DeepCAGE transcriptome analysis", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5881f627713cbdfd3d000005", "position": 4, "answer": "DeepCAGE transcriptome profiling", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5883a727e56acf5176000001", "position": 1, "answer": "R-spondin 1 and noggin facilitate expansion of resident stem cells from non-damaged gallbladders.", "relation_type": "original", "raw_position": 1}
+{"question_id": "588f2de394c1512c50000001", "position": 1, "answer": "chromDraw", "relation_type": "original", "raw_position": 1}
+{"question_id": "588f9950ed9bbee70d000002", "position": 1, "answer": "PLA2G6", "relation_type": "original", "raw_position": 1}
+{"question_id": "588f9950ed9bbee70d000002", "position": 2, "answer": "phospholipase A2 group VI", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "588f9950ed9bbee70d000002", "position": 3, "answer": "phospholipase A2 group VI gene", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "588f9950ed9bbee70d000002", "position": 4, "answer": "phospholipase A2 group VI (PLA2G6)", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5895f7e978275d0c4a000001", "position": 1, "answer": "Ackee", "relation_type": "original", "raw_position": 1}
+{"question_id": "5895f7e978275d0c4a000001", "position": 2, "answer": "Ackee fruit", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5895f7e978275d0c4a000001", "position": 3, "answer": "Ackee apple", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5895f7e978275d0c4a000001", "position": 4, "answer": "Ackee tree fruit", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "58a57f9460087bc10a00001f", "position": 1, "answer": "MITF", "relation_type": "original", "raw_position": 1}
+{"question_id": "58a57f9460087bc10a00001f", "position": 2, "answer": "microphthalmia-associated transcription factor", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "58a57f9460087bc10a00001f", "position": 3, "answer": "MITF gene", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "58a57f9460087bc10a00001f", "position": 4, "answer": "MITF (microphthalmia-associated transcription factor)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 1, "answer": "The sole E2-conjugating enzyme required for sumoylation", "relation_type": "original", "raw_position": 1}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 2, "answer": "The only E2-conjugating enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 3, "answer": "The sole SUMO-conjugating enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 4, "answer": "The unique E2-conjugating enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 5, "answer": "The only SUMO-conjugating enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 6, "answer": "The sole E2 enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 7, "answer": "The unique E2 enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "58a5b1fe60087bc10a000024", "position": 8, "answer": "The only E2 enzyme required for sumoylation", "relation_type": "synonym", "raw_position": 8}
+{"question_id": "58a872bd38c171fb5b000002", "position": 1, "answer": "SMIM1 gene", "relation_type": "original", "raw_position": 1}
+{"question_id": "58a872bd38c171fb5b000002", "position": 2, "answer": "SMIM1 gene deletion", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58a872bd38c171fb5b000002", "position": 3, "answer": "SMIM1 gene mutation", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58a872bd38c171fb5b000002", "position": 4, "answer": "SMIM1 gene defect", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58a872bd38c171fb5b000002", "position": 5, "answer": "SMIM1 gene deletion mutation", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58aa0c6f396a458e50000008", "position": 1, "answer": "Oxytocin", "relation_type": "original", "raw_position": 1}
+{"question_id": "58aa0c6f396a458e50000008", "position": 2, "answer": "OT", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "58aa0c6f396a458e50000008", "position": 3, "answer": "OXT", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "58aa0c6f396a458e50000008", "position": 4, "answer": "oxytocin (OXT)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "58aa0c6f396a458e50000008", "position": 5, "answer": "oxytocin (OT)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "58bca08702b8c6095300000a", "position": 1, "answer": "Dravet syndrome is a severe infantile-onset epileptic encephalopathy characterized by multiple types of seizures.", "relation_type": "original", "raw_position": 1}
+{"question_id": "58bca08702b8c6095300000a", "position": 2, "answer": "Dravet syndrome is a severe infantile-onset epileptic encephalopathy characterized by multiple seizure types.", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58bca08702b8c6095300000a", "position": 3, "answer": "Dravet syndrome is a severe infantile-onset epileptic encephalopathy marked by multiple seizure types.", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58bca08702b8c6095300000a", "position": 4, "answer": "Dravet syndrome is a severe infantile-onset epileptic encephalopathy with multiple seizure types.", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58bca08702b8c6095300000a", "position": 5, "answer": "Dravet syndrome is a severe infantile-onset epileptic encephalopathy characterized by polymorphic seizures.", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58bca2f302b8c6095300000c", "position": 1, "answer": "X", "relation_type": "original", "raw_position": 1}
+{"question_id": "58bca2f302b8c6095300000c", "position": 2, "answer": "X chromosome", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "58bca2f302b8c6095300000c", "position": 3, "answer": "X-chromosome", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "58bca2f302b8c6095300000c", "position": 4, "answer": "X chromosome (X)", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "58bca2f302b8c6095300000c", "position": 5, "answer": "X chromosome (X, 23)", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "58caf0be02b8c6095300002f", "position": 1, "answer": "Bacillus anthracis", "relation_type": "original", "raw_position": 1}
+{"question_id": "58caf0be02b8c6095300002f", "position": 2, "answer": "Bacillus anthracis (B. anthracis)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "58caf0be02b8c6095300002f", "position": 3, "answer": "Bacillus anthracis (Bacillus anthracis)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "58d900428acda3452900000c", "position": 1, "answer": "X-linked recessive", "relation_type": "original", "raw_position": 1}
+{"question_id": "58d900428acda3452900000c", "position": 2, "answer": "X-linked recessive inheritance", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58d900428acda3452900000c", "position": 3, "answer": "X-linked recessive disorder", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58d900428acda3452900000c", "position": 4, "answer": "X-linked recessive pattern", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58d900428acda3452900000c", "position": 5, "answer": "X-linked recessive mode", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 1, "answer": "Type I IFN signature", "relation_type": "original", "raw_position": 1}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 2, "answer": "Type I interferon signature", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 3, "answer": "Type I IFN gene signature", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 4, "answer": "Type I interferon gene signature", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 5, "answer": "Type I IFN pathway signature", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58e7902b3e8b6dc87c000007", "position": 6, "answer": "Type I interferon pathway signature", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "58ea7248eda5a57672000002", "position": 1, "answer": "Congenital insensitivity to pain", "relation_type": "original", "raw_position": 1}
+{"question_id": "58ea7248eda5a57672000002", "position": 2, "answer": "Congenital pain insensitivity", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58ea7248eda5a57672000002", "position": 3, "answer": "Congenital inability to feel pain", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58ea7248eda5a57672000002", "position": 4, "answer": "Congenital painlessness", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58ea7248eda5a57672000002", "position": 5, "answer": "Congenital absence of pain perception", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58f3c62970f9fc6f0f00000b", "position": 1, "answer": "Fingers", "relation_type": "original", "raw_position": 1}
+{"question_id": "58f3c62970f9fc6f0f00000b", "position": 2, "answer": "Digits", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "58f3c62970f9fc6f0f00000b", "position": 3, "answer": "Finger bones", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "58f3c62970f9fc6f0f00000b", "position": 4, "answer": "Phalanges of the fingers", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "58f3c62970f9fc6f0f00000b", "position": 5, "answer": "Finger phalanges", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "58f6295a70f9fc6f0f000019", "position": 1, "answer": "80.8", "relation_type": "original", "raw_position": 1}
+{"question_id": "58f6295a70f9fc6f0f000019", "position": 2, "answer": "80.8 times", "relation_type": "numerically_equivalent", "raw_position": 2}
+{"question_id": "58f6295a70f9fc6f0f000019", "position": 3, "answer": "80.8x", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "590c74d170f9fc6f0f00001e", "position": 1, "answer": "ECM22", "relation_type": "original", "raw_position": 1}
+{"question_id": "590c74d170f9fc6f0f00001e", "position": 3, "answer": "ECM22 gene", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "590c74d170f9fc6f0f00001e", "position": 4, "answer": "ECM22 protein", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5a67c497b750ff4455000012", "position": 1, "answer": "Genomiser", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a67c497b750ff4455000012", "position": 2, "answer": "Genomiser framework", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5a67c497b750ff4455000012", "position": 3, "answer": "Genomiser analysis framework", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5a6a02a3b750ff4455000021", "position": 1, "answer": "fibrinogen A alpha chain", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a6a02a3b750ff4455000021", "position": 2, "answer": "fibrinogen Aα-chain", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5a6a02a3b750ff4455000021", "position": 3, "answer": "fibrinogen A alpha-chain", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5a6a02a3b750ff4455000021", "position": 4, "answer": "fibrinogen A alpha chain (AFib)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5a6a02a3b750ff4455000021", "position": 5, "answer": "fibrinogen A alpha-chain gene", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5a6e2578b750ff445500003d", "position": 1, "answer": "diffloop", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a74a8a70384be9551000005", "position": 1, "answer": "siG12D-LODER", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a74a8a70384be9551000005", "position": 2, "answer": "siRNA against KRAS(G12D) delivered via LODER", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5a74a8a70384be9551000005", "position": 3, "answer": "siG12D-LODER™", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5a74a8a70384be9551000005", "position": 4, "answer": "siRNA targeting KRAS(G12D) with LODER delivery", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5a74e9ad0384be955100000a", "position": 1, "answer": "Selective estrogen receptor modulator", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a74e9ad0384be955100000a", "position": 2, "answer": "Selective estrogen receptor modulators", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5a74e9ad0384be955100000a", "position": 3, "answer": "Selective estrogen receptor modulator (SERM)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5a74e9ad0384be955100000a", "position": 4, "answer": "Selective estrogen receptor modulator (SERMs)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5a7610af83b0d9ea6600001a", "position": 1, "answer": "JAK3", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a7610af83b0d9ea6600001a", "position": 2, "answer": "Janus kinase 3", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5a7610af83b0d9ea6600001a", "position": 3, "answer": "Janus kinase-3", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5a7610af83b0d9ea6600001a", "position": 4, "answer": "JAK-3", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5a774fdcfaa1ab7d2e000008", "position": 1, "answer": "53BP1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a774fdcfaa1ab7d2e000008", "position": 2, "answer": "p53-binding protein 1", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5a774fdcfaa1ab7d2e000008", "position": 3, "answer": "p53-binding protein 1 (53BP1)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5a86e6fafaa1ab7d2e000036", "position": 1, "answer": "A/T-rich", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a86e6fafaa1ab7d2e000036", "position": 2, "answer": "adenine and thymine-rich", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5a86e6fafaa1ab7d2e000036", "position": 3, "answer": "AT-rich", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5a86e6fafaa1ab7d2e000036", "position": 4, "answer": "adenine-thymine-rich", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5a9d31711d1251d03b00001c", "position": 1, "answer": "100 nm", "relation_type": "original", "raw_position": 1}
+{"question_id": "5a9d31711d1251d03b00001c", "position": 2, "answer": "100 nanometers", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5a9d31711d1251d03b00001c", "position": 3, "answer": "100 nm diameter", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5a9d8a651d1251d03b00001f", "position": 1, "answer": "The BioArchive system is an automated cryopreservation and storage system used in the banking of umbilical cord blood (UCB) units.", "relation_type": "original", "raw_position": 1}
+{"question_id": "5ac37afc0340b9f058000002", "position": 1, "answer": "ancestral DNA", "relation_type": "original", "raw_position": 1}
+{"question_id": "5ac37afc0340b9f058000002", "position": 2, "answer": "ancestral DNA sequences", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5ac37afc0340b9f058000002", "position": 3, "answer": "ancestral DNA elements", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5be44ed3133db5eb78000016", "position": 1, "answer": "Maternal gastrointestinal tract", "relation_type": "original", "raw_position": 1}
+{"question_id": "5be44ed3133db5eb78000016", "position": 2, "answer": "Maternal gut", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5be44ed3133db5eb78000016", "position": 3, "answer": "Mother's gastrointestinal tract", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5be44ed3133db5eb78000016", "position": 4, "answer": "Maternal intestinal tract", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5be44ed3133db5eb78000016", "position": 5, "answer": "Mother's gut", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5be47fcb133db5eb7800001a", "position": 1, "answer": "Mucor racemosus", "relation_type": "original", "raw_position": 1}
+{"question_id": "5be47fcb133db5eb7800001a", "position": 2, "answer": "Mucor racemosus (M. racemosus)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5c307474133db5eb78000033", "position": 1, "answer": "Dax1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c307474133db5eb78000033", "position": 2, "answer": "Dax1 protein", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c5219f67e3cb0e231000006", "position": 1, "answer": "Support Vector Machine", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c5219f67e3cb0e231000006", "position": 2, "answer": "SVM", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5c5219f67e3cb0e231000006", "position": 3, "answer": "Support Vector Machines", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c5312097e3cb0e231000011", "position": 1, "answer": "Ohio", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c5312097e3cb0e231000011", "position": 2, "answer": "OH", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5c5312097e3cb0e231000011", "position": 3, "answer": "Ohio State", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c5312097e3cb0e231000011", "position": 4, "answer": "Ohio, USA", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5c536b857e3cb0e23100001c", "position": 1, "answer": "achalasia", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c536b857e3cb0e23100001c", "position": 2, "answer": "esophageal achalasia", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c536b857e3cb0e23100001c", "position": 3, "answer": "achalasia of the esophagus", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c580aff07647bbc4b00001a", "position": 1, "answer": "T-UCstem1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c580aff07647bbc4b00001a", "position": 2, "answer": "T-UCstem1 lncRNA", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c580aff07647bbc4b00001a", "position": 3, "answer": "T-UCstem1 long non-coding RNA", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c580aff07647bbc4b00001a", "position": 4, "answer": "T-UCstem1 transcribed ultraconserved element", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5c5f094c1a4c55d80b00000c", "position": 1, "answer": "Membrane-bound", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c5f094c1a4c55d80b00000c", "position": 2, "answer": "Membrane-bound protein", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5c5f094c1a4c55d80b00000c", "position": 3, "answer": "Membrane-bound Bouncer protein", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5c5f30c91a4c55d80b000025", "position": 1, "answer": "T helper type 17 cells", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c5f30c91a4c55d80b000025", "position": 2, "answer": "T helper 17 cells", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c5f30c91a4c55d80b000025", "position": 3, "answer": "TH17 cells", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c5f30c91a4c55d80b000025", "position": 4, "answer": "T helper type 17 (TH17) cells", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5c5f30c91a4c55d80b000025", "position": 5, "answer": "T helper 17 (TH17) cells", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5c61d278e842deac67000005", "position": 1, "answer": "amyotrophic lateral sclerosis", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c61d278e842deac67000005", "position": 2, "answer": "ALS", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5c61d278e842deac67000005", "position": 3, "answer": "amyotrophic lateral sclerosis (ALS)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5c674c287c78d6947100001a", "position": 1, "answer": "Congenital absence of the eyes", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c674c287c78d6947100001a", "position": 2, "answer": "Congenital absence of ocular tissue", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5c674c287c78d6947100001a", "position": 3, "answer": "Congenital absence of the eyeballs", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5c674c287c78d6947100001a", "position": 4, "answer": "Congenital absence of ocular globes", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5c674c287c78d6947100001a", "position": 5, "answer": "Congenital absence of the eyes and ocular tissue", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5c6bec987c78d69471000033", "position": 1, "answer": "Glioblastoma", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c6bec987c78d69471000033", "position": 2, "answer": "Glioblastoma multiforme", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c6bec987c78d69471000033", "position": 3, "answer": "Glioblastoma multiforme (GBM)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5c76d0417c78d694710000a8", "position": 1, "answer": "Mutations in the cystinosin lysosomal cystine transporter (CTNS) gene.", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c76d0417c78d694710000a8", "position": 2, "answer": "Mutations in the cystinosin gene (CTNS) encoding the lysosomal cystine transporter.", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c76d0417c78d694710000a8", "position": 3, "answer": "Defective cystinosin gene (CTNS) mutations causing lysosomal cystine transport defect.", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c9791d2ecadf2e73f000026", "position": 1, "answer": "Cat flea", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c9791d2ecadf2e73f000026", "position": 2, "answer": "Ctenocephalides felis", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5c9791d2ecadf2e73f000026", "position": 3, "answer": "Ctenocephalides felis felis", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5c9a6693ecadf2e73f000031", "position": 1, "answer": "a relict mitochondrion with a greatly reduced metabolic capability.", "relation_type": "original", "raw_position": 1}
+{"question_id": "5c9a6693ecadf2e73f000031", "position": 2, "answer": "a relict mitochondrion with greatly reduced metabolic capability", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "5c9a6693ecadf2e73f000031", "position": 3, "answer": "a relict mitochondrion with greatly reduced metabolic capabilities", "relation_type": "spelling_or_inflection", "raw_position": 3}
+{"question_id": "5c9a6693ecadf2e73f000031", "position": 4, "answer": "a relict mitochondrion with greatly reduced metabolic function", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5c9a6693ecadf2e73f000031", "position": 5, "answer": "a relict mitochondrion with greatly reduced metabolic activity", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5ca0bf00ecadf2e73f000045", "position": 1, "answer": "Eosinophilic asthma", "relation_type": "original", "raw_position": 1}
+{"question_id": "5cebeb82a49efeb44c000009", "position": 1, "answer": "Mutations in five genes (NIPBL, SMC1A, SMC3, RAD21, and HDAC8), all regulators or structural components of cohesin, have been identified.", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d35e7ddb3a638076300000e", "position": 1, "answer": "nucleus", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d35e7ddb3a638076300000e", "position": 2, "answer": "nuclear matrix", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5d35e7ddb3a638076300000e", "position": 3, "answer": "nuclear compartment", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5d35e7ddb3a638076300000e", "position": 4, "answer": "nucleus of the cell", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5d35e7ddb3a638076300000e", "position": 5, "answer": "nuclear region", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5d36a9507bc3fee31f000005", "position": 1, "answer": "T cells", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d36a9507bc3fee31f000005", "position": 2, "answer": "T lymphocytes", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5d36a9507bc3fee31f000005", "position": 3, "answer": "T-lymphocytes", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5d36a9507bc3fee31f000005", "position": 4, "answer": "T cells (lymphocytes)", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5d36a9507bc3fee31f000005", "position": 5, "answer": "T lymphocytes (T cells)", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5d3826427bc3fee31f00000f", "position": 1, "answer": "75%", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d3826427bc3fee31f00000f", "position": 2, "answer": "75 percent", "relation_type": "numerically_equivalent", "raw_position": 2}
+{"question_id": "5d3826427bc3fee31f00000f", "position": 3, "answer": "75.0%", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "5d3826427bc3fee31f00000f", "position": 4, "answer": "75 percent (75%)", "relation_type": "numerically_equivalent", "raw_position": 4}
+{"question_id": "5d3852d07bc3fee31f000014", "position": 1, "answer": "RNA polymerase III transcription initiation sites", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d3852d07bc3fee31f000014", "position": 2, "answer": "RNA polymerase III transcription initiation regions", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5d3852d07bc3fee31f000014", "position": 3, "answer": "RNA polymerase III transcription start sites", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5d38577b7bc3fee31f000017", "position": 1, "answer": "Maturation of nucleosomal and nonnucleosomal components of nascent chromatin: differential requirements for concurrent protein synthesis.", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d38577b7bc3fee31f000017", "position": 2, "answer": "Maturation of nucleosomal and nonnucleosomal components of nascent chromatin requires differential protein synthesis.", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5d38577b7bc3fee31f000017", "position": 3, "answer": "Maturation of nucleosomal and nonnucleosomal components of nascent chromatin: differential protein synthesis requirements.", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5d387aa8a1e159510500000f", "position": 1, "answer": "detect absent or reduced NADPH oxidase activity", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d387aa8a1e159510500000f", "position": 2, "answer": "detect absent or reduced NADPH oxidase activity in stimulated phagocytes", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5d387aa8a1e159510500000f", "position": 3, "answer": "detect absent or reduced NADPH oxidase activity in stimulated phagocytic cells", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5d387aa8a1e159510500000f", "position": 4, "answer": "detect absent or reduced NADPH oxidase activity in activated phagocytes", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5d388535a1e1595105000018", "position": 1, "answer": "20", "relation_type": "original", "raw_position": 1}
+{"question_id": "5d388535a1e1595105000018", "position": 2, "answer": "20 copies", "relation_type": "harmless_formatting", "raw_position": 2}
+{"question_id": "5d388535a1e1595105000018", "position": 3, "answer": "20 copies of TP53", "relation_type": "harmless_formatting", "raw_position": 3}
+{"question_id": "5e2e11a1fbd6abf43b000021", "position": 1, "answer": "G380R", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e2e11a1fbd6abf43b000021", "position": 2, "answer": "Gly380Arg", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5e2e11a1fbd6abf43b000021", "position": 3, "answer": "G380R (Glycine to Arginine)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5e319617fbd6abf43b000049", "position": 1, "answer": "factor Xa", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e319617fbd6abf43b000049", "position": 2, "answer": "coagulation factor Xa", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5e319617fbd6abf43b000049", "position": 3, "answer": "activated factor Xa", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5e319617fbd6abf43b000049", "position": 4, "answer": "factor Xa (recombinant)", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5e319617fbd6abf43b000049", "position": 5, "answer": "activated factor Xa (recombinant)", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5e31cceafbd6abf43b000052", "position": 1, "answer": "chromosome 19", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e31cceafbd6abf43b000052", "position": 2, "answer": "chr19", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5e31cceafbd6abf43b000052", "position": 3, "answer": "chromosome 19q13.2", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5e31cceafbd6abf43b000052", "position": 4, "answer": "chromosome 19, short arm", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5e355e20fbd6abf43b000065", "position": 1, "answer": "LMNB1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e355e20fbd6abf43b000065", "position": 2, "answer": "lamin B1", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5e355e20fbd6abf43b000065", "position": 3, "answer": "lamin B1 (LMNB1)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5e355e20fbd6abf43b000065", "position": 4, "answer": "lamin B1 gene", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5e355e20fbd6abf43b000065", "position": 5, "answer": "lamin B1 (LMNB1) gene", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5e3c6c9eb5b409ea53000022", "position": 1, "answer": "Helicobacter pylori", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e3c6c9eb5b409ea53000022", "position": 2, "answer": "H. pylori", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5e3c6c9eb5b409ea53000022", "position": 3, "answer": "Helicobacter pylori (H. pylori)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "5e3c6c9eb5b409ea53000022", "position": 4, "answer": "Helicobacter pylori (H pylori)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5e3c6c9eb5b409ea53000022", "position": 5, "answer": "Helicobacter pylori (Helicobacter pylori)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "5e42d1a748dab47f26000010", "position": 1, "answer": "PARP", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e42d1a748dab47f26000010", "position": 2, "answer": "poly (ADP-ribose) polymerase", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5e42d1a748dab47f26000010", "position": 3, "answer": "PARP-1", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5e42d1a748dab47f26000010", "position": 4, "answer": "poly ADP ribose polymerase", "relation_type": "spelling_or_inflection", "raw_position": 4}
+{"question_id": "5e49c2356d0a277941000010", "position": 1, "answer": "SNP2TFBS", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e49c2356d0a277941000010", "position": 2, "answer": "SNP2TFBS database", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5e49c2356d0a277941000010", "position": 3, "answer": "SNP2TFBS resource", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5e49c2356d0a277941000010", "position": 4, "answer": "SNP2TFBS system", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5e52a3416d0a277941000043", "position": 1, "answer": "For metabolite annotation in metabolomics", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e52a3416d0a277941000043", "position": 2, "answer": "For metabolite annotation in metabolomics by database searching", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5e52a3416d0a277941000043", "position": 3, "answer": "For metabolite annotation in metabolomics using database searching", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5e52a3416d0a277941000043", "position": 4, "answer": "For metabolite annotation in metabolomics by searching compound databases", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5e52a3416d0a277941000043", "position": 5, "answer": "For metabolite annotation in metabolomics using compound database searches", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5e52add36d0a277941000047", "position": 1, "answer": "easyGWAS", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e52add36d0a277941000047", "position": 2, "answer": "easy GWAS", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "5e52add36d0a277941000047", "position": 3, "answer": "easy GWAS platform", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5e52add36d0a277941000047", "position": 4, "answer": "easy GWAS system", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5e5b8170b761aafe09000010", "position": 1, "answer": "Reverse transcription polymerase chain reaction", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e5b8170b761aafe09000010", "position": 2, "answer": "RT-PCR", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5e5b8170b761aafe09000010", "position": 3, "answer": "real-time reverse transcription polymerase chain reaction", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5e5b8170b761aafe09000010", "position": 4, "answer": "rRT-PCR", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "5e5b8170b761aafe09000010", "position": 5, "answer": "reverse transcriptase polymerase chain reaction", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5e776443835f4e4777000008", "position": 1, "answer": "Astellas Pharma GmbH", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e776443835f4e4777000008", "position": 2, "answer": "Astellas Pharma Inc.", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5e776443835f4e4777000008", "position": 3, "answer": "Astellas Pharmaceutical Co., Ltd.", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5e776845835f4e477700000a", "position": 1, "answer": "Modified Vaccinia virus Ankara expressing Antigen 85A", "relation_type": "original", "raw_position": 1}
+{"question_id": "5e776845835f4e477700000a", "position": 2, "answer": "Modified Vaccinia Ankara virus expressing Antigen 85A", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5fdb1023a43ad31278000009", "position": 1, "answer": "PITX1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5fdb1023a43ad31278000009", "position": 2, "answer": "paired-like homeodomain transcription factor 1", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "5fdb1023a43ad31278000009", "position": 3, "answer": "PITX1 gene", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5fdb1023a43ad31278000009", "position": 4, "answer": "paired-like homeodomain transcription factor 1 gene", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 1, "answer": "Read summarization", "relation_type": "original", "raw_position": 1}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 2, "answer": "Read counting", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 3, "answer": "Read assignment", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 4, "answer": "Read quantification", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 5, "answer": "Read mapping", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "5fdb41c5a43ad3127800001e", "position": 6, "answer": "Read summarization program", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "5fe31312a43ad31278000042", "position": 1, "answer": "TAL1", "relation_type": "original", "raw_position": 1}
+{"question_id": "5fe31312a43ad31278000042", "position": 2, "answer": "TAL1/SCL", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "5fe31312a43ad31278000042", "position": 3, "answer": "TAL1 protein", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "5fe31312a43ad31278000042", "position": 4, "answer": "TAL1/SCL protein", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "5fe31312a43ad31278000042", "position": 5, "answer": "TAL1 oncogene", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "5fe31312a43ad31278000042", "position": 6, "answer": "TAL1/SCL oncogene", "relation_type": "nomenclature_variant", "raw_position": 6}
+{"question_id": "601c42ad1cb411341a00001b", "position": 1, "answer": "bronchiectasis", "relation_type": "original", "raw_position": 1}
+{"question_id": "601c42ad1cb411341a00001b", "position": 2, "answer": "bronchiectasis (a chronic lung disease)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "601c42ad1cb411341a00001b", "position": 3, "answer": "bronchiectasis (a chronic infection of the lungs)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "601c42ad1cb411341a00001b", "position": 4, "answer": "bronchiectasis (a chronic inflammatory lung disease)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "601db60e1cb411341a000049", "position": 1, "answer": "D2", "relation_type": "original", "raw_position": 1}
+{"question_id": "601db60e1cb411341a000049", "position": 2, "answer": "Chromosome 2", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "601db60e1cb411341a000049", "position": 3, "answer": "Chromosome 2 (Felis catus)", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "601db60e1cb411341a000049", "position": 4, "answer": "Chromosome 2 (Domestic cat)", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "601eaac81cb411341a000051", "position": 1, "answer": "median nerve", "relation_type": "original", "raw_position": 1}
+{"question_id": "601eaac81cb411341a000051", "position": 2, "answer": "median nerve (MN)", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "601eab7d1cb411341a000053", "position": 1, "answer": "Antidepressants", "relation_type": "original", "raw_position": 1}
+{"question_id": "601eab7d1cb411341a000053", "position": 2, "answer": "Antidepressant drugs", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "601eab7d1cb411341a000053", "position": 3, "answer": "Antidepressive drugs", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "601eab7d1cb411341a000053", "position": 4, "answer": "Antidepressant medications", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "601eab7d1cb411341a000053", "position": 5, "answer": "Antidepressant agents", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "601f08c11cb411341a00006c", "position": 1, "answer": "Anakinra", "relation_type": "original", "raw_position": 1}
+{"question_id": "601f08c11cb411341a00006c", "position": 2, "answer": "Kineret", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "601f08c11cb411341a00006c", "position": 3, "answer": "rHHHuIL-1Ra", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "601f08c11cb411341a00006c", "position": 4, "answer": "r-metHuIL-1ra", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "601f08c11cb411341a00006c", "position": 5, "answer": "recombinant human interleukin-1 receptor antagonist", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "602357ff1cb411341a00009a", "position": 1, "answer": "pembrolizumab", "relation_type": "original", "raw_position": 1}
+{"question_id": "602357ff1cb411341a00009a", "position": 2, "answer": "Keytruda", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "602357ff1cb411341a00009a", "position": 3, "answer": "pembrolizumab (Keytruda)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "6026ef9d1cb411341a0000d5", "position": 1, "answer": "February 2020", "relation_type": "original", "raw_position": 1}
+{"question_id": "6026ef9d1cb411341a0000d5", "position": 2, "answer": "2020-02", "relation_type": "harmless_formatting", "raw_position": 2}
+{"question_id": "6028183e1cb411341a0000f1", "position": 1, "answer": "putamen", "relation_type": "original", "raw_position": 1}
+{"question_id": "6028183e1cb411341a0000f1", "position": 2, "answer": "caudate nucleus", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "6028183e1cb411341a0000f1", "position": 3, "answer": "putamen nucleus", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "6028183e1cb411341a0000f1", "position": 4, "answer": "putamen body", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "60292d191cb411341a00010e", "position": 1, "answer": "Bladder Cancer", "relation_type": "original", "raw_position": 1}
+{"question_id": "60292d191cb411341a00010e", "position": 2, "answer": "Non-muscle-invasive bladder cancer", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "60292d191cb411341a00010e", "position": 3, "answer": "Superficial bladder cancer", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "60292d191cb411341a00010e", "position": 4, "answer": "Transitional cell carcinoma", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "60292d191cb411341a00010e", "position": 5, "answer": "Carcinoma in situ", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "60292d191cb411341a00010e", "position": 6, "answer": "High-grade non-muscle invasive bladder cancer", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "60292d191cb411341a00010e", "position": 7, "answer": "NMIBC", "relation_type": "abbreviation_expansion", "raw_position": 7}
+{"question_id": "60292d191cb411341a00010e", "position": 8, "answer": "TCC", "relation_type": "abbreviation_expansion", "raw_position": 8}
+{"question_id": "60292d191cb411341a00010e", "position": 9, "answer": "Superficial transitional cell carcinoma", "relation_type": "synonym", "raw_position": 9}
+{"question_id": "602a84ae1cb411341a000116", "position": 1, "answer": "long noncoding RNAs", "relation_type": "original", "raw_position": 1}
+{"question_id": "602a84ae1cb411341a000116", "position": 2, "answer": "long non-coding RNAs", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "602a84ae1cb411341a000116", "position": 3, "answer": "long noncoding RNA", "relation_type": "spelling_or_inflection", "raw_position": 3}
+{"question_id": "602a84ae1cb411341a000116", "position": 4, "answer": "long non-coding RNA", "relation_type": "spelling_or_inflection", "raw_position": 4}
+{"question_id": "603251f81cb411341a00013a", "position": 1, "answer": "c-Myc", "relation_type": "original", "raw_position": 1}
+{"question_id": "6048ff3e1cb411341a000160", "position": 1, "answer": "mast cells", "relation_type": "original", "raw_position": 1}
+{"question_id": "6048ff3e1cb411341a000160", "position": 2, "answer": "mast cell", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "6048ff3e1cb411341a000160", "position": 3, "answer": "MCs", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "6048ff3e1cb411341a000160", "position": 4, "answer": "mast-cell", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "6057c78994d57fd879000034", "position": 1, "answer": "KLF4", "relation_type": "original", "raw_position": 1}
+{"question_id": "6057c78994d57fd879000034", "position": 2, "answer": "Kruppel-like factor 4", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "6057c78994d57fd879000034", "position": 3, "answer": "KLF-4", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "6057c78994d57fd879000034", "position": 4, "answer": "Kruppel-like factor 4 (KLF4)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "61f86c03882a024a10000044", "position": 1, "answer": "Hereditary motor neuropathy", "relation_type": "original", "raw_position": 1}
+{"question_id": "61f86c03882a024a10000044", "position": 2, "answer": "Heredity motor neuropathy", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "61f86c03882a024a10000044", "position": 3, "answer": "Hereditary motor neuron disease", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "61f86c03882a024a10000044", "position": 4, "answer": "Hereditary motor neuropathy (HMAN)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "6206cfd5c9dfcb9c09000040", "position": 1, "answer": "Khellin", "relation_type": "original", "raw_position": 1}
+{"question_id": "6206cfd5c9dfcb9c09000040", "position": 2, "answer": "Ammi visnaga extract", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "6206cfd5c9dfcb9c09000040", "position": 3, "answer": "Ammi visnaga seed extract", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "6206cfd5c9dfcb9c09000040", "position": 4, "answer": "Khellin (Ammi visnaga extract)", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "620c28d03a8413c653000007", "position": 1, "answer": "AML", "relation_type": "original", "raw_position": 1}
+{"question_id": "620c28d03a8413c653000007", "position": 2, "answer": "acute myeloid leukaemia", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "620c28d03a8413c653000007", "position": 3, "answer": "acute myeloid leukemia", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "620c28d03a8413c653000007", "position": 4, "answer": "AML (acute myeloid leukaemia)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "621d02f33a8413c653000047", "position": 1, "answer": "mechanosensitive ion channel", "relation_type": "original", "raw_position": 1}
+{"question_id": "621d02f33a8413c653000047", "position": 2, "answer": "mechanosensitive cation channel", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "621d02f33a8413c653000047", "position": 3, "answer": "mechanosensitive Piezo1 channels", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "621d02f33a8413c653000047", "position": 4, "answer": "mechanosensitive Piezo1 channel", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "622b99f73a8413c653000093", "position": 1, "answer": "HER2", "relation_type": "original", "raw_position": 1}
+{"question_id": "622b99f73a8413c653000093", "position": 2, "answer": "human epidermal growth factor receptor 2", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "622b99f73a8413c653000093", "position": 3, "answer": "ErbB2", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "622b99f73a8413c653000093", "position": 4, "answer": "c-erbB-2", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "622b9d593a8413c653000095", "position": 1, "answer": "prostate", "relation_type": "original", "raw_position": 1}
+{"question_id": "622b9d593a8413c653000095", "position": 2, "answer": "prostate gland", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "622b9d593a8413c653000095", "position": 3, "answer": "prostate organ", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "622b9d593a8413c653000095", "position": 4, "answer": "prostate gland organ", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "622deabc3a8413c6530000a6", "position": 1, "answer": "DNA repair", "relation_type": "original", "raw_position": 1}
+{"question_id": "622deabc3a8413c6530000a6", "position": 2, "answer": "DNA-protein crosslink repair", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "622deabc3a8413c6530000a6", "position": 3, "answer": "DNA crosslink repair", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "622deabc3a8413c6530000a6", "position": 4, "answer": "DNA-protein crosslink proteolysis repair", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "622deabc3a8413c6530000a6", "position": 5, "answer": "DNA crosslink proteolysis repair", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "623c8330f0baec9a1b000003", "position": 1, "answer": "RANTES production is involved in the induction of maternal tolerance to fetal alloantigens.", "relation_type": "original", "raw_position": 1}
+{"question_id": "623c8330f0baec9a1b000003", "position": 2, "answer": "RANTES production is implicated in the induction of maternal tolerance to fetal alloantigens.", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "623c8330f0baec9a1b000003", "position": 3, "answer": "RANTES production is associated with the induction of maternal tolerance to fetal alloantigens.", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "626aa929e764a53204000039", "position": 1, "answer": "piRNAs and rRNAs showed a substantial decrease in RNA abundance that was sustained after IA rupture, whereas miRNAs were largely upregulated.", "relation_type": "original", "raw_position": 1}
+{"question_id": "626aa929e764a53204000039", "position": 2, "answer": "piRNAs and rRNAs showed a significant decrease in RNA abundance that was sustained after IA rupture, whereas miRNAs were largely upregulated.", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "626aa929e764a53204000039", "position": 3, "answer": "piRNAs and rRNAs showed a marked decrease in RNA abundance that was sustained after IA rupture, whereas miRNAs were largely upregulated.", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "626aa929e764a53204000039", "position": 4, "answer": "piRNAs and rRNAs showed a substantial reduction in RNA abundance that was sustained after IA rupture, whereas miRNAs were largely upregulated.", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "63eef60ef36125a42600000c", "position": 1, "answer": "rheumatoid arthritis", "relation_type": "original", "raw_position": 1}
+{"question_id": "63eef60ef36125a42600000c", "position": 2, "answer": "RA", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "63eef60ef36125a42600000c", "position": 3, "answer": "rheumatoid arthritis (RA)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "63f03c47f36125a42600001e", "position": 1, "answer": "SARS-CoV-2", "relation_type": "original", "raw_position": 1}
+{"question_id": "63f03c47f36125a42600001e", "position": 2, "answer": "Severe Acute Respiratory Syndrome Coronavirus 2", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "63f03c47f36125a42600001e", "position": 3, "answer": "SARS-CoV-2 virus", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "63f03c47f36125a42600001e", "position": 4, "answer": "SARS-CoV-2 coronavirus", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "63f9cd0b33942b094c000010", "position": 1, "answer": "metastasis", "relation_type": "original", "raw_position": 1}
+{"question_id": "63f9cd0b33942b094c000010", "position": 2, "answer": "metastatic spread", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "63f9cd0b33942b094c000010", "position": 3, "answer": "metastasis potential", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "63f9cd0b33942b094c000010", "position": 4, "answer": "metastasis formation", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "63f9cd0b33942b094c000010", "position": 5, "answer": "metastatic progression", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "640f8641201352f04a00002c", "position": 1, "answer": "eye", "relation_type": "original", "raw_position": 1}
+{"question_id": "640f8641201352f04a00002c", "position": 2, "answer": "ocular", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "640f8641201352f04a00002c", "position": 3, "answer": "eyeball", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "640f8641201352f04a00002c", "position": 4, "answer": "eye globe", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "640f8641201352f04a00002c", "position": 5, "answer": "ocular globe", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "64136fbf201352f04a00003d", "position": 1, "answer": "area under the receiver operating characteristic curve", "relation_type": "original", "raw_position": 1}
+{"question_id": "64136fbf201352f04a00003d", "position": 2, "answer": "area under the receiver operating characteristic (ROC) curve", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "64136fbf201352f04a00003d", "position": 3, "answer": "area under the receiver operating characteristic (ROC) curve (AUROC)", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "64136fbf201352f04a00003d", "position": 4, "answer": "area under the receiver operating characteristic (ROC) curve (AUC)", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "64136fbf201352f04a00003d", "position": 5, "answer": "area under the receiver operating characteristic (ROC) curve (AUC) (AUROC)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "64136fbf201352f04a00003d", "position": 6, "answer": "area under the receiver operating characteristic (ROC) curve (AUC) (AUROC) (AUC-ROC)", "relation_type": "abbreviation_expansion", "raw_position": 6}
+{"question_id": "64138ce8201352f04a000042", "position": 1, "answer": "Progressive renal failure", "relation_type": "original", "raw_position": 1}
+{"question_id": "64138ce8201352f04a000042", "position": 2, "answer": "Progressive renal disease", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "64138ce8201352f04a000042", "position": 3, "answer": "Progressive kidney failure", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "64138ce8201352f04a000042", "position": 4, "answer": "Progressive renal dysfunction", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "64138ce8201352f04a000042", "position": 5, "answer": "Progressive kidney disease", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "6415c599690f196b51000013", "position": 1, "answer": "Merck & Co., Inc.", "relation_type": "original", "raw_position": 1}
+{"question_id": "6415c599690f196b51000013", "position": 2, "answer": "Merck Sharp & Dohme", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "6415c599690f196b51000013", "position": 3, "answer": "Merck KGaA", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "6415c599690f196b51000013", "position": 4, "answer": "Merck & Co Inc.", "relation_type": "spelling_or_inflection", "raw_position": 4}
+{"question_id": "6426d131690f196b5100004e", "position": 1, "answer": "liver", "relation_type": "original", "raw_position": 1}
+{"question_id": "6426d131690f196b5100004e", "position": 2, "answer": "hepatic", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "6426d131690f196b5100004e", "position": 3, "answer": "hepatocytes", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "6426d131690f196b5100004e", "position": 4, "answer": "hepatocyte", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "6426d131690f196b5100004e", "position": 5, "answer": "liver cells", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 1, "answer": "1:3500-1:5000", "relation_type": "original", "raw_position": 1}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 2, "answer": "1 in 3500-5000 male births", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 3, "answer": "1 per 3500-5000 male births", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 4, "answer": "1/3500 to 1/5000 male births", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 5, "answer": "1 in 3,500 to 1 in 5,000 male births", "relation_type": "numerically_equivalent", "raw_position": 5}
+{"question_id": "643f9eeb57b1c7a31500003c", "position": 6, "answer": "1 per 3,500 to 1 per 5,000 male births", "relation_type": "numerically_equivalent", "raw_position": 6}
+{"question_id": "6440396957b1c7a31500004b", "position": 1, "answer": "Suprachoroidal", "relation_type": "original", "raw_position": 1}
+{"question_id": "6440396957b1c7a31500004b", "position": 2, "answer": "SCS", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "6440396957b1c7a31500004b", "position": 3, "answer": "suprachoroidal space", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "6440396957b1c7a31500004b", "position": 4, "answer": "suprachoroidal compartment", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "64403ab057b1c7a31500004d", "position": 1, "answer": "2", "relation_type": "original", "raw_position": 1}
+{"question_id": "64403ab057b1c7a31500004d", "position": 2, "answer": "two", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "64403ab057b1c7a31500004d", "position": 3, "answer": "2.0", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "644640de57b1c7a31500006b", "position": 1, "answer": "mutations in SMN1 gene", "relation_type": "original", "raw_position": 1}
+{"question_id": "644640de57b1c7a31500006b", "position": 2, "answer": "mutations in survival motor neuron 1 (SMN1) gene", "relation_type": "abbreviation_expansion", "raw_position": 2}
+{"question_id": "644640de57b1c7a31500006b", "position": 3, "answer": "mutations in the survival motor neuron 1 (SMN1) gene", "relation_type": "abbreviation_expansion", "raw_position": 3}
+{"question_id": "644640de57b1c7a31500006b", "position": 4, "answer": "mutations in the SMN1 gene", "relation_type": "abbreviation_expansion", "raw_position": 4}
+{"question_id": "644640de57b1c7a31500006b", "position": 5, "answer": "mutations in the survival motor neuron gene 1 (SMN1)", "relation_type": "abbreviation_expansion", "raw_position": 5}
+{"question_id": "644640de57b1c7a31500006b", "position": 6, "answer": "mutations in the survival motor neuron 1 gene (SMN1)", "relation_type": "abbreviation_expansion", "raw_position": 6}
+{"question_id": "644640de57b1c7a31500006b", "position": 7, "answer": "mutations in the SMN1 gene encoding survival motor neuron protein", "relation_type": "abbreviation_expansion", "raw_position": 7}
+{"question_id": "644640de57b1c7a31500006b", "position": 8, "answer": "mutations in the survival motor neuron (SMN1) gene", "relation_type": "abbreviation_expansion", "raw_position": 8}
+{"question_id": "64468e0d57b1c7a315000071", "position": 1, "answer": "1:80,000", "relation_type": "original", "raw_position": 1}
+{"question_id": "64468e0d57b1c7a315000071", "position": 2, "answer": "1 in 80,000", "relation_type": "numerically_equivalent", "raw_position": 2}
+{"question_id": "64468e0d57b1c7a315000071", "position": 3, "answer": "1:80000", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "64468e0d57b1c7a315000071", "position": 4, "answer": "1:80,000 individuals", "relation_type": "numerically_equivalent", "raw_position": 4}
+{"question_id": "644ec7fe57b1c7a315000082", "position": 1, "answer": "lac operon", "relation_type": "original", "raw_position": 1}
+{"question_id": "644ec7fe57b1c7a315000082", "position": 2, "answer": "lac operon system", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "644ec7fe57b1c7a315000082", "position": 3, "answer": "lactose operon", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "644ec7fe57b1c7a315000082", "position": 5, "answer": "lactose operon system", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "65cfaf7e1930410b13000016", "position": 1, "answer": "KRAS G12C", "relation_type": "original", "raw_position": 1}
+{"question_id": "65cfaf7e1930410b13000016", "position": 2, "answer": "KRAS G12C mutation", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "65cfaf7e1930410b13000016", "position": 3, "answer": "KRAS G12C oncogene", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "65cfaf7e1930410b13000016", "position": 4, "answer": "KRAS G12C variant", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "65cfaf7e1930410b13000016", "position": 5, "answer": "KRAS G12C allele", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "65cfaf7e1930410b13000016", "position": 7, "answer": "KRAS G12C oncogenic mutation", "relation_type": "synonym", "raw_position": 7}
+{"question_id": "65cfaf7e1930410b13000016", "position": 8, "answer": "KRAS G12C activating mutation", "relation_type": "synonym", "raw_position": 8}
+{"question_id": "65cfaf7e1930410b13000016", "position": 9, "answer": "KRAS G12C point mutation", "relation_type": "synonym", "raw_position": 9}
+{"question_id": "65f039fdc4010b4d78000002", "position": 1, "answer": "ticks", "relation_type": "original", "raw_position": 1}
+{"question_id": "65f039fdc4010b4d78000002", "position": 2, "answer": "tick", "relation_type": "spelling_or_inflection", "raw_position": 2}
+{"question_id": "65f039fdc4010b4d78000002", "position": 3, "answer": "Ixodes ticks", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "65f039fdc4010b4d78000002", "position": 4, "answer": "Dermacentor ticks", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "65f039fdc4010b4d78000002", "position": 5, "answer": "Amblyomma ticks", "relation_type": "nomenclature_variant", "raw_position": 5}
+{"question_id": "65f039fdc4010b4d78000002", "position": 6, "answer": "Boophilus ticks", "relation_type": "nomenclature_variant", "raw_position": 6}
+{"question_id": "65f039fdc4010b4d78000002", "position": 7, "answer": "Ornithodoros ticks", "relation_type": "nomenclature_variant", "raw_position": 7}
+{"question_id": "65f37997c4010b4d7800000b", "position": 1, "answer": "To assess the quality of evidence", "relation_type": "original", "raw_position": 1}
+{"question_id": "65f37997c4010b4d7800000b", "position": 2, "answer": "To evaluate the quality of evidence", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "65f37997c4010b4d7800000b", "position": 3, "answer": "To assess the quality of evidence in systematic reviews", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "65f37997c4010b4d7800000b", "position": 4, "answer": "To evaluate the quality of evidence in systematic reviews", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "66099907fdcbea915f000015", "position": 1, "answer": "24 months", "relation_type": "original", "raw_position": 1}
+{"question_id": "66099907fdcbea915f000015", "position": 2, "answer": "24 mo", "relation_type": "harmless_formatting", "raw_position": 2}
+{"question_id": "66099907fdcbea915f000015", "position": 3, "answer": "24 months (range 16-42)", "relation_type": "numerically_equivalent", "raw_position": 3}
+{"question_id": "66099907fdcbea915f000015", "position": 4, "answer": "24 months (range 16.1-33.9 months)", "relation_type": "numerically_equivalent", "raw_position": 4}
+{"question_id": "66099907fdcbea915f000015", "position": 5, "answer": "24 months (range 16-42 months)", "relation_type": "numerically_equivalent", "raw_position": 5}
+{"question_id": "66099907fdcbea915f000015", "position": 6, "answer": "24 months (range 16.1-33.9 mo)", "relation_type": "numerically_equivalent", "raw_position": 6}
+{"question_id": "66099a25fdcbea915f00001e", "position": 1, "answer": "FOLFOXIRI plus bevacizumab", "relation_type": "original", "raw_position": 1}
+{"question_id": "66099a25fdcbea915f00001e", "position": 2, "answer": "FOLFOXIRI plus bevacizumab chemotherapy", "relation_type": "synonym", "raw_position": 2}
+{"question_id": "66099a25fdcbea915f00001e", "position": 3, "answer": "FOLFOXIRI plus bevacizumab regimen", "relation_type": "synonym", "raw_position": 3}
+{"question_id": "66099a25fdcbea915f00001e", "position": 4, "answer": "FOLFOXIRI plus bevacizumab combination", "relation_type": "synonym", "raw_position": 4}
+{"question_id": "66099a25fdcbea915f00001e", "position": 5, "answer": "FOLFOXIRI plus bevacizumab therapy", "relation_type": "synonym", "raw_position": 5}
+{"question_id": "66099a25fdcbea915f00001e", "position": 6, "answer": "FOLFOXIRI plus bevacizumab treatment", "relation_type": "synonym", "raw_position": 6}
+{"question_id": "660c0071fdcbea915f00002b", "position": 1, "answer": "Ixodes", "relation_type": "original", "raw_position": 1}
+{"question_id": "660c0071fdcbea915f00002b", "position": 2, "answer": "Ixodes scapularis", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "660c0071fdcbea915f00002b", "position": 3, "answer": "Ixodes ricinus", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "660c0071fdcbea915f00002b", "position": 4, "answer": "Ixodes ticks", "relation_type": "nomenclature_variant", "raw_position": 4}
+{"question_id": "6630154c187cba990d000021", "position": 1, "answer": "chromosome 10", "relation_type": "original", "raw_position": 1}
+{"question_id": "6630154c187cba990d000021", "position": 2, "answer": "chromosome 10q", "relation_type": "nomenclature_variant", "raw_position": 2}
+{"question_id": "6630154c187cba990d000021", "position": 3, "answer": "chromosome 10p", "relation_type": "nomenclature_variant", "raw_position": 3}
+{"question_id": "6630154c187cba990d000021", "position": 4, "answer": "chromosome 10 (LOH#10)", "relation_type": "abbreviation_expansion", "raw_position": 4}

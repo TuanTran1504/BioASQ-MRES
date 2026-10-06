@@ -8,6 +8,11 @@ hashes. Regenerate it from a workspace containing the original local artifacts:
 python scripts/export_main_results.py
 ```
 
+Sanitized per-question model responses and parsed candidates from the Qwen3-8B
+base, Gemma-3-27B base and Qwen3-8B expansion-SFT Gadi runs are preserved in
+[expansion_generations](expansion_generations/README.md). They omit BioASQ
+question text, snippets and gold answers.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official

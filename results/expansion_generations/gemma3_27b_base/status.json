@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "expected_questions": 160,
+  "completed_questions": 160,
+  "parse_failures": 0,
+  "schema_compliant_responses": 142,
+  "recovered_responses": 0,
+  "accepted_candidates": 605,
+  "invalid_candidates": 24,
+  "corrected_citations": 0
+}

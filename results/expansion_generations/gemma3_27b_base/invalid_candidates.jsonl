@@ -1,0 +1,24 @@
+{"question_id": "51bdd9c2047fa84d1d000002", "answer": "lamp2a", "relation_type": "spelling_or_inflection", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "5323640b9b2d7acc7e000014", "answer": "Notch3 gene", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "54f35ad864850a5854000004", "answer": "semagacestat", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5880aef4c872c95565000001", "answer": "CD38", "relation_type": "synonym", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "5880b073c872c95565000003", "answer": "Factor Xa inhibitors", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5881f627713cbdfd3d000005", "answer": "DeepCAGE transcriptomics", "relation_type": "harmless_formatting", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5895f7e978275d0c4a000001", "answer": "Ackee fruit", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5a7610af83b0d9ea6600001a", "answer": "janus kinase 3", "relation_type": "spelling_or_inflection", "raw_position": 3, "reason": "duplicate_answer_surface"}
+{"question_id": "5a774fdcfaa1ab7d2e000008", "answer": "53BP1", "relation_type": "nomenclature_variant", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5a9d8a651d1251d03b00001f", "answer": "Bioarchive system", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "5c536b857e3cb0e23100001c", "answer": "Esophageal achalasia", "relation_type": "nomenclature_variant", "raw_position": 3, "reason": "duplicate_answer_surface"}
+{"question_id": "5c536b857e3cb0e23100001c", "answer": "Achalasia", "relation_type": "abbreviation_expansion", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "5c5f30c91a4c55d80b000025", "answer": "Th17 cells", "relation_type": "spelling_or_inflection", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "5e3c6c9eb5b409ea53000022", "answer": "Helicobacter pylori", "relation_type": "spelling_or_inflection", "raw_position": 3, "reason": "duplicate_answer_surface"}
+{"question_id": "5fdb1023a43ad31278000009", "answer": "Pitx1", "relation_type": "spelling_or_inflection", "raw_position": 3, "reason": "duplicate_answer_surface"}
+{"question_id": "5fe31312a43ad31278000042", "answer": "TAL1/SCL", "relation_type": "nomenclature_variant", "raw_position": 5, "reason": "duplicate_answer_surface"}
+{"question_id": "601c42ad1cb411341a00001b", "answer": "Bronchiectasis", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "601eaac81cb411341a000051", "answer": "median nerve", "relation_type": "nomenclature_variant", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "601f08c11cb411341a00006c", "answer": "anakinra", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "602357ff1cb411341a00009a", "answer": "Pembrolizumab plus chemotherapy", "relation_type": "harmless_formatting", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "6206cfd5c9dfcb9c09000040", "answer": "Khellin", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "621d02f33a8413c653000047", "answer": "Piezo1 transduces mechanical signals into biological signals by mediating Ca2+ influx.", "relation_type": "spelling_or_inflection", "raw_position": 2, "reason": "duplicate_answer_surface"}
+{"question_id": "621d02f33a8413c653000047", "answer": "Piezo1 mediates Ca2+ influx to transduce mechanical signals into biological signals.", "relation_type": "spelling_or_inflection", "raw_position": 4, "reason": "duplicate_answer_surface"}
+{"question_id": "65f039fdc4010b4d78000002", "answer": "ticks", "relation_type": "spelling_or_inflection", "raw_position": 6, "reason": "duplicate_answer_surface"}
