@@ -81,6 +81,7 @@ Artifacts/
 # Native build by-products and editor backups.
 *.o
 *~
+~$*
 
 # Third-party IDE/build by-products; keep source and distributable evaluator jars.
 third_party/Evaluation-Measures/flat/BioASQEvaluation/build/
