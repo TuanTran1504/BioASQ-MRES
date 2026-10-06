@@ -1,0 +1,799 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-06",
+  "factoid_dev_questions": 160,
+  "sft": [
+    {
+      "model": "Qwen2.5-0.5B",
+      "run_id": "20260927-143545-67f7a338",
+      "standalone_evaluation": {
+        "created_at": "2026-09-29T13:42:05+00:00",
+        "metrics": {
+          "question_count": 160,
+          "primary_metric": "mrr",
+          "average_primary_score": 0.40625,
+          "metrics": {
+            "strict_accuracy": 0.40625,
+            "lenient_accuracy": 0.40625,
+            "mrr": 0.40625
+          }
+        },
+        "semantic": {
+          "status": "complete",
+          "rubric_version": "bioasq-grounded-semantic-eval-v2-paired-semantic-relation",
+          "judge_model": "gpt-4.1-2025-04-14",
+          "question_count": 160,
+          "candidate_count": 160,
+          "semantic_accuracy": 0.74375,
+          "semantic_lenient_accuracy": 0.74375,
+          "semantic_mrr": 0.74375,
+          "grounded_semantic_accuracy": 0.7375,
+          "grounded_semantic_lenient_accuracy": 0.7375,
+          "grounded_semantic_mrr": 0.7375,
+          "uncertain_question_rate": 0.0,
+          "semantic_label_counts": {
+            "exact": 65,
+            "equivalent": 54,
+            "not_equivalent": 41
+          },
+          "evidence_label_counts": {
+            "supported": 150,
+            "contradicted": 7,
+            "insufficient": 3
+          },
+          "origin_counts": {
+            "deterministic_exact": 65,
+            "api": 95
+          },
+          "shared_budget": {
+            "new_judge_calls": 95,
+            "judge_retry_count": 0
+          }
+        },
+        "generation": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "aggregation_strategy": "union",
+          "aggregation_min_frequency": 2,
+          "do_sample": false,
+          "seed": 3407,
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "dtype": null,
+          "device_map": "auto",
+          "summary_reference_mode": "first",
+          "prompt_truncation": {
+            "prompt_truncated": false,
+            "generation_count": 160,
+            "truncated_generation_count": 0,
+            "max_prompt_token_count": 3629,
+            "max_effective_prompt_token_count": 3629,
+            "total_truncated_token_count": 0,
+            "max_truncated_token_count": 0,
+            "question_count": 160,
+            "truncated_question_count": 0
+          }
+        },
+        "evidence_settings": {
+          "max_resources": 15,
+          "max_resource_chars": 0,
+          "resource_selection": "first"
+        },
+        "prompt_id": "factoid-single-answer-extractive-v1",
+        "scoring_backend": "bioasq_java"
+      },
+      "training_checkpoint_selection": {
+        "step": 150,
+        "epoch": 3.4930300807043286,
+        "metric_value": 0.40625,
+        "question_count": 160,
+        "generation_protocol": {
+          "do_sample": false,
+          "max_new_tokens": 64,
+          "max_seq_length": 4096,
+          "num_generations": 1,
+          "use_cache": false
+        }
+      }
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "run_id": "20260927-143545-3fca1c3d",
+      "standalone_evaluation": {
+        "created_at": "2026-09-29T13:56:45+00:00",
+        "metrics": {
+          "question_count": 160,
+          "primary_metric": "mrr",
+          "average_primary_score": 0.44375,
+          "metrics": {
+            "strict_accuracy": 0.44375,
+            "lenient_accuracy": 0.44375,
+            "mrr": 0.44375
+          }
+        },
+        "semantic": {
+          "status": "complete",
+          "rubric_version": "bioasq-grounded-semantic-eval-v2-paired-semantic-relation",
+          "judge_model": "gpt-4.1-2025-04-14",
+          "question_count": 160,
+          "candidate_count": 160,
+          "semantic_accuracy": 0.8125,
+          "semantic_lenient_accuracy": 0.8125,
+          "semantic_mrr": 0.8125,
+          "grounded_semantic_accuracy": 0.80625,
+          "grounded_semantic_lenient_accuracy": 0.80625,
+          "grounded_semantic_mrr": 0.80625,
+          "uncertain_question_rate": 0.0,
+          "semantic_label_counts": {
+            "exact": 71,
+            "equivalent": 59,
+            "not_equivalent": 30
+          },
+          "evidence_label_counts": {
+            "supported": 153,
+            "contradicted": 6,
+            "insufficient": 1
+          },
+          "origin_counts": {
+            "deterministic_exact": 71,
+            "api": 67,
+            "cache": 22
+          },
+          "shared_budget": {
+            "new_judge_calls": 162,
+            "judge_retry_count": 0
+          }
+        },
+        "generation": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "aggregation_strategy": "union",
+          "aggregation_min_frequency": 2,
+          "do_sample": false,
+          "seed": 3407,
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "dtype": null,
+          "device_map": "auto",
+          "summary_reference_mode": "first",
+          "prompt_truncation": {
+            "prompt_truncated": false,
+            "generation_count": 160,
+            "truncated_generation_count": 0,
+            "max_prompt_token_count": 3629,
+            "max_effective_prompt_token_count": 3629,
+            "total_truncated_token_count": 0,
+            "max_truncated_token_count": 0,
+            "question_count": 160,
+            "truncated_question_count": 0
+          }
+        },
+        "evidence_settings": {
+          "max_resources": 15,
+          "max_resource_chars": 0,
+          "resource_selection": "first"
+        },
+        "prompt_id": "factoid-single-answer-extractive-v1",
+        "scoring_backend": "bioasq_java"
+      },
+      "training_checkpoint_selection": {
+        "step": 100,
+        "epoch": 2.3286867204695523,
+        "metric_value": 0.46875,
+        "question_count": 160,
+        "generation_protocol": {
+          "do_sample": false,
+          "max_new_tokens": 64,
+          "max_seq_length": 4096,
+          "num_generations": 1,
+          "use_cache": false
+        }
+      }
+    }
+  ],
+  "factoid_dpo": {
+    "model": "Qwen2.5-0.5B",
+    "run_id": "20260929-140224-fa5a3f25",
+    "status": "complete",
+    "best_dev_mrr": 0.41875,
+    "selected_step": 52,
+    "configuration": {
+      "seed": 3407,
+      "beta": 0.1,
+      "objective": "dpo",
+      "learning_rate": 5e-06,
+      "optimizer": "RMSprop",
+      "epochs": 8,
+      "batch_size": 1,
+      "gradient_accumulation": 8,
+      "max_length": 4096,
+      "selection_metric": "dev_mrr",
+      "stop_after_stage": "concept_learning"
+    },
+    "history": [
+      {
+        "epoch": 0,
+        "step": 0,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.4,
+        "dev_strict_accuracy": 0.4,
+        "dev_lenient_accuracy": 0.4,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 64,
+        "newly_correct_count": 0,
+        "lost_correct_count": 0,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      },
+      {
+        "epoch": 1,
+        "step": 26,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.4125,
+        "dev_strict_accuracy": 0.4125,
+        "dev_lenient_accuracy": 0.4125,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 64,
+        "newly_correct_count": 2,
+        "lost_correct_count": 0,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      },
+      {
+        "epoch": 2,
+        "step": 52,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.41875,
+        "dev_strict_accuracy": 0.41875,
+        "dev_lenient_accuracy": 0.41875,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 63,
+        "newly_correct_count": 4,
+        "lost_correct_count": 1,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      },
+      {
+        "epoch": 3,
+        "step": 78,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.40625,
+        "dev_strict_accuracy": 0.40625,
+        "dev_lenient_accuracy": 0.40625,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 61,
+        "newly_correct_count": 4,
+        "lost_correct_count": 3,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      },
+      {
+        "epoch": 4,
+        "step": 104,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.40625,
+        "dev_strict_accuracy": 0.40625,
+        "dev_lenient_accuracy": 0.40625,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 57,
+        "newly_correct_count": 8,
+        "lost_correct_count": 7,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      },
+      {
+        "epoch": 5,
+        "step": 130,
+        "dev_eval_question_count": 160,
+        "dev_mrr": 0.40625,
+        "dev_strict_accuracy": 0.40625,
+        "dev_lenient_accuracy": 0.40625,
+        "baseline_correct_count": 64,
+        "retained_correct_count": 57,
+        "newly_correct_count": 8,
+        "lost_correct_count": 7,
+        "generation_protocol": {
+          "max_seq_length": 4096,
+          "max_new_tokens": 64,
+          "num_generations": 1,
+          "do_sample": false,
+          "use_cache": false
+        },
+        "scoring_backend": "bioasq_java"
+      }
+    ],
+    "matched_baseline_mrr": 0.4,
+    "best_minus_matched_baseline_mrr": 0.01875
+  },
+  "factoid_dpo_3b": {
+    "model": "Qwen2.5-3B",
+    "run_id": "20260929-140224-46d6d62c",
+    "saved_status": "running",
+    "evaluation_available": false,
+    "note": "No saved evaluation history or completed summary was found at snapshot time; saved status is not live process status."
+  },
+  "coverage_pilots": {
+    "gpt41mini_equivalent_vs_sampling": {
+      "question_count": 160,
+      "methods": [
+        {
+          "method": "expansion",
+          "questions": 160,
+          "mean_candidates": 4.36875,
+          "mean_unique_candidates": 4.28125,
+          "requests": 160,
+          "new_requests": 79,
+          "new_request_attempts": 79,
+          "prompt_tokens": 190065,
+          "new_prompt_tokens": 87440,
+          "completion_tokens": 13655,
+          "new_completion_tokens": 6440,
+          "total_tokens": 203720,
+          "new_total_tokens": 93880,
+          "covered_at1": 68,
+          "coverage_at1": 0.425,
+          "covered_at5": 88,
+          "coverage_at5": 0.55,
+          "covered_at10": 88,
+          "coverage_at10": 0.55
+        },
+        {
+          "method": "sampling",
+          "questions": 160,
+          "mean_candidates": 10.0,
+          "mean_unique_candidates": 2.96875,
+          "requests": 1600,
+          "new_requests": 796,
+          "new_request_attempts": 796,
+          "prompt_tokens": 1387050,
+          "new_prompt_tokens": 623858,
+          "completion_tokens": 22249,
+          "new_completion_tokens": 11307,
+          "total_tokens": 1409299,
+          "new_total_tokens": 635165,
+          "covered_at1": 66,
+          "coverage_at1": 0.4125,
+          "covered_at5": 77,
+          "coverage_at5": 0.48125,
+          "covered_at10": 78,
+          "coverage_at10": 0.4875
+        }
+      ],
+      "paired_outcomes": {
+        "both": 72,
+        "neither": 66,
+        "expansion_only": 16,
+        "sampling_only": 6
+      },
+      "coverage_at10_difference_percentage_points": 6.250000000000005,
+      "scoring": "Any candidate accepted by official BioASQ Java matcher; offline pool coverage, not an official 10-answer submission"
+    },
+    "gpt41mini_extractive_v1_vs_sampling": {
+      "question_count": 160,
+      "methods": [
+        {
+          "method": "expansion",
+          "questions": 160,
+          "mean_candidates": 5.00625,
+          "mean_unique_candidates": 3.25625,
+          "requests": 160,
+          "new_requests": 160,
+          "new_request_attempts": 160,
+          "prompt_tokens": 207985,
+          "new_prompt_tokens": 207985,
+          "completion_tokens": 20707,
+          "new_completion_tokens": 20707,
+          "total_tokens": 228692,
+          "new_total_tokens": 228692,
+          "covered_at1": 58,
+          "coverage_at1": 0.3625,
+          "covered_at5": 70,
+          "coverage_at5": 0.4375,
+          "covered_at10": 72,
+          "coverage_at10": 0.45
+        },
+        {
+          "method": "sampling",
+          "questions": 160,
+          "mean_candidates": 10.0,
+          "mean_unique_candidates": 2.96875,
+          "requests": 1600,
+          "new_requests": 0,
+          "new_request_attempts": 0,
+          "prompt_tokens": 1387050,
+          "new_prompt_tokens": 0,
+          "completion_tokens": 22249,
+          "new_completion_tokens": 0,
+          "total_tokens": 1409299,
+          "new_total_tokens": 0,
+          "covered_at1": 66,
+          "coverage_at1": 0.4125,
+          "covered_at5": 77,
+          "coverage_at5": 0.48125,
+          "covered_at10": 78,
+          "coverage_at10": 0.4875
+        }
+      ],
+      "paired_outcomes": {
+        "sampling_only": 18,
+        "both": 60,
+        "neither": 70,
+        "expansion_only": 12
+      },
+      "coverage_at10_difference_percentage_points": -3.749999999999998,
+      "scoring": "Any candidate accepted by official BioASQ Java matcher; offline pool coverage, not an official 10-answer submission",
+      "extractive_validation": {
+        "rejected_candidate_count": 14,
+        "questions_with_rejections": 12,
+        "corrected_citation_count": 67
+      }
+    },
+    "gpt41mini_extractive_v2_vs_sampling": {
+      "question_count": 160,
+      "methods": [
+        {
+          "method": "expansion",
+          "questions": 160,
+          "mean_candidates": 4.1625,
+          "mean_unique_candidates": 3.18125,
+          "requests": 160,
+          "new_requests": 160,
+          "new_request_attempts": 160,
+          "prompt_tokens": 218705,
+          "new_prompt_tokens": 218705,
+          "completion_tokens": 17707,
+          "new_completion_tokens": 17707,
+          "total_tokens": 236412,
+          "new_total_tokens": 236412,
+          "covered_at1": 59,
+          "coverage_at1": 0.36875,
+          "covered_at5": 69,
+          "coverage_at5": 0.43125,
+          "covered_at10": 71,
+          "coverage_at10": 0.44375
+        },
+        {
+          "method": "sampling",
+          "questions": 160,
+          "mean_candidates": 10.0,
+          "mean_unique_candidates": 2.96875,
+          "requests": 1600,
+          "new_requests": 0,
+          "new_request_attempts": 0,
+          "prompt_tokens": 1387050,
+          "new_prompt_tokens": 0,
+          "completion_tokens": 22249,
+          "new_completion_tokens": 0,
+          "total_tokens": 1409299,
+          "new_total_tokens": 0,
+          "covered_at1": 66,
+          "coverage_at1": 0.4125,
+          "covered_at5": 77,
+          "coverage_at5": 0.48125,
+          "covered_at10": 78,
+          "coverage_at10": 0.4875
+        }
+      ],
+      "paired_outcomes": {
+        "sampling_only": 18,
+        "both": 60,
+        "neither": 71,
+        "expansion_only": 11
+      },
+      "coverage_at10_difference_percentage_points": -4.375000000000001,
+      "scoring": "Any candidate accepted by official BioASQ Java matcher; offline pool coverage, not an official 10-answer submission",
+      "extractive_validation": {
+        "rejected_candidate_count": 13,
+        "questions_with_rejections": 12,
+        "corrected_citation_count": 50
+      }
+    },
+    "llama31_8b_equivalent": {
+      "question_count": 160,
+      "parse_success_count": 160,
+      "parse_success_rate": 1.0,
+      "questions_with_truncated_snippets": 0,
+      "mean_candidates": 6.6625,
+      "mean_unique_candidates": 6.6625,
+      "extractive_candidate_rate": 0.5065666041275797,
+      "candidate_type_counts": {
+        "original": 152,
+        "synonym": 380,
+        "abbreviation_expansion": 85,
+        "spelling_or_inflection": 170,
+        "nomenclature_variant": 121,
+        "harmless_formatting": 90,
+        "numerically_equivalent": 68
+      },
+      "response_mode": "equivalent",
+      "model": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+      "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+      "covered_at1": 62,
+      "coverage_at1": 0.3875,
+      "covered_at5": 81,
+      "coverage_at5": 0.50625,
+      "covered_at10": 84,
+      "coverage_at10": 0.525
+    },
+    "qwen3_8b_equivalent": {
+      "question_count": 160,
+      "parse_success_count": 160,
+      "parse_success_rate": 1.0,
+      "questions_with_truncated_snippets": 0,
+      "mean_candidates": 7.65625,
+      "mean_unique_candidates": 7.65625,
+      "extractive_candidate_rate": 0.32816326530612244,
+      "candidate_type_counts": {
+        "original": 160,
+        "synonym": 397,
+        "numerically_equivalent": 77,
+        "nomenclature_variant": 212,
+        "abbreviation_expansion": 128,
+        "spelling_or_inflection": 118,
+        "harmless_formatting": 131,
+        "unrecognized": 2
+      },
+      "response_mode": "equivalent",
+      "model": "unsloth/Qwen3-8B-unsloth-bnb-4bit",
+      "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+      "covered_at1": 67,
+      "coverage_at1": 0.41875,
+      "covered_at5": 85,
+      "coverage_at5": 0.53125,
+      "covered_at10": 85,
+      "coverage_at10": 0.53125
+    }
+  },
+  "reranker_pilot": {
+    "status": "complete",
+    "method": "TF-IDF plus inference-available metadata logistic reranker",
+    "evaluation": "5-fold question-grouped cross-validation",
+    "warning": "The final_model is trained on all 160 development questions and has no independent evaluation score.",
+    "question_count": 160,
+    "candidate_count": 7362,
+    "positive_candidate_count": 132,
+    "questions_with_positive_candidate": 112,
+    "format_variants": true,
+    "folds": [
+      {
+        "fold": 0,
+        "train_questions": 127,
+        "test_questions": 33,
+        "train_candidates": 5839,
+        "test_candidates": 1523,
+        "train_positives": 105,
+        "test_positives": 27
+      },
+      {
+        "fold": 1,
+        "train_questions": 129,
+        "test_questions": 31,
+        "train_candidates": 6100,
+        "test_candidates": 1262,
+        "train_positives": 101,
+        "test_positives": 31
+      },
+      {
+        "fold": 2,
+        "train_questions": 128,
+        "test_questions": 32,
+        "train_candidates": 5820,
+        "test_candidates": 1542,
+        "train_positives": 105,
+        "test_positives": 27
+      },
+      {
+        "fold": 3,
+        "train_questions": 128,
+        "test_questions": 32,
+        "train_candidates": 5805,
+        "test_candidates": 1557,
+        "train_positives": 106,
+        "test_positives": 26
+      },
+      {
+        "fold": 4,
+        "train_questions": 128,
+        "test_questions": 32,
+        "train_candidates": 5884,
+        "test_candidates": 1478,
+        "train_positives": 111,
+        "test_positives": 21
+      }
+    ],
+    "metrics": {
+      "cross_validated_reranker": {
+        "question_count": 160,
+        "covered_at1": 74,
+        "coverage_at1": 0.4625,
+        "covered_at5": 98,
+        "coverage_at5": 0.6125,
+        "covered_at10": 105,
+        "coverage_at10": 0.65625,
+        "mrr_at5": 0.5275000000000001,
+        "oracle_covered": 112,
+        "oracle_coverage": 0.7
+      },
+      "fixed_source_order": {
+        "question_count": 160,
+        "covered_at1": 68,
+        "coverage_at1": 0.425,
+        "covered_at5": 93,
+        "coverage_at5": 0.58125,
+        "covered_at10": 104,
+        "coverage_at10": 0.65,
+        "mrr_at5": 0.48374999999999996,
+        "oracle_covered": 112,
+        "oracle_coverage": 0.7
+      },
+      "source_balanced_round_robin": {
+        "question_count": 160,
+        "covered_at1": 68,
+        "coverage_at1": 0.425,
+        "covered_at5": 98,
+        "coverage_at5": 0.6125,
+        "covered_at10": 104,
+        "coverage_at10": 0.65,
+        "mrr_at5": 0.503125,
+        "oracle_covered": 112,
+        "oracle_coverage": 0.7
+      },
+      "consensus_heuristic": {
+        "question_count": 160,
+        "covered_at1": 71,
+        "coverage_at1": 0.44375,
+        "covered_at5": 100,
+        "coverage_at5": 0.625,
+        "covered_at10": 107,
+        "coverage_at10": 0.66875,
+        "mrr_at5": 0.5170833333333332,
+        "oracle_covered": 112,
+        "oracle_coverage": 0.7
+      }
+    }
+  },
+  "historical_list_dpo": {
+    "experiment": "best-list-system-whole-response-dpo-v3",
+    "description": "Historical best local BioASQ Task 13B list-question result.",
+    "base_model": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+    "evaluation": {
+      "dataset": "BioASQ Task 13B batches 1-4",
+      "question_type": "list",
+      "question_count": 83,
+      "scorer": "official BioASQ Java evaluator",
+      "challenge_version": 5,
+      "mean_precision": 0.5808108892446244,
+      "mean_recall": 0.5165599508664863,
+      "mean_f1": 0.5311819105609734
+    },
+    "historical_counts": {
+      "visible_gold_sft_train_questions": 899,
+      "visible_gold_sft_dev_questions": 100,
+      "full_snippet_sft_train_questions": 947,
+      "full_snippet_sft_dev_questions": 100,
+      "candidate_bank_questions": 1047,
+      "candidate_bank_samples_per_question": 12,
+      "candidate_bank_rows": 12564,
+      "pair_eligible_candidate_rows": 11976,
+      "preference_pairs": 2327,
+      "preference_pair_questions": 461,
+      "dpo_train_pairs": 2212,
+      "dpo_eval_pairs": 115
+    },
+    "method": {
+      "policy_initialization": "MR5 visible-gold SFT adapter",
+      "candidate_generator": "Full-snippet SFT adapter",
+      "preference_data": "Whole-response MR5 v3 pairs",
+      "dpo_loss": "sigmoid",
+      "dpo_beta": 0.1,
+      "seed": 3407
+    },
+    "reproducibility_note": "GPU kernels, dependency versions, and stochastic candidate sampling can cause small deviations from the historical score."
+  },
+  "interpretation_notes": [
+    "Factoid results are development pilots, not unseen-test confirmation.",
+    "SFT checkpoint-selection and standalone evaluations differ; do not substitute one for the other.",
+    "Use DPO step zero as the matched baseline; its 0.40000 differs from standalone SFT 0.40625.",
+    "Candidate coverage at ten is an offline diagnostic, not an official ten-answer submission or final MRR.",
+    "Reranker scores use five-fold question-grouped development cross-validation; the final fitted model has no independent score.",
+    "LLM semantic labels require auditing. No semantic score is available here for factoid DPO."
+  ],
+  "sources": [
+    {
+      "path": "Artifacts/notebook_runs/evaluation/local_evaluation/20260929-133024-48a9b350/evaluation/20260927-143545-67f7a338/scores.json",
+      "sha256": "831f90377a32bd09d47bdddabd2c85d083fb9a4f080dd3b273ab8dfa0b421cd4"
+    },
+    {
+      "path": "Artifacts/notebook_runs/sft/answer_sft/20260927-143545-67f7a338/generated_dev_selection/best_summary.json",
+      "sha256": "b38a92e300852bb75d7b66418a09d7a27142699ecdca1005a571cb075192a1a5"
+    },
+    {
+      "path": "Artifacts/notebook_runs/evaluation/local_evaluation/20260929-133024-48a9b350/evaluation/20260927-143545-3fca1c3d/scores.json",
+      "sha256": "d5b6697c5c39ecfc7aacc98423003adedce8fcf3f1e21a3bc076dea8f1035a7b"
+    },
+    {
+      "path": "Artifacts/notebook_runs/sft/answer_sft/20260927-143545-3fca1c3d/generated_dev_selection/best_summary.json",
+      "sha256": "78951a09cf9c52080350079bef380d64fcfe0490ea38089b098fb8ca83ad0faa"
+    },
+    {
+      "path": "Artifacts/notebook_runs/dpo/staged_dpo/20260929-140224-fa5a3f25/training/stage_1_concept_learning/eval_history.json",
+      "sha256": "1ec2f4bd2862d7f26c9e43e3c84ebcf6ce7ef589dc54bafb04abcdaf3774c2be"
+    },
+    {
+      "path": "Artifacts/notebook_runs/dpo/staged_dpo/20260929-140224-fa5a3f25/training/stage_1_concept_learning/manifest.json",
+      "sha256": "04672b17ad3987c4e57a28ecdeca9be019269f99c891f22194b69bca743dd062"
+    },
+    {
+      "path": "Artifacts/notebook_runs/dpo/staged_dpo/20260929-140224-fa5a3f25/training/config.json",
+      "sha256": "41a49a6fc30ce179e3ae839ad46ca06c230f9e00ac266a32061d289ad77955a2"
+    },
+    {
+      "path": "Artifacts/notebook_runs/dpo/staged_dpo/20260929-140224-fa5a3f25/status.json",
+      "sha256": "0f5be724e12fd5b537f0c89f2852813d67f72fe9e89f18489f7a5c25b4a0953d"
+    },
+    {
+      "path": "Artifacts/notebook_runs/dpo/staged_dpo/20260929-140224-46d6d62c/status.json",
+      "sha256": "9d3d2247e7deef8b955272e44f0bc87e22f93b135e5cab527a2bf5265a97c01c"
+    },
+    {
+      "path": "Artifacts/notebook_runs/coverage_comparison/20260929-070458-a6267ca4/analysis-59ac5450/summary.json",
+      "sha256": "3111506793f387983e38808282819c349c1aeb216708e4132ed0f43607e8f018"
+    },
+    {
+      "path": "Artifacts/notebook_runs/coverage_comparison/20261001-010109-2d745f42/analysis-21e98a02/summary.json",
+      "sha256": "f7a7c045f5fcef93bf6c478007bccaa0286c68a37bb918cdbc937a0773062cbe"
+    },
+    {
+      "path": "Artifacts/notebook_runs/coverage_comparison/20261001-081220-082b3f96/analysis-c1d65d52/summary.json",
+      "sha256": "687dbf0f69a03d2ae487b7e3861314c4a17ea334585124c68ed2f52f451b8653"
+    },
+    {
+      "path": "Artifacts/gadi_runs/llama31_8b_equivalent_dev160/analysis-c672a1c9/summary.json",
+      "sha256": "39829c5a82c2ebae49e03d20af8b371afdbc8daccd02cc8baffb6bd426ed76f8"
+    },
+    {
+      "path": "Artifacts/gadi_runs/qwen3_8b_equivalent_dev160/analysis-795d7fb5/summary.json",
+      "sha256": "c1894db4b7a1efeef0e9d550602bf1a4545f9525f6860821a7c2ee507ba00dcd"
+    },
+    {
+      "path": "Artifacts/reranker_pilot/20261002-023517-tfidf-logistic/summary.json",
+      "sha256": "625b741aa7522b31018f2b58b4d5c1298d342aaa07f3740b12a4a9c2ba2449e9"
+    },
+    {
+      "path": "reproducibility/best_list_system/expected_result.json",
+      "sha256": "89ce6740eb4301c27136d36c0f29a52275c64c0ed5c03ecd404f0a5ded755616"
+    }
+  ]
+}

@@ -15,6 +15,10 @@ Research code for task-structured counterfactual preference mining and evidence-
 
 Model weights, checkpoints, raw datasets, API credentials, cached model downloads, and generated experiment artifacts are intentionally excluded. See [DATA.md](DATA.md) and [ARTIFACTS.md](ARTIFACTS.md).
 
+The [main saved results](results/README.md) include SFT and DPO development scores,
+candidate-generation and reranking pilots, and machine-readable metrics with
+source hashes. Evaluation differences and unfinished runs are documented there.
+
 ## Main workflows
 
 ### Evidence-grounded SFT
