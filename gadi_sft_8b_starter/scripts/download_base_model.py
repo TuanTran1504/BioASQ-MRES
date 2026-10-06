@@ -20,14 +20,27 @@ def main() -> None:
         type=Path,
         help="Read the Hugging Face token from a protected local file.",
     )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Check the configured Hugging Face cache without downloading files.",
+    )
     args = parser.parse_args()
     token = args.token
     if args.token_file is not None:
         token = args.token_file.read_text(encoding="utf-8").strip()
         if not token:
             raise ValueError(f"Token file is empty: {args.token_file}")
-    snapshot_download(repo_id=args.model, token=token)
-    print(f"Cached {args.model} under HF_HOME={os.environ.get('HF_HOME', '<default>')}")
+    path = snapshot_download(
+        repo_id=args.model,
+        token=token,
+        local_files_only=args.check_only,
+    )
+    action = "Found cached" if args.check_only else "Cached"
+    print(
+        f"{action} {args.model} at {path} "
+        f"under HF_HOME={os.environ.get('HF_HOME', '<default>')}"
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=06:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq-qwen05b-exp-sft
+
+set -euo pipefail
+
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export TRANSFORMERS_CACHE="${HF_HUB_CACHE}"
+export PYTHONUNBUFFERED=1
+
+cd "${PBS_O_WORKDIR}"
+python3 scripts/run_expansion_sft_qwen3.py \
+  --mode train \
+  --config configs/expansion_sft_qwen25_05b.json \
+  --run-name "qwen25-05b-expansion-sft-${PBS_JOBID}"

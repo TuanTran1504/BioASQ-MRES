@@ -150,6 +150,49 @@ python3 scripts/download_base_model.py \
   --token-file /scratch/nl78/$USER/.secrets/hf_token.txt
 ```
 
+## Matched expansion SFT across Qwen sizes
+
+The strict teacher-validated expansion dataset can be used unchanged for
+Qwen2.5-0.5B, Qwen2.5-3B and Qwen3-8B. The three configurations use the same
+1,296-question training split, 144-question internal-validation split, seed,
+8,192-token limit, effective batch size, three-epoch budget and LoRA settings.
+The separate 160-question outer development set is not used for training or
+checkpoint selection.
+
+Check the Gadi cache without downloading anything:
+
+```bash
+python3 scripts/download_base_model.py --check-only \
+  --model unsloth/Qwen2.5-0.5B-Instruct-bnb-4bit
+python3 scripts/download_base_model.py --check-only \
+  --model unsloth/Qwen2.5-3B-Instruct-bnb-4bit
+python3 scripts/download_base_model.py --check-only \
+  --model unsloth/Qwen3-8B-unsloth-bnb-4bit
+```
+
+If a check reports that files are unavailable locally, rerun that command
+without `--check-only` (and add `--token-file` if the account requires it).
+Then validate the two new configs and submit smoke tests:
+
+```bash
+python3 scripts/run_expansion_sft_qwen3.py --mode validate \
+  --config configs/expansion_sft_qwen25_05b.json
+python3 scripts/run_expansion_sft_qwen3.py --mode validate \
+  --config configs/expansion_sft_qwen25_3b.json
+qsub jobs/09_expansion_sft_qwen25_05b_smoke.pbs
+qsub jobs/10_expansion_sft_qwen25_3b_smoke.pbs
+qsub jobs/08_expansion_sft_qwen3_smoke.pbs
+```
+
+Only after each smoke test completes successfully, submit the corresponding
+full job:
+
+```bash
+qsub jobs/train_expansion_sft_qwen25_05b.pbs
+qsub jobs/train_expansion_sft_qwen25_3b.pbs
+qsub jobs/train_expansion_sft_qwen3_8b.pbs
+```
+
 Run each smoke test before its full run. The Gemma smoke test intentionally uses only two questions because the 20 GB 4-bit checkpoint is close enough to the V100's 32 GB limit that model loading and generation must be confirmed first.
 
 ```bash
