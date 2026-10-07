@@ -93,7 +93,24 @@ python scripts/analyze_matched_qwen_expansion.py \
 
 This can run on a Gadi login node for these small offline evaluations if the
 environment and Java are available, or locally after retrieving the complete
-experiment directories. For local retrieval, run from PowerShell in the repository:
+experiment directories.
+
+Load the Python environment in the interactive shell before scoring, even if it
+was loaded earlier by the submission script (that script runs in its own shell):
+
+```bash
+module load python3/3.12.13
+source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
+python --version
+java -version
+javac -version
+```
+
+The official per-question adapter is compiled to Java 8 bytecode and uses a cache
+key containing the compiler target. This avoids reusing an earlier Java 17 build
+with Gadi's default Java 8 runtime. A Java JDK is required to compile the adapter.
+
+For local retrieval, run from PowerShell in the repository:
 
 ```powershell
 New-Item -ItemType Directory -Force gadi_sft_8b_starter/outputs/matched_qwen25 | Out-Null

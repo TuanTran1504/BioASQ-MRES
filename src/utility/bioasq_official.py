@@ -229,13 +229,19 @@ def _official_adapter_classes(jar_path: Path) -> Path:
     source = Path(__file__).resolve().parent / "java" / "BioASQPerQuestionEvaluator.java"
     if not source.exists():
         raise FileNotFoundError(f"Official per-question adapter source was not found: {source}")
-    digest = hashlib.sha256(source.read_bytes() + jar_path.read_bytes()).hexdigest()[:16]
+    # Gadi may provide javac 17 alongside a default Java 8 runtime. Pin bytecode
+    # compatibility and separate this cache from earlier compiler-default builds.
+    compile_options = ["-source", "8", "-target", "8"]
+    digest = hashlib.sha256(
+        source.read_bytes() + jar_path.read_bytes() + " ".join(compile_options).encode("ascii")
+    ).hexdigest()[:16]
     classes = Path(tempfile.gettempdir()) / f"bioasq-official-adapter-{digest}"
     target = classes / "evaluation" / "BioASQPerQuestionEvaluator.class"
     if target.exists():
         return classes
     classes.mkdir(parents=True, exist_ok=True)
-    command = [*_conda_executable("javac"), "-cp", str(jar_path), "-d", str(classes), str(source)]
+    command = [*_conda_executable("javac"), *compile_options,
+               "-cp", str(jar_path), "-d", str(classes), str(source)]
     completed = subprocess.run(command, capture_output=True, text=True)
     if completed.returncode != 0:
         raise RuntimeError(

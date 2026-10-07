@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 from pathlib import Path
 
@@ -23,6 +24,12 @@ def test_java_per_question_scores_match_aggregate_with_spaced_paths(tmp_path, mo
     from src.utility import bioasq_official
     class_cache = tmp_path / "scorer with spaces"
     monkeypatch.setattr(bioasq_official.tempfile, "gettempdir", lambda: str(class_cache))
+    source = Path(bioasq_official.__file__).parent / "java/BioASQPerQuestionEvaluator.java"
+    old_digest = hashlib.sha256(source.read_bytes() + jar.read_bytes()).hexdigest()[:16]
+    old_class = class_cache / f"bioasq-official-adapter-{old_digest}/evaluation/BioASQPerQuestionEvaluator.class"
+    old_class.parent.mkdir(parents=True)
+    stale_bytes = b"\xca\xfe\xba\xbe\x00\x00\x00\x3dold Java 17 cache"
+    old_class.write_bytes(stale_bytes)
     examples = {
         (qid, "factoid"): EvalExample(qid, "factoid", "Which?", "", (),
                                      "[BE]alpha[EE]", "dev.json")
@@ -42,3 +49,8 @@ def test_java_per_question_scores_match_aggregate_with_spaced_paths(tmp_path, mo
     scores = {row["question_id"]: row["mrr"] for row in result["per_question"]}
     assert scores == {"correct": 1.0, "wrong": 0.0}
     assert result["aggregate"]["overall_average_primary_score"] == pytest.approx(.5)
+    new_classes = [path for path in class_cache.rglob("BioASQPerQuestionEvaluator.class") if path != old_class]
+    assert len(new_classes) == 1
+    # Major version 52 is Java 8, including when javac itself is Java 17.
+    assert new_classes[0].read_bytes()[:8] == b"\xca\xfe\xba\xbe\x00\x00\x00\x34"
+    assert old_class.read_bytes() == stale_bytes
