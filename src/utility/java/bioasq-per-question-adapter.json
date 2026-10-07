@@ -1,0 +1,8 @@
+{
+  "source_sha256": "ffbaa3404307524daa53b313b554240ccd800392f713fe1cd7bb09348bf79cc1",
+  "source_normalization": "universal newlines converted to LF",
+  "evaluator_sha256": "40321d159d9770b42724967d9d401993d9c5bd052abf4d90da18e483472fa539",
+  "artifact_sha256": "5692b468dbcf3a060fc095ac209b11cd7aa214fa32ade980edd3d9f2400f1125",
+  "class_major_version": 52,
+  "build_command": "javac --release 8 -cp BioASQEvaluation.jar -d BUILD_DIR BioASQPerQuestionEvaluator.java"
+}

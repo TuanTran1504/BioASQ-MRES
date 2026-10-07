@@ -222,13 +222,32 @@ def _conda_executable(tool: str) -> list[str]:
     candidate = Path.home() / "miniconda3" / "envs" / "bioasq" / "bin" / tool
     if candidate.exists():
         return [str(candidate)]
-    raise RuntimeError(f"{tool} was not found; the official BioASQ scorer requires a Java JDK.")
+    requirement = "a Java runtime" if tool == "java" else "a Java JDK compiler"
+    raise RuntimeError(f"{tool} was not found; the official BioASQ scorer requires {requirement}.")
+
+
+def _bundled_official_adapter(source: Path, jar_path: Path) -> Path | None:
+    """Use the checked-in Java 8 adapter when its source and evaluator match."""
+    archive = source.parent / "bioasq-per-question-adapter.jar"
+    metadata_path = archive.with_suffix(".json")
+    if not archive.exists() or not metadata_path.exists():
+        return None
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    source_digest = hashlib.sha256(source.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    if metadata.get("source_sha256") != source_digest or metadata.get("evaluator_sha256") != hashlib.sha256(jar_path.read_bytes()).hexdigest():
+        return None
+    if metadata.get("artifact_sha256") != hashlib.sha256(archive.read_bytes()).hexdigest():
+        raise RuntimeError("Bundled BioASQ adapter checksum mismatch; rebuild or restore the adapter JAR")
+    return archive
 
 
 def _official_adapter_classes(jar_path: Path) -> Path:
     source = Path(__file__).resolve().parent / "java" / "BioASQPerQuestionEvaluator.java"
     if not source.exists():
         raise FileNotFoundError(f"Official per-question adapter source was not found: {source}")
+    bundled = _bundled_official_adapter(source, jar_path)
+    if bundled is not None:
+        return bundled
     # Gadi may provide javac 17 alongside a default Java 8 runtime. Pin bytecode
     # compatibility and separate this cache from earlier compiler-default builds.
     compile_options = ["-source", "8", "-target", "8"]

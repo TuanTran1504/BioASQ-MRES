@@ -103,12 +103,15 @@ module load python3/3.12.13
 source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
 python --version
 java -version
-javac -version
 ```
 
-The official per-question adapter is compiled to Java 8 bytecode and uses a cache
-key containing the compiler target. This avoids reusing an earlier Java 17 build
-with Gadi's default Java 8 runtime. A Java JDK is required to compile the adapter.
+The repository includes a precompiled Java 8 per-question adapter, checked against
+its normalized source, evaluator and artifact hashes. Scoring with the bundled
+evaluator needs a Java runtime only; `javac` is optional. A JDK is needed if the
+adapter source or evaluator has changed and the bundled adapter no longer matches.
+Developers can rebuild it with `python scripts/build_bioasq_adapter.py` from the
+repository root using a JDK 9+ compiler. The compilation fallback also targets
+Java 8 and has a separate cache key from earlier Java 17 builds.
 
 For local retrieval, run from PowerShell in the repository:
 
