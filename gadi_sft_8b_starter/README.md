@@ -57,6 +57,11 @@ Monitor with `qstat -swx <job-id>`. PBS output and errors are retained by Gadi; 
 
 ## Important notes
 
+For the completed Qwen2.5-0.5B and 3B expansion SFT adapters, use the
+[matched base/SFT evaluation workflow](docs/MATCHED_QWEN25_EVALUATION.md).
+It provides validation, paired smoke/full GPU jobs, and official candidate scoring
+with generated-order MRR and coverage diagnostics on all 160 development questions.
+
 - Run `scripts/download_base_model.py` on a login node, not a compute node. Training defaults to `--local-files-only` to prevent compute-node downloads.
 - The first GPU job should be the smoke test. It validates CUDA, the environment, data, model cache, and the BioASQ Java evaluator with only eight training/dev examples.
 - Do not use `--resume-from-checkpoint auto` with a reused run directory. This launcher creates timestamped managed run folders, so every normal submission starts a distinct experiment.

@@ -1,0 +1,15 @@
+{
+  "description": "Matched gold-blind equivalent expansion for Qwen2.5-3B base and expansion SFT on dev160.",
+  "model_name": "unsloth/Qwen2.5-3B-Instruct-bnb-4bit",
+  "model_loader": "fast_language_model",
+  "chat_template_kwargs": {},
+  "input": "data/expansion_dev160.jsonl",
+  "prompt": "prompts/equivalent_expansion_v1.txt",
+  "max_seq_length": 6144,
+  "max_new_tokens": 512,
+  "temperature": 0,
+  "require_all_snippets": true,
+  "expected_questions": 160,
+  "prompt_version": "equivalent-expansion-v1",
+  "response_mode": "equivalent"
+}
