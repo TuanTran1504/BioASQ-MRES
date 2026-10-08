@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -532,6 +533,7 @@ def main() -> None:
                 add_special_tokens=True,
             )
             encoded = {key: value.to(device) for key, value in encoded.items()}
+            generation_started = time.perf_counter()
             with torch.inference_mode():
                 output_ids = model.generate(
                     **encoded,
@@ -543,6 +545,7 @@ def main() -> None:
                 )
             generated_ids = output_ids[0, encoded["input_ids"].shape[-1]:]
             raw = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+            generation_seconds = time.perf_counter() - generation_started
             parse_error = None
             try:
                 if response_mode == "extractive":
@@ -559,6 +562,10 @@ def main() -> None:
                 "question_id": qid,
                 "question": example["question"],
                 "raw_response": raw,
+                "request_count": 1,
+                "input_tokens": prompt_tokens,
+                "output_tokens": int(generated_ids.numel()),
+                "generation_seconds": generation_seconds,
                 "parse_error": parse_error,
                 "schema_compliant": schema_compliant,
                 "response_recovered": "incomplete_top_level_json_recovered" in issues,

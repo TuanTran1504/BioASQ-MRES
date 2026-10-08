@@ -1,0 +1,12 @@
+{
+  "05b": {
+    "historical_run": "20260927-143545-67f7a338",
+    "identity_sha256": "28388959e05596ddd374510f69f5f7e005dcbbb3f033e3ac1d94a268e9d197e4",
+    "base_model": "unsloth/qwen2.5-0.5b-instruct-unsloth-bnb-4bit"
+  },
+  "3b": {
+    "historical_run": "20260927-143545-3fca1c3d",
+    "identity_sha256": "84aedf21888045aa5a68d3ad4970ec0d7467e430c6ca264dfd4d054b48757fe6",
+    "base_model": "unsloth/qwen2.5-3b-instruct-unsloth-bnb-4bit"
+  }
+}

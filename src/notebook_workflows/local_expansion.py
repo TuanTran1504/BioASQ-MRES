@@ -363,13 +363,17 @@ def analyze_local_expansion(run_dir: str | Path, *, jar_path: str | Path) -> tup
         qid = generation["question_id"]
         example = by_id[qid]
         group = sorted(by_candidates.get(qid, []), key=lambda row: row["position"])
-        hits = [row["position"] for row in group if matches.get((qid, row["answer"]), False)]
+        # Submission ranks are consecutive after filtering/deduplication. Raw
+        # response positions can have gaps and are retained only for audit.
+        hits = [rank for rank, row in enumerate(group, 1)
+                if matches.get((qid, row["answer"]), False)]
         extractive = [candidate_is_extractive(row["answer"], example["snippets"]) for row in group]
         rows.append({
             "question_id": qid,
             "question": example["question"],
             "gold_aliases": example["gold_aliases"],
             "answers": [row["answer"] for row in group],
+            "raw_positions": [row["position"] for row in group],
             "candidate_types": [row.get("candidate_type", row.get("relation_type")) for row in group],
             "snippet_ids": [row.get("snippet_id") for row in group],
             "matching_answers": [row["answer"] for row in group if matches.get((qid, row["answer"]), False)],

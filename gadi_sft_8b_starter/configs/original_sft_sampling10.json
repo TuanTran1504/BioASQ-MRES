@@ -1,0 +1,16 @@
+{
+  "description": "Ten independently seeded single-answer samples from each original Qwen2.5 SFT adapter.",
+  "input": "data/expansion_dev160.jsonl",
+  "prompt": "prompts/original_sft_single_answer.txt",
+  "chat_template_kwargs": {},
+  "max_seq_length": 6144,
+  "max_new_tokens": 512,
+  "require_all_snippets": true,
+  "response_mode": "single_answer_sampling",
+  "num_generations": 10,
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "seed": 3407,
+  "expected_questions": 160,
+  "prompt_version": "historical-extractive-instructions-json-evidence-v1"
+}

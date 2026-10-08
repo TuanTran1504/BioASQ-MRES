@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Generate ten independent single answers per question, without gold-guided selection."""
+
+import argparse
+import gc
+import hashlib
+import re
+import time
+from pathlib import Path
+
+from run_extractive_expansion_8b import (
+    ROOT, configure_job_local_compiler_cache, file_sha256, input_token_count,
+    load_model, read_json, read_jsonl, render_prompt, tokenize_text, write_json, write_jsonl,
+)
+
+
+def sample_seed(question_id, draw, seed=3407):
+    return int.from_bytes(hashlib.sha256(f"{seed}:{question_id}:{draw}".encode()).digest()[:4], "big")
+
+
+def parse_single_answer(raw):
+    """Require the original SFT's single-expression [BE]/[EE] format."""
+    matches = re.findall(r"\[BE\](.*?)\[EE\]", raw, flags=re.DOTALL)
+    if len(matches) != 1 or not matches[0].strip():
+        raise ValueError("Expected exactly one nonempty [BE] answer [EE]")
+    if re.sub(r"\[BE\].*?\[EE\]", "", raw, flags=re.DOTALL).strip():
+        raise ValueError("Unexpected text outside the single answer")
+    return re.sub(r"\s+", " ", matches[0]).strip()
+
+
+def unique_candidates(samples):
+    seen, result = set(), []
+    for row in samples:
+        answer = row.get("answer")
+        if not answer or answer.casefold() in seen:
+            continue
+        seen.add(answer.casefold())
+        result.append({"answer": answer, "relation_type": "sampled_single_answer",
+                       "position": len(result) + 1, "raw_position": row["draw"]})
+    return result
+
+
+def generation_options(config):
+    if config["num_generations"] != 10 or config["temperature"] <= 0:
+        raise ValueError("Expected ten stochastic samples with positive temperature")
+    return {"max_new_tokens": config["max_new_tokens"], "do_sample": True,
+            "temperature": config["temperature"], "top_p": config["top_p"],
+            "top_k": 0, "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--model-name", required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--limit", type=int, default=160)
+    args = parser.parse_args()
+    cache = configure_job_local_compiler_cache()
+    config = read_json(args.config)
+    options = generation_options(config)
+    examples = read_jsonl(ROOT / config["input"])[:args.limit]
+    prompt_path = ROOT / config["prompt"]
+    prompt = prompt_path.read_text(encoding="utf-8").strip()
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    config.update(model_name=args.model_name, question_count=len(examples),
+                  input_sha256=file_sha256(ROOT / config["input"]),
+                  prompt_sha256=file_sha256(prompt_path), gold_blind_generation=True,
+                  local_files_only=True, selection="first five unique answers in draw order")
+    write_json(output / "config.json", config)
+    write_jsonl(output / "examples.jsonl", examples)
+    state = {"status": "running", "expected_questions": len(examples), "completed_questions": 0}
+    generations, candidates = [], []
+    write_json(output / "status.json", state)
+    import torch
+    if not torch.cuda.is_available():
+        raise RuntimeError("Submit sampling through the Gadi GPU queue")
+    model = tokenizer = None
+    try:
+        model, tokenizer = load_model(args.model_name, config["max_seq_length"], False)
+        if cache:
+            configure_job_local_compiler_cache()
+        if hasattr(model, "gradient_checkpointing_disable"):
+            model.gradient_checkpointing_disable()
+        device = next(model.parameters()).device
+        budget = config["max_seq_length"] - config["max_new_tokens"]
+        prepared = []
+        for example in examples:
+            # Keep the exact evidence strings; markers preserve the trained prompt's format.
+            marked = {**example, "snippets": [{**s, "text": "[BS] " + s["text"] + " [ES]"}
+                                               for s in example["snippets"]]}
+            text = render_prompt(tokenizer, prompt, marked, config.get("chat_template_kwargs", {}))
+            count = input_token_count(tokenize_text(tokenizer, text, add_special_tokens=True))
+            if count > budget:
+                raise ValueError(f"{example['question_id']}: all snippets exceed {budget} prompt tokens")
+            prepared.append((example, text, count))
+        for example, text, count in prepared:
+            qid = example["question_id"]
+            encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)
+            encoded = {k: v.to(device) for k, v in encoded.items()}
+            samples = []
+            for draw in range(1, 11):
+                seed = sample_seed(qid, draw, config["seed"])
+                torch.manual_seed(seed)
+                torch.cuda.manual_seed_all(seed)
+                started = time.perf_counter()
+                with torch.inference_mode():
+                    ids = model.generate(**encoded, **options,
+                                         pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
+                                         eos_token_id=tokenizer.eos_token_id)
+                new_ids = ids[0, encoded["input_ids"].shape[-1]:]
+                raw = tokenizer.decode(new_ids, skip_special_tokens=True).strip()
+                elapsed = time.perf_counter() - started
+                answer, error = None, None
+                try:
+                    answer = parse_single_answer(raw)
+                except ValueError as exc:
+                    error = str(exc)
+                samples.append({"draw": draw, "seed": seed, "raw_response": raw,
+                                "answer": answer, "parse_error": error,
+                                "output_tokens": int(new_ids.numel()), "generation_seconds": elapsed})
+                del ids, new_ids
+            unique = unique_candidates(samples)
+            candidates.extend({"question_id": qid, **row} for row in unique)
+            generations.append({"question_id": qid, "question": example["question"],
+                                "samples": samples, "parse_error": None if unique else "All ten samples failed",
+                                "prompt_tokens": count, "included_snippets": len(example["snippets"]),
+                                "total_snippets": len(example["snippets"]), "snippets_truncated": False,
+                                "request_count": 10, "input_tokens": count * 10,
+                                "output_tokens": sum(s["output_tokens"] for s in samples),
+                                "generation_seconds": sum(s["generation_seconds"] for s in samples)})
+            state["completed_questions"] = len(generations)
+            write_jsonl(output / "generations.jsonl", generations)
+            write_jsonl(output / "candidates.jsonl", candidates)
+            write_json(output / "status.json", state)
+            print(f"{len(generations)}/{len(examples)}: ten draws; {len(unique)} unique answers", flush=True)
+            del encoded
+        state["status"] = "complete"
+    except BaseException as exc:
+        state.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+        raise
+    finally:
+        write_jsonl(output / "generations.jsonl", generations)
+        write_jsonl(output / "candidates.jsonl", candidates)
+        write_json(output / "status.json", state)
+        del model, tokenizer
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
+if __name__ == "__main__":
+    main()

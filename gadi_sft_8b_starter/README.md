@@ -2,6 +2,11 @@
 
 This is a small, portable package for Gadi. It supports the original SFT jobs plus gold-blind exact-span and equivalent-expression expansion experiments. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.
 
+To evaluate the historical Qwen2.5 0.5B/3B SFT checkpoints with the existing
+expansion prompt and ten high-temperature single-answer draws, use the
+[original SFT inference workflow](docs/ORIGINAL_QWEN25_INFERENCE.md). The exact
+historical adapters are transferred separately, then smoke-tested before full runs.
+
 It trains `unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit` with 4-bit LoRA and generated-dev BioASQ MRR checkpoint selection.
 
 The expansion jobs run the unchanged instruction checkpoint without training. They give the model each of the fixed 160 development questions and all of its snippets. The extractive branch asks for literal answer spans; the equivalent branch uses the original GPT-4.1-mini prompt that produced 55% dev coverage and asks for synonymous or formatting-equivalent answer expressions. Both write candidates in the same scoreable artifact format.
