@@ -7,6 +7,10 @@ Qwen3-8B and Ministral-3-8B, use the [paired 8B training workflow](docs/MATCHED_
 It prepares six training conditions with shared question splits and base snapshots,
 each gated by a training-and-generation smoke job.
 
+For the completed Llama and Qwen pairs, the [matched 8B evaluation workflow](docs/MATCHED_8B_EVALUATION.md)
+compares greedy single-answer SFT, ten sampled single answers and greedy expansion
+SFT on the same 160 dev questions, with official scores and paired comparisons.
+
 To evaluate the historical Qwen2.5 0.5B/3B SFT checkpoints with the existing
 expansion prompt and ten high-temperature single-answer draws, use the
 [original SFT inference workflow](docs/ORIGINAL_QWEN25_INFERENCE.md). The exact

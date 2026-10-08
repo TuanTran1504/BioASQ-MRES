@@ -142,7 +142,8 @@ Measure official MRR@5, first-answer accuracy, candidate coverage, parse success
 paired confidence intervals and request/token/runtime costs. Ten samples have a
 larger request budget. Sampling expansion SFT is an optional equal-request arm.
 
-This launcher submits training and smoke checks. Full dev inference/scoring
-requires subsequent jobs after adapters exist; it is not submitted here.
+This launcher submits training and smoke checks. Once adapters exist, use the
+[matched 8B evaluation workflow](MATCHED_8B_EVALUATION.md) for full dev inference
+and scoring. Its current configuration selects the completed Llama and Qwen pairs.
 The initial pilot uses one training seed. Additional seeds and an exposure-audited
 unseen test batch are needed for confirmatory research claims.

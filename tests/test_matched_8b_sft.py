@@ -370,3 +370,113 @@ def test_fast_model_inference_unwraps_processor_before_smoke_generation(monkeypa
     assert tokenizer.chat_template == "native"
     assert tokenizer.pad_token == "</s>"
     assert inference_calls == [model]
+
+
+@pytest.fixture
+def completed_pairs(paired_data, monkeypatch):
+    root, matrix = paired_data
+    matrix["models"] = {"qwen3": {"model_name": "Qwen/base", "model_loader": "fast_language_model",
+                                  "chat_template_kwargs": {"enable_thinking": False}}}
+    prepare.build(matrix)
+    matrix_path = root / "matrix.json"
+    prepare.write(matrix_path, matrix)
+    snapshot = root / "snapshots/pinned-revision"
+    snapshot.mkdir(parents=True)
+    prepare.write(snapshot / "config.json", {})
+    runs = {}
+    for formulation in ("original", "expansion"):
+        name = "training-" + formulation
+        directory = root / name
+        adapter = directory / "adapter"
+        adapter.mkdir(parents=True)
+        config = prepare.resolved_config(matrix, "qwen3", formulation)
+        config.update(matrix_sha256=prepare.digest(matrix_path), base_snapshot=str(snapshot),
+                      base_revision=snapshot.name)
+        prepare.write(directory / "status.json", {"status": "completed", "smoke_test": False,
+                                                  "selected_train_examples": 1296, "selected_validation_examples": 144,
+                                                  "dataset_validation": {
+                                                      "train_sha256": prepare.digest(root / config["train_input"]),
+                                                      "validation_sha256": prepare.digest(root / config["eval_input"])},
+                                                  "configuration": config})
+        prepare.write(adapter / "training_complete.json", {"status": "completed"})
+        prepare.write(adapter / "adapter_config.json", {"base_model_name_or_path": str(snapshot)})
+        prepare.write(adapter / "tokenizer_config.json", {"chat_template": "native"})
+        (adapter / "adapter_model.safetensors").write_bytes(b"test weights; never loaded")
+        runs[formulation] = name
+    evaluation = {"training_matrix": "matrix.json", "input": "dev.jsonl",
+                  "input_sha256": prepare.digest(root / "dev.jsonl"),
+                  "max_seq_length": 6144, "max_new_tokens": 512, "seed": 3407,
+                  "models": {"qwen3": runs}}
+    with bundle_imports():
+        import run_matched_8b_evaluation as runner
+    monkeypatch.setattr(runner, "ROOT", root)
+    return root, evaluation, runner
+
+
+def test_evaluation_validates_completed_pair_and_rejects_smoke_or_wrong_backbone(completed_pairs):
+    root, config, runner = completed_pairs
+    provenance = runner.validate_training_pair(config, "qwen3")
+    assert provenance["original"]["base_revision"] == provenance["expansion"]["base_revision"]
+    assert provenance["original"]["system_prompt"] == "Return exactly one tagged answer."
+    path = root / "training-expansion/status.json"
+    state = prepare.read(path)
+    state["smoke_test"] = True
+    prepare.write(path, state)
+    with pytest.raises(ValueError, match="completed full"):
+        runner.validate_training_pair(config, "qwen3")
+    state["smoke_test"] = False
+    prepare.write(path, state)
+    prepare.write(root / "training-expansion/adapter/adapter_config.json", {"base_model_name_or_path": "other"})
+    with pytest.raises(ValueError, match="backbone differs"):
+        runner.validate_training_pair(config, "qwen3")
+
+
+def test_evaluation_rejects_changed_dev_export_before_loading_weights(completed_pairs):
+    root, config, runner = completed_pairs
+    path = root / "dev.jsonl"
+    path.write_text(path.read_text() + "\n")  # Same IDs, altered pinned file.
+    with pytest.raises(ValueError, match="outer_dev_sha256|pinned 160"):
+        runner.validate_training_pair(config, "qwen3")
+
+
+@pytest.mark.parametrize("empty_arm", [None, "original_sampling10"])
+def test_evaluation_runs_three_arms_with_native_prompts_and_gates_bad_smoke(completed_pairs, monkeypatch, empty_arm):
+    root, config, runner = completed_pairs
+    config_path = root / "evaluation.json"
+    prepare.write(config_path, config)
+    calls = []
+
+    def subprocess_run(command, check):
+        assert check
+        arm_path = Path(command[command.index("--config") + 1])
+        arm = prepare.read(arm_path)
+        condition = arm_path.name.removesuffix("_config.json")
+        calls.append((condition, arm, command))
+        target = Path(command[command.index("--output-parent" if condition == "expansion_greedy" else "--output-dir") + 1])
+        if condition == "expansion_greedy":
+            target /= "generated"
+        target.mkdir(parents=True)
+        prepare.write(target / "status.json", {"status": "complete", "completed_questions": 4})
+        rows = [{"question_id": str(i), "raw_response": "invalid"} for i in range(4)]
+        (target / "generations.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        candidates = [] if condition == empty_arm else [{"question_id": "0", "answer": "15"}]
+        (target / "candidates.jsonl").write_text("".join(json.dumps(r) + "\n" for r in candidates))
+
+    monkeypatch.setattr(runner.subprocess, "run", subprocess_run)
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--config", str(config_path), "--model", "qwen3",
+                                    "--mode", "run", "--smoke-test", "--run-name", "test-evaluation"])
+    if empty_arm:
+        with pytest.raises(ValueError, match="zero parseable"):
+            runner.main()
+    else:
+        runner.main()
+    manifest = prepare.read(root / "outputs/matched_8b_evaluation/test-evaluation/manifest.json")
+    assert manifest["status"] == ("failed" if empty_arm else "complete")
+    assert [row[0] for row in calls] == list(runner.CONDITIONS)
+    assert all(row[1]["mark_snippets"] is False for row in calls)
+    assert all(row[1]["chat_template_kwargs"] == {"enable_thinking": False} for row in calls)
+    assert [row[1]["num_generations"] for row in calls] == [1, 10, 1]
+    assert [row[1]["temperature"] for row in calls] == [0, 0.8, 0]
+    assert calls[0][1]["prompt"] == calls[1][1]["prompt"]
+    assert Path(calls[0][1]["prompt"]).read_text() == "Return exactly one tagged answer."
+    assert calls[0][2][calls[0][2].index("--model-name") + 1] != calls[2][2][calls[2][2].index("--model-name") + 1]

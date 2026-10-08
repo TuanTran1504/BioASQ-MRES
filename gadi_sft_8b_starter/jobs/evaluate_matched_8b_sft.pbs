@@ -1,0 +1,28 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=08:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N matched-8b-eval
+
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+args=(--mode run --model "${MODEL_KEY:?MODEL_KEY is required}"
+      --config "${EVAL_CONFIG:?EVAL_CONFIG is required}")
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then args+=(--smoke-test); fi
+python scripts/run_matched_8b_evaluation.py "${args[@]}" \
+  --run-name "${MODEL_KEY}-8b-evaluation-${PBS_JOBID}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ten independent single answers per question, without gold-guided selection."""
+"""Generate greedy or ten sampled single answers without gold-guided selection."""
 
 import argparse
 import gc
@@ -48,11 +48,23 @@ def unique_candidates(samples):
 
 
 def generation_options(config):
+    if config.get("response_mode") == "single_answer_greedy":
+        if config["num_generations"] != 1 or config["temperature"] != 0:
+            raise ValueError("Expected one greedy single-answer generation")
+        return {"max_new_tokens": config["max_new_tokens"], "do_sample": False,
+                "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
     if config["num_generations"] != 10 or config["temperature"] <= 0:
         raise ValueError("Expected ten stochastic samples with positive temperature")
     return {"max_new_tokens": config["max_new_tokens"], "do_sample": True,
             "temperature": config["temperature"], "top_p": config["top_p"],
             "top_k": 0, "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
+
+
+def prompt_example(example, config):
+    if not config.get("mark_snippets", True):
+        return example
+    return {**example, "snippets": [{**s, "text": "[BS] " + s["text"] + " [ES]"}
+                                    for s in example["snippets"]]}
 
 
 def main():
@@ -62,6 +74,8 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=160)
     args = parser.parse_args()
+    if args.limit <= 0:
+        raise ValueError("--limit must be positive")
     cache = configure_job_local_compiler_cache()
     config = read_json(args.config)
     options = generation_options(config)
@@ -85,7 +99,10 @@ def main():
         raise RuntimeError("Submit sampling through the Gadi GPU queue")
     model = tokenizer = None
     try:
-        model, tokenizer = load_model(args.model_name, config["max_seq_length"], False)
+        loader = config.get("model_loader", "fast_language_model")
+        model, tokenizer = (load_model(args.model_name, config["max_seq_length"], False)
+                            if loader == "fast_language_model" else
+                            load_model(args.model_name, config["max_seq_length"], False, loader))
         if cache:
             configure_job_local_compiler_cache()
         if hasattr(model, "gradient_checkpointing_disable"):
@@ -94,9 +111,8 @@ def main():
         budget = config["max_seq_length"] - config["max_new_tokens"]
         prepared = []
         for example in examples:
-            # Keep the exact evidence strings; markers preserve the trained prompt's format.
-            marked = {**example, "snippets": [{**s, "text": "[BS] " + s["text"] + " [ES]"}
-                                               for s in example["snippets"]]}
+            # Historical adapters used markers; fresh matched 8B SFT did not.
+            marked = prompt_example(example, config)
             text = render_prompt(tokenizer, prompt, marked, config.get("chat_template_kwargs", {}))
             count = input_token_count(tokenize_text(tokenizer, text, add_special_tokens=True))
             if count > budget:
@@ -107,7 +123,7 @@ def main():
             encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)
             encoded = {k: v.to(device) for k, v in encoded.items()}
             samples = []
-            for draw in range(1, 11):
+            for draw in range(1, config["num_generations"] + 1):
                 seed = sample_seed(qid, draw, config["seed"])
                 torch.manual_seed(seed)
                 torch.cuda.manual_seed_all(seed)
@@ -131,17 +147,17 @@ def main():
             unique = unique_candidates(samples)
             candidates.extend({"question_id": qid, **row} for row in unique)
             generations.append({"question_id": qid, "question": example["question"],
-                                "samples": samples, "parse_error": None if unique else "All ten samples failed",
+                                "samples": samples, "parse_error": None if unique else "All samples failed",
                                 "prompt_tokens": count, "included_snippets": len(example["snippets"]),
                                 "total_snippets": len(example["snippets"]), "snippets_truncated": False,
-                                "request_count": 10, "input_tokens": count * 10,
+                                "request_count": len(samples), "input_tokens": count * len(samples),
                                 "output_tokens": sum(s["output_tokens"] for s in samples),
                                 "generation_seconds": sum(s["generation_seconds"] for s in samples)})
             state["completed_questions"] = len(generations)
             write_jsonl(output / "generations.jsonl", generations)
             write_jsonl(output / "candidates.jsonl", candidates)
             write_json(output / "status.json", state)
-            print(f"{len(generations)}/{len(examples)}: ten draws; {len(unique)} unique answers", flush=True)
+            print(f"{len(generations)}/{len(examples)}: {len(samples)} draws; {len(unique)} unique answers", flush=True)
             del encoded
         state["status"] = "complete"
     except BaseException as exc:

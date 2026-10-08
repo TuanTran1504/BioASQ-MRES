@@ -1,0 +1,112 @@
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from scripts.analyze_matched_8b_evaluation import CONDITIONS, score_experiment, validate_experiment
+
+
+def write(path, value):
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def jsonl(path, rows):
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+
+@pytest.fixture
+def experiment(tmp_path):
+    provenance = {}
+    for formulation in ("original", "expansion"):
+        prompt = formulation + " trained prompt"
+        (tmp_path / (formulation + "_prompt.txt")).write_text(prompt)
+        provenance[formulation] = {"adapter": formulation + " adapter", "system_prompt": prompt,
+                                   "model_loader": "fast_language_model",
+                                   "chat_template_kwargs": {"enable_thinking": False},
+                                   "base_snapshot": "shared", "base_revision": "pinned", "matrix_sha256": "matrix"}
+    manifest = {"status": "complete", "smoke_test": False, "expected_questions": 160,
+                "model_key": "qwen3", "evaluation": "development-only", "selection": "first five",
+                "input_sha256": "same input", "provenance": provenance, "runs": {}}
+    examples = [{"question_id": str(i), "question": "How many?", "gold_aliases": ["15"],
+                 "snippets": [{"snippet_id": "s", "text": "There are 15."}]} for i in range(160)]
+    for name, hit_count in zip(CONDITIONS, (80, 160, 120)):
+        path = tmp_path / name
+        path.mkdir()
+        formulation = "expansion" if name == "expansion_greedy" else "original"
+        source = provenance[formulation]
+        count = 10 if name == "original_sampling10" else 1
+        config = {"model_name": source["adapter"], "model_loader": source["model_loader"],
+                  "chat_template_kwargs": source["chat_template_kwargs"],
+                  "prompt": "old host path", "prompt_sha256": hashlib.sha256(source["system_prompt"].encode()).hexdigest(),
+                  "input_sha256": "same input", "max_seq_length": 6144, "max_new_tokens": 512,
+                  "require_all_snippets": True, "mark_snippets": False, "seed": 3407,
+                  "temperature": 0.8 if count == 10 else 0, "num_generations": count, "top_p": 0.95,
+                  "question_count": 160, "gold_blind_generation": True,
+                  "response_mode": "equivalent" if formulation == "expansion" else
+                                   "single_answer_sampling" if count == 10 else "single_answer_greedy"}
+        write(path / "config.json", config)
+        write(path / "status.json", {"status": "complete"})
+        jsonl(path / "examples.jsonl", examples)
+        rows = []
+        candidates = []
+        for i in range(160):
+            # Greedy parse failures stay in the denominator; other arms recover.
+            failure = name == "original_greedy" and i >= hit_count
+            answer = "15" if i < hit_count else "wrong"
+            row = {"question_id": str(i), "question": "How many?", "parse_error": "bad format" if failure else None,
+                   "snippets_truncated": False, "included_snippets": 1, "total_snippets": 1,
+                   "request_count": count, "input_tokens": count * 5, "output_tokens": count * 3,
+                   "generation_seconds": count * 0.1}
+            if formulation == "original":
+                row["samples"] = [{"draw": d, "seed": int.from_bytes(hashlib.sha256(f"3407:{i}:{d}".encode()).digest()[:4], "big"),
+                                   "answer": None if failure else answer, "parse_error": row["parse_error"]}
+                                  for d in range(1, count + 1)]
+            rows.append(row)
+            if not failure:
+                candidates.append({"question_id": str(i), "position": 1, "answer": answer, "relation_type": "original"})
+        jsonl(path / "generations.jsonl", rows)
+        jsonl(path / "candidates.jsonl", candidates)
+        manifest["runs"][name] = name
+    write(tmp_path / "manifest.json", manifest)
+    return tmp_path
+
+
+@pytest.mark.parametrize("error", ["evidence", "nine_draws", "seed", "prompt", "backbone", "truncation"])
+def test_analysis_rejects_unmatched_inputs_or_incomplete_draws(experiment, error):
+    path = experiment / "original_sampling10"
+    if error == "evidence":
+        rows = [json.loads(line) for line in (path / "examples.jsonl").read_text().splitlines()]
+        rows[0]["snippets"][0]["text"] = "changed evidence"
+        jsonl(path / "examples.jsonl", rows)
+    elif error == "prompt":
+        (experiment / "original_prompt.txt").write_text("changed system prompt")
+    elif error == "backbone":
+        manifest = json.loads((experiment / "manifest.json").read_text())
+        manifest["provenance"]["expansion"]["base_revision"] = "other revision"
+        write(experiment / "manifest.json", manifest)
+    else:
+        rows = [json.loads(line) for line in (path / "generations.jsonl").read_text().splitlines()]
+        if error == "nine_draws": rows[0]["samples"].pop()
+        if error == "seed": rows[0]["samples"][0]["seed"] = 0
+        if error == "truncation": rows[0]["snippets_truncated"] = True
+        jsonl(path / "generations.jsonl", rows)
+    with pytest.raises(ValueError):
+        validate_experiment(experiment)
+
+
+def test_all_three_paired_contrasts_include_failures_and_request_costs(experiment, monkeypatch):
+    from src.notebook_workflows import local_expansion
+    # Isolate Java matching; exercise the actual candidate analysis and bootstrap.
+    monkeypatch.setattr(local_expansion, "official_candidate_matches", lambda examples, candidates, *a, **k:
+                        {(row["question_id"], row["answer"]): row["answer"] == "15" for row in candidates})
+    result = score_experiment(experiment, Path("unused.jar"))
+    assert [result["conditions"][name]["metrics"]["mrr_at5"] for name in CONDITIONS] == [0.5, 1.0, 0.75]
+    assert [result["conditions"][name]["efficiency"]["request_count"] for name in CONDITIONS] == [160, 1600, 160]
+    contrasts = result["paired_contrasts"]
+    assert len(contrasts) == 3
+    assert contrasts["expansion_greedy_minus_original_greedy"]["mrr_at5"]["second_minus_first"] == 0.25
+    assert contrasts["expansion_greedy_minus_original_sampling10"]["mrr_at5"]["second_minus_first"] == -0.25
+    assert contrasts["original_sampling10_minus_original_greedy"]["mrr_at5"]["paired_bootstrap_95ci"][0] > 0
+    assert result["conditions"]["original_greedy"]["candidate_diagnostics"]["parse_success_rate"] == 0.5
+    assert (experiment / "comparison_summary.json").is_file()
