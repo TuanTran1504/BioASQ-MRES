@@ -1,0 +1,49 @@
+{
+  "description": "Fresh, paired single-answer and expansion SFT across three 8B backbones.",
+  "source_dataset": "../data/BioASQ_expansion_sft/seed3407_teacher_strict_v1",
+  "source_manifest_sha256": "aa0e9c403f05114ee0f31726af4f311e9935f84424a1d7202f70de2917f435a0",
+  "output_dataset": "data/matched_8b_sft",
+  "outer_dev": "data/expansion_dev160.jsonl",
+  "single_answer_prompt": "prompts/matched_single_answer_v1.txt",
+  "common": {
+    "audit_response_masks": true,
+    "max_seq_length": 8192,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
+    "gradient_accumulation_steps": 16,
+    "warmup_steps": 10,
+    "num_train_epochs": 3.0,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.01,
+    "logging_steps": 1,
+    "save_strategy": "epoch",
+    "lora_r": 32,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "early_stopping_patience": 0,
+    "early_stopping_threshold": 0.001,
+    "seed": 3407
+  },
+  "models": {
+    "llama31": {
+      "model_name": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+      "model_loader": "fast_language_model",
+      "chat_template": "llama-3",
+      "chat_template_kwargs": {}
+    },
+    "qwen3": {
+      "model_name": "unsloth/Qwen3-8B-unsloth-bnb-4bit",
+      "model_loader": "fast_language_model",
+      "chat_template": "qwen",
+      "chat_template_kwargs": {"enable_thinking": false}
+    },
+    "ministral3": {
+      "model_name": "unsloth/Ministral-3-8B-Instruct-2512-unsloth-bnb-4bit",
+      "model_loader": "fast_model",
+      "chat_template": "ministral-3",
+      "chat_template_kwargs": {},
+      "instruction_part": "[INST]",
+      "response_part": "[/INST]"
+    }
+  }
+}

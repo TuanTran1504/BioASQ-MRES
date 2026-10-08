@@ -13,6 +13,7 @@ import argparse
 from collections import Counter
 from datetime import datetime, timezone
 import hashlib
+from importlib.metadata import version
 import json
 import os
 from pathlib import Path
@@ -66,7 +67,9 @@ def normalized_surface(value: str) -> str:
     return re.sub(r"\s+", " ", str(value)).strip().casefold()
 
 
-def validate_rows(rows: list[dict[str, Any]], label: str) -> dict[str, Any]:
+def validate_rows(rows: list[dict[str, Any]], label: str, formulation: str = "expansion") -> dict[str, Any]:
+    if formulation not in {"expansion", "original"}:
+        raise ValueError(f"Unknown SFT formulation: {formulation}")
     question_ids: list[str] = []
     answer_counts: Counter[int] = Counter()
     relation_counts: Counter[str] = Counter()
@@ -79,6 +82,15 @@ def validate_rows(rows: list[dict[str, Any]], label: str) -> dict[str, Any]:
             raise ValueError(f"{label} row {index}: expected system/user/assistant roles")
         if any(not isinstance(message.get("content"), str) or not message["content"].strip() for message in messages):
             raise ValueError(f"{label} row {index}: every message needs nonempty text content")
+        if formulation == "original":
+            target = messages[-1]["content"]
+            match = re.fullmatch(r"Answer: \[BE\](.*?)\[EE\]", target, flags=re.DOTALL)
+            if (not match or not match[1].strip() or target.count("[BE]") != 1
+                    or target.count("[EE]") != 1):
+                raise ValueError(f"{label} row {index}: expected one Answer: [BE]expression[EE] target")
+            question_ids.append(qid)
+            answer_counts[1] += 1
+            continue
         try:
             target = json.loads(messages[-1]["content"])
         except json.JSONDecodeError as exc:
@@ -139,8 +151,9 @@ def validate_inputs(config: dict[str, Any]) -> tuple[list[dict[str, Any]], list[
 
     train_rows = read_jsonl(train_path)
     eval_rows = read_jsonl(eval_path)
-    train_summary = validate_rows(train_rows, "train")
-    eval_summary = validate_rows(eval_rows, "validation")
+    formulation = config.get("formulation", "expansion")
+    train_summary = validate_rows(train_rows, "train", formulation)
+    eval_summary = validate_rows(eval_rows, "validation", formulation)
     overlap = train_summary.pop("question_ids") & eval_summary.pop("question_ids")
     if overlap:
         raise ValueError(f"Train/validation question overlap: {sorted(overlap)[:5]}")
@@ -212,6 +225,27 @@ def token_preflight(
     return summary, {qid: length for length, qid in lengths}
 
 
+def audit_response_masks(dataset: Any, tokenizer: Any, response_part: str) -> dict[str, int]:
+    """Fail before optimisation if response masking omits prompts or all targets."""
+    supervised_tokens = 0
+    for index, record in enumerate(dataset):
+        ids, labels = list(record["input_ids"]), list(record["labels"])
+        active = [position for position, label in enumerate(labels) if label != -100]
+        if len(ids) != len(labels) or not active:
+            raise ValueError(f"Response masking row {index}: no trainable assistant tokens")
+        decoded = tokenizer.decode(ids, skip_special_tokens=False)
+        if response_part not in decoded:
+            raise ValueError(f"Response masking row {index}: missing native assistant delimiter")
+        expected_prefix = decoded.rsplit(response_part, 1)[0] + response_part
+        masked_prefix = tokenizer.decode(ids[:active[0]], skip_special_tokens=False)
+        if not masked_prefix.startswith(expected_prefix):
+            raise ValueError(f"Response masking row {index}: prompt tokens contribute to loss")
+        if any(labels[position] != ids[position] for position in active):
+            raise ValueError(f"Response masking row {index}: labels differ from assistant tokens")
+        supervised_tokens += len(active)
+    return {"examples": len(dataset), "supervised_tokens": supervised_tokens}
+
+
 def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dict[str, Any]], eval_rows: list[dict[str, Any]], validation: dict[str, Any]) -> None:
     os.environ.setdefault("UNSLOTH_DISABLE_STATISTICS", "1")
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
@@ -220,6 +254,7 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         sys.path.insert(0, str(BUNDLE_ROOT))
 
     # Import the CUDA/Unsloth stack only for an actual training invocation.
+    import unsloth
     import torch
     from src.utility.adapter_save import save_adapter_and_tokenizer
     from src.utility.dataset_builder import prepare_dataset
@@ -252,6 +287,7 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
 
     training_args = argparse.Namespace(
         model_name=model_name,
+        model_loader=config.get("model_loader", "fast_language_model"),
         max_seq_length=int(config["max_seq_length"]),
         dtype=None,
         no_4bit=False,
@@ -284,8 +320,8 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         dataset_num_proc=1,
         early_stopping_patience=int(config["early_stopping_patience"]),
         early_stopping_threshold=float(config["early_stopping_threshold"]),
-        instruction_part=None,
-        response_part=None,
+        instruction_part=config.get("instruction_part"),
+        response_part=config.get("response_part"),
         response_template="\nAnswer:",
         response_template_trim_tokens=0,
         resume_from_checkpoint=args.resume_from_checkpoint,
@@ -302,6 +338,7 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         "requested_max_train_examples": max_train,
         "requested_max_validation_examples": max_eval,
         "smoke_test": args.smoke_test,
+        "package_versions": {name: version(name) for name in ("torch", "transformers", "peft", "trl", "unsloth")},
     }
     write_json(status_path, status)
 
@@ -396,6 +433,14 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
             eval_rows=[],
             args=training_args,
         )
+        if config.get("audit_response_masks"):
+            from src.utility.training import resolve_response_only_parts
+            _, response_part = resolve_response_only_parts(
+                training_args.chat_template, training_args.instruction_part, training_args.response_part)
+            status["response_mask_audit"] = {
+                "train": audit_response_masks(trainer.train_dataset, tokenizer, response_part),
+                "validation": audit_response_masks(trainer.eval_dataset, tokenizer, response_part)}
+            write_json(status_path, status)
         result = train_trainer(trainer, training_args)
         eval_metrics = dict(trainer.evaluate())
         save_adapter_and_tokenizer(

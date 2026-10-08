@@ -2,6 +2,11 @@
 
 This is a small, portable package for Gadi. It supports the original SFT jobs plus gold-blind exact-span and equivalent-expression expansion experiments. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.
 
+For fresh, matched single-answer and expansion SFT across Llama-3.1-8B,
+Qwen3-8B and Ministral-3-8B, use the [paired 8B training workflow](docs/MATCHED_8B_SFT.md).
+It prepares six training conditions with shared question splits and base snapshots,
+each gated by a training-and-generation smoke job.
+
 To evaluate the historical Qwen2.5 0.5B/3B SFT checkpoints with the existing
 expansion prompt and ten high-temperature single-answer draws, use the
 [original SFT inference workflow](docs/ORIGINAL_QWEN25_INFERENCE.md). The exact

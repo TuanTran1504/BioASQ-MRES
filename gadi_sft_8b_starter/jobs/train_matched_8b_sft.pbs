@@ -1,0 +1,39 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N bioasq-matched-8b-sft
+
+set -euo pipefail
+: "${MODEL_KEY:?Missing MODEL_KEY}"
+: "${SFT_FORMULATION:?Missing SFT_FORMULATION}"
+: "${BASE_PINS:?Missing BASE_PINS}"
+case "$MODEL_KEY" in llama31|qwen3|ministral3) ;; *) exit 2 ;; esac
+case "$SFT_FORMULATION" in original|expansion) ;; *) exit 2 ;; esac
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+run_name="${MODEL_KEY}-8b-${SFT_FORMULATION}-sft-${PBS_JOBID}"
+options=()
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  run_name="${run_name}-smoke"
+  options+=(--smoke-test)
+fi
+python scripts/run_matched_8b_sft.py \
+  --model "$MODEL_KEY" --formulation "$SFT_FORMULATION" \
+  --pins "$BASE_PINS" --run-name "$run_name" "${options[@]}"
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  python scripts/check_matched_8b_sft_smoke.py "outputs/matched_8b_sft/${run_name}"
+fi

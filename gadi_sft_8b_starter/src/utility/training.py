@@ -944,7 +944,15 @@ def build_sft_trainer(
 
 
 def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
-    model, tokenizer = FastLanguageModel.from_pretrained(
+    loader_name = getattr(args, "model_loader", "fast_language_model")
+    if loader_name == "fast_language_model":
+        loader = FastLanguageModel
+    elif loader_name == "fast_model":
+        from unsloth import FastModel
+        loader = FastModel
+    else:
+        raise ValueError(f"Unsupported model_loader: {loader_name}")
+    model, tokenizer = loader.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
         dtype=resolve_dtype(args.dtype),
@@ -952,8 +960,7 @@ def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
         local_files_only=bool(getattr(args, "local_files_only", False)),
     )
 
-    model = FastLanguageModel.get_peft_model(
-        model,
+    peft_options = dict(
         r=args.lora_r,
         target_modules=[
             "q_proj",
@@ -972,6 +979,17 @@ def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
         use_rslora=False,
         loftq_config=None,
     )
+    if loader_name == "fast_model":
+        # Ministral 3 is multimodal; this experiment adapts only its language path.
+        language_targets = [name for name, _ in model.named_modules()
+                            if name.rsplit(".", 1)[-1] in peft_options["target_modules"]
+                            and not any(part in name.lower() for part in ("vision", "visual", "projector"))]
+        if not language_targets:
+            raise ValueError("No language LoRA modules found in the FastModel backbone")
+        peft_options["target_modules"] = language_targets
+        peft_options.update(finetune_vision_layers=False, finetune_language_layers=True,
+                            finetune_attention_modules=True, finetune_mlp_modules=True)
+    model = loader.get_peft_model(model, **peft_options)
 
     if clean_text(args.prompt_format).lower() == "chat" and not bool(
         getattr(args, "preserve_native_chat_template", False)
