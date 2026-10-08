@@ -986,10 +986,20 @@ def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
                             and not any(part in name.lower() for part in ("vision", "visual", "projector"))]
         if not language_targets:
             raise ValueError("No language LoRA modules found in the FastModel backbone")
-        peft_options["target_modules"] = language_targets
+        # FastModel passes this list to get_peft_regex, which interprets entries
+        # as leaf names. Fully qualified paths produce an empty selection.
+        # The language/vision flags scope these shared projection names.
         peft_options.update(finetune_vision_layers=False, finetune_language_layers=True,
                             finetune_attention_modules=True, finetune_mlp_modules=True)
     model = loader.get_peft_model(model, **peft_options)
+    if loader_name == "fast_model":
+        trainable_lora = [name for name, parameter in model.named_parameters()
+                          if parameter.requires_grad and "lora_" in name]
+        if not trainable_lora:
+            raise ValueError("FastModel attached no trainable LoRA parameters")
+        if any(any(part in name.lower() for part in ("vision", "visual", "projector"))
+               for name in trainable_lora):
+            raise ValueError("Language-only SFT unexpectedly attached vision/projector LoRA adapters")
 
     if clean_text(args.prompt_format).lower() == "chat" and not bool(
         getattr(args, "preserve_native_chat_template", False)

@@ -76,6 +76,22 @@ Add `--check-only` to check without downloads, or the existing protected
 requires Transformers v5 and compatible Unsloth. GPU smoke tests check the
 actual Gadi stack; local CPU tests do not establish GPU compatibility.
 
+The initial Ministral smoke jobs `180794575` and `180794577` loaded weights but
+failed when attaching LoRA. FastModel's scoped target selection interpreted our
+fully qualified module paths as projection leaf names and matched no layers.
+The corrected loader supplies `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`,
+`up_proj` and `down_proj`, using its language/vision filters to select language
+modules. It then checks that trainable LoRA parameters exist and exclude vision
+and projector modules. After pulling this correction, retry only Ministral:
+
+```bash
+bash scripts/submit_matched_8b_sft.sh ministral3
+```
+
+This submits two fresh smoke jobs and two dependent full jobs. The original
+failed smoke/full jobs are retained for audit. The datasets and matrix settings
+are unchanged; existing Llama and Qwen jobs need no resubmission for this fix.
+
 ## Smoke checks and outputs
 
 Preflight checks every fitting/validation example and refuses truncation. The

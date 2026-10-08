@@ -235,15 +235,20 @@ def test_model_matrix_matches_settings_and_disables_qwen_thinking():
     assert matrix["models"]["ministral3"]["response_part"] == "[/INST]"
 
 
-def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(monkeypatch):
+@pytest.mark.parametrize("adapter_scope", ["language", "vision", "empty"])
+def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(monkeypatch, adapter_scope):
     # Isolate the loader function from CUDA imports, and exercise its actual branch.
     tree = ast.parse((BUNDLE / "src/utility/training.py").read_text(encoding="utf-8"))
     function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
                     and node.name == "load_model_and_tokenizer")
     model = SimpleNamespace(named_modules=lambda: iter([
-        ("model.language_model.layers.0.q_proj", None),
-        ("model.vision_tower.layers.0.q_proj", None),
-        ("model.language_model.layers.0.up_proj", None)]))
+        ("model.language_model.layers.0.self_attn.q_proj", None),
+        ("model.vision_tower.layers.0.self_attn.q_proj", None),
+        ("model.language_model.layers.0.mlp.up_proj", None)]))
+    scope_name = "language_model" if adapter_scope == "language" else "vision_tower"
+    model.named_parameters = lambda: iter([] if adapter_scope == "empty" else [
+        (f"base_model.model.model.{scope_name}.layers.0.self_attn.q_proj.lora_A.default.weight",
+         SimpleNamespace(requires_grad=True))])
     tokenizer = SimpleNamespace(pad_token_id=1)
     calls = []
     class Loader:
@@ -254,6 +259,17 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
         @staticmethod
         def get_peft_model(actual_model, **kwargs):
             assert actual_model is model
+            # FastModel's scoped regex API accepts projection leaf names, not
+            # qualified module paths. Reproduce that contract from the failure.
+            assert all("." not in name for name in kwargs["target_modules"])
+            assert kwargs["finetune_language_layers"] is True
+            assert kwargs["finetune_vision_layers"] is False
+            import re
+            matcher = re.compile(r".*language.*(?:self_attn|mlp).*\." +
+                                 "(?:" + "|".join(re.escape(name) for name in kwargs["target_modules"]) + ")")
+            selected = [name for name, _ in actual_model.named_modules() if matcher.fullmatch(name)]
+            assert selected == ["model.language_model.layers.0.self_attn.q_proj",
+                                "model.language_model.layers.0.mlp.up_proj"]
             calls.append(kwargs)
             return model
     monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastModel=Loader))
@@ -265,7 +281,12 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
                            dtype=None, no_4bit=False, local_files_only=True, lora_r=32,
                            lora_alpha=32, lora_dropout=0.05, seed=3407, prompt_format="chat",
                            preserve_native_chat_template=True)
-    namespace["load_model_and_tokenizer"](args)
+    if adapter_scope == "language":
+        namespace["load_model_and_tokenizer"](args)
+    else:
+        message = "vision/projector" if adapter_scope == "vision" else "no trainable"
+        with pytest.raises(ValueError, match=message):
+            namespace["load_model_and_tokenizer"](args)
     assert calls[0]["local_files_only"] is True
     assert calls[1]["finetune_vision_layers"] is False
-    assert calls[1]["target_modules"] == ["model.language_model.layers.0.q_proj", "model.language_model.layers.0.up_proj"]
+    assert calls[1]["target_modules"] == ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
