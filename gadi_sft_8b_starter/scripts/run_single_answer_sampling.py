@@ -13,13 +13,20 @@ from run_extractive_expansion_8b import (
     load_model, read_json, read_jsonl, render_prompt, tokenize_text, write_json, write_jsonl,
 )
 
+PARSER_VERSION = "single-tagged-answer-v2-trained-prefix"
+
 
 def sample_seed(question_id, draw, seed=3407):
     return int.from_bytes(hashlib.sha256(f"{seed}:{question_id}:{draw}".encode()).digest()[:4], "big")
 
 
 def parse_single_answer(raw):
-    """Require the original SFT's single-expression [BE]/[EE] format."""
+    """Accept the tagged answer with the exact prefix used in historical SFT.
+
+    build_sharegpt_conversation trained assistant targets as
+    'Answer: [BE] ... [EE]'. This prefix carries no answer content.
+    """
+    raw = re.sub(r"^\s*Answer:\s*", "", raw, count=1, flags=re.IGNORECASE)
     matches = re.findall(r"\[BE\](.*?)\[EE\]", raw, flags=re.DOTALL)
     if len(matches) != 1 or not matches[0].strip():
         raise ValueError("Expected exactly one nonempty [BE] answer [EE]")
@@ -66,7 +73,8 @@ def main():
     config.update(model_name=args.model_name, question_count=len(examples),
                   input_sha256=file_sha256(ROOT / config["input"]),
                   prompt_sha256=file_sha256(prompt_path), gold_blind_generation=True,
-                  local_files_only=True, selection="first five unique answers in draw order")
+                  local_files_only=True, selection="first five unique answers in draw order",
+                  parser_version=PARSER_VERSION)
     write_json(output / "config.json", config)
     write_jsonl(output / "examples.jsonl", examples)
     state = {"status": "running", "expected_questions": len(examples), "completed_questions": 0}

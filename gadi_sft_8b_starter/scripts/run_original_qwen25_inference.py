@@ -20,6 +20,22 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def validate_smoke_outputs(runs):
+    """Never release a full job when a complete smoke arm produced no answers."""
+    for name, path in runs.items():
+        rows = [json.loads(line) for line in (path / "generations.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+        candidates = [json.loads(line) for line in (path / "candidates.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+        usable = {row["question_id"] for row in candidates if row.get("answer")}
+        if not usable:
+            example = rows[0] if rows else {}
+            if example.get("samples"):
+                example = example["samples"][0]
+            raise ValueError(f"Smoke arm {name} produced zero parseable answers. "
+                             f"Inspect raw output before a full run: {example.get('raw_response')!r}; "
+                             f"parser error: {example.get('parse_error')}")
+        print(f"Smoke {name}: {len(usable)}/{len(rows)} questions produced parseable answers", flush=True)
+
+
 def validate_adapter(size, adapter):
     pinned = read(ROOT / "configs/original_qwen25_adapters.json")[size]
     if not (adapter / "identity.json").is_file():
@@ -112,6 +128,8 @@ def main():
             state = read(output / relative / "status.json")
             if state["status"] != "complete" or state["completed_questions"] != manifest["expected_questions"]:
                 raise ValueError("Incomplete inference arm")
+        if args.smoke_test:
+            validate_smoke_outputs({name: output / relative for name, relative in manifest["runs"].items()})
         manifest["status"] = "complete"
     except BaseException as exc:
         manifest.update(status="failed", error=f"{type(exc).__name__}: {exc}")

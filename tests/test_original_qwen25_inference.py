@@ -9,24 +9,31 @@ from types import SimpleNamespace
 import pytest
 
 from scripts.analyze_original_qwen25_inference import sampling_diagnostics, validate_inference_pair
+from scripts.reparse_original_qwen25_sampling import reparse_samples
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "gadi_sft_8b_starter"
 
 
 def load_script(name):
+    original_path = sys.path[:]
     scripts = str(BUNDLE / "scripts")
     if scripts not in sys.path:
         sys.path.insert(0, scripts)
     spec = importlib.util.spec_from_file_location(name, BUNDLE / "scripts" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = original_path
     return module
 
 
 def test_sampling_parser_rejects_multiple_answers_and_preserves_failed_draw_budget():
     sampler = load_script("run_single_answer_sampling")
     assert sampler.parse_single_answer("[BE] alpha  beta [EE]") == "alpha beta"
+    assert sampler.parse_single_answer("Answer: [BE] alpha beta [EE]") == "alpha beta"
+    assert sampler.parse_single_answer("\nanswer: [BE] alpha [EE]\n") == "alpha"
     for raw in ("alpha", "[BE][EE]", "[BE]alpha[EE][BE]beta[EE]", "Reasoning [BE]alpha[EE]"):
         with pytest.raises(ValueError):
             sampler.parse_single_answer(raw)
@@ -65,7 +72,7 @@ def test_sampler_actually_makes_ten_seeded_calls_and_saves_failures(tmp_path, mo
             return "question and evidence"
         def __call__(self, **kwargs): return {"input_ids": Tokens()}
         def decode(self, ids, **kwargs):
-            return "invalid" if len(calls) == 2 else "[BE] Beta [EE]" if len(calls) == 10 else "[BE] Alpha [EE]"
+            return "invalid" if len(calls) == 2 else "Answer: [BE] Beta [EE]" if len(calls) == 10 else "Answer: [BE] Alpha [EE]"
 
     fake_torch = SimpleNamespace(inference_mode=nullcontext, manual_seed=seeds.append,
                                  cuda=SimpleNamespace(is_available=lambda: True,
@@ -172,3 +179,67 @@ def test_historical_identity_rejects_changed_files_and_fitting_leakage(tmp_path,
     (adapter / "adapter_config.json").write_text("changed")
     with pytest.raises(ValueError, match="file differs"):
         runner.validate_adapter("3b", adapter)
+
+
+def test_smoke_guard_rejects_completed_zero_answer_arm(tmp_path):
+    runner = load_script("run_original_qwen25_inference")
+    (tmp_path / "generations.jsonl").write_text(json.dumps({"question_id": "q", "samples": [
+        {"raw_response": "Answer: [BE] alpha [EE]", "parse_error": "Unexpected prefix"}]}) + "\n")
+    (tmp_path / "candidates.jsonl").write_text("")
+    with pytest.raises(ValueError, match="zero parseable"):
+        runner.validate_smoke_outputs({"sampling": tmp_path})
+    (tmp_path / "candidates.jsonl").write_text(json.dumps({"question_id": "q", "answer": "alpha"}) + "\n")
+    runner.validate_smoke_outputs({"sampling": tmp_path})
+
+
+def test_reparsing_preserves_raw_samples_costs_and_previous_errors():
+    original = {"question_id": "q", "parse_error": "All ten samples failed", "request_count": 10,
+                "samples": [{"draw": 1, "raw_response": "Answer: [BE] alpha [EE]", "answer": None,
+                             "parse_error": "Unexpected prefix", "seed": 123, "output_tokens": 10},
+                            {"draw": 2, "raw_response": "Reasoning [BE] beta [EE]", "answer": None,
+                             "parse_error": "Unexpected text", "seed": 456, "output_tokens": 20}]}
+    generations, candidates = reparse_samples([original])
+    assert generations[0]["samples"][0]["answer"] == "alpha"
+    assert generations[0]["samples"][0]["previous_parse_error"] == "Unexpected prefix"
+    assert generations[0]["samples"][0]["raw_response"] == original["samples"][0]["raw_response"]
+    assert generations[0]["samples"][0]["seed"] == 123
+    assert generations[0]["samples"][0]["output_tokens"] == 10
+    assert generations[0]["request_count"] == 10
+    assert generations[0]["samples"][1]["parse_error"]
+    assert original["samples"][0]["answer"] is None
+    assert generations[0]["parse_error"] is None
+    assert [c["answer"] for c in candidates] == ["alpha"]
+
+
+def test_recovery_creates_auditable_sibling_without_changing_original(tmp_path, monkeypatch):
+    from scripts import reparse_original_qwen25_sampling as recovery
+    original = tmp_path / "experiment"
+    sampling = original / "sampling10"
+    expansion = original / "expansion"
+    sampling.mkdir(parents=True)
+    expansion.mkdir()
+    manifest = {"status": "complete", "smoke_test": False, "expected_questions": 160,
+                "runs": {"original_sft_sampling10": "sampling10", "original_sft_expansion": "expansion"}}
+    (original / "manifest.json").write_text(json.dumps(manifest))
+    (sampling / "status.json").write_text(json.dumps({"status": "complete"}))
+    (sampling / "config.json").write_text(json.dumps({"temperature": 0.8, "num_generations": 10}))
+    examples = [{"question_id": str(i)} for i in range(160)]
+    rows = [{"question_id": str(i), "request_count": 10, "samples": [
+        {"draw": draw, "seed": draw, "raw_response": "Answer: [BE]15[EE]", "answer": None,
+         "parse_error": "Unexpected text outside the single answer"} for draw in range(1, 11)]}
+        for i in range(160)]
+    for name, values in (("examples", examples), ("generations", rows)):
+        (sampling / f"{name}.jsonl").write_text("".join(json.dumps(row) + "\n" for row in values))
+    before = {path: path.read_bytes() for path in original.rglob("*") if path.is_file()}
+    monkeypatch.setattr(sys, "argv", ["recover", str(original)])
+    recovery.main()
+    output = original.with_name("experiment-sampling-parser-v2")
+    revised = json.loads((output / "manifest.json").read_text())
+    assert (output / revised["runs"]["original_sft_expansion"]).resolve() == expansion
+    assert revised["generation_unchanged"] is True
+    assert all(path.read_bytes() == contents for path, contents in before.items())
+    assert len((output / "sampling10/candidates.jsonl").read_text().splitlines()) == 160
+    config = json.loads((output / "sampling10/config.json").read_text())
+    assert config["source_generations_sha256"] == hashlib.sha256(before[sampling / "generations.jsonl"]).hexdigest()
+    with pytest.raises(FileExistsError):
+        recovery.main()

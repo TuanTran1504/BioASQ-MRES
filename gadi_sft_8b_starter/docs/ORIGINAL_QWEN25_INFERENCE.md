@@ -16,7 +16,10 @@ and full-evidence preflight checks. The sampling prompt presents the same
 snippet strings inside `[BS]`/`[ES]` markers. Its question/evidence JSON layout is
 new, so this is not a reproduction of the historical single-answer evaluation.
 There are no retries or gold-guided choices. Invalid sampled responses consume
-their draw and remain saved. Case-insensitive duplicate answers are removed;
+their draw and remain saved. The single-answer parser accepts the optional
+`Answer:` prefix used in the historical SFT targets, while still requiring exactly
+one nonempty `[BE]`/`[EE]` answer and rejecting other surrounding text.
+Case-insensitive duplicate answers are removed;
 the first five unique candidates in response/draw order form the ranked result.
 This ranking is a deterministic baseline, not a learned selector.
 
@@ -87,6 +90,9 @@ an eight-hour full job conditional on smoke success. Two sizes mean four jobs,
 not four independent full evaluations. Submission IDs are saved under
 `outputs/original_qwen25/submission-*.tsv`. Avoid resubmitting active jobs.
 The full run contains 160 expansion responses and 1,600 sampled responses.
+Smoke jobs also require at least one parseable answer in each arm. A completed
+process with zero parseable answers fails this check and does not release its
+dependent full job.
 
 ## Score after completion
 
@@ -105,6 +111,37 @@ inputs/settings. It re-scores the stored expansion SFT outputs without regenerat
 Reports are saved as `comparison_summary.json` and `comparison_per_question.json`.
 Python 3.12 plus a Java runtime is required; the bundled official adapter avoids a
 JDK requirement.
+
+## Recover the October 8 sampling results without new generation
+
+The original sampling parser rejected the trained `Answer:` prefix. Saved raw
+responses confirmed this issue (for example, `Answer: [BE]15[EE]`). The resulting
+zero sampling scores are parser failures and must not be interpreted as zero
+answer accuracy. Reparse both completed jobs using the corrected parser:
+
+```bash
+python ../scripts/reparse_original_qwen25_sampling.py \
+  outputs/original_qwen25/qwen25-05b-original-sft-180768374.gadi-pbs
+python ../scripts/reparse_original_qwen25_sampling.py \
+  outputs/original_qwen25/qwen25-3b-original-sft-180768376.gadi-pbs
+python ../scripts/analyze_original_qwen25_inference.py \
+  outputs/original_qwen25/qwen25-05b-original-sft-180768374.gadi-pbs-sampling-parser-v2 \
+  --expansion-sft-experiment outputs/matched_qwen25/qwen25-05b-expansion-dev160-180709560.gadi-pbs
+python ../scripts/analyze_original_qwen25_inference.py \
+  outputs/original_qwen25/qwen25-3b-original-sft-180768376.gadi-pbs-sampling-parser-v2 \
+  --expansion-sft-experiment outputs/matched_qwen25/qwen25-3b-expansion-dev160-180709562.gadi-pbs
+```
+
+Run these after pulling the updated repository, in the existing Python/Java
+scoring environment. No GPU job or model loading is required. Each recovery
+creates a new sibling directory, preserves all ten raw draws and their seeds,
+records the previous parsing errors and source-file hash, and retains measured
+generation costs. Existing files are not overwritten; an existing recovery
+directory causes an error. Use `--output-dir` for a different new destination.
+
+The expansion arm remains unchanged, including its strict JSON parsing. Its
+zero scores need separate raw-output inspection; the sampling repair does not
+establish that the model followed the expansion format.
 
 ## Interpretation
 

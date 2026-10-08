@@ -85,7 +85,7 @@ def main():
     result = {"model_size": manifest["model_size"], "historical_run": manifest["historical_run"],
               "question_count": 160, "evaluation": manifest["evaluation"],
               "scoring": "official BioASQ Java candidate matcher", "selection": manifest["selection"],
-              "conditions": {}, "paired_contrasts": {},
+              "conditions": {}, "paired_contrasts": {}, "quality_warnings": [],
               "interpretation": ["Sampling uses ten requests per question; expansion uses one.",
                                  "Comparison with expansion SFT concerns checkpoints: training data and backbone revisions differ.",
                                  "Coverage at ten is an offline diagnostic; ranked submissions use at most five."]}
@@ -94,7 +94,12 @@ def main():
         report, summary, rows = analyze_local_expansion(path, jar_path=args.jar)
         metrics, scored[name] = ranking_metrics(rows)
         result["conditions"][name] = {"metrics": metrics, "candidate_diagnostics": summary,
-                                      "efficiency": efficiency(path), "report": str(report)}
+                                      "efficiency": efficiency(path), "report": str(report),
+                                      "parser_version": read(path / "config.json").get("parser_version", "original-run-parser")}
+        if not summary["parse_success_count"]:
+            result["quality_warnings"].append(
+                f"{name}: no response produced parseable candidates; scores measure output/parse failure. "
+                "Inspect raw responses before drawing conclusions about biomedical accuracy.")
         if name == "original_sft_sampling10":
             result["conditions"][name]["sampling_diagnostics"] = sampling_diagnostics(path, rows)
     contrasts = [("original_sft_expansion", "original_sft_sampling10")]
