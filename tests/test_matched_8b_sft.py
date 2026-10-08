@@ -1,4 +1,5 @@
 import ast
+import importlib.util
 from contextlib import contextmanager
 from contextlib import nullcontext
 import json
@@ -10,6 +11,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "gadi_sft_8b_starter"
+
+_text_spec = importlib.util.spec_from_file_location(
+    "bundle_text_tokenizer", BUNDLE / "src/utility/text_tokenizer.py")
+_text_module = importlib.util.module_from_spec(_text_spec)
+_text_spec.loader.exec_module(_text_module)
+text_only_tokenizer = _text_module.text_only_tokenizer
 
 
 @contextmanager
@@ -236,7 +243,9 @@ def test_model_matrix_matches_settings_and_disables_qwen_thinking():
 
 
 @pytest.mark.parametrize("adapter_scope", ["language", "vision", "empty"])
-def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(monkeypatch, adapter_scope):
+@pytest.mark.parametrize("processor_wrapped", [False, True])
+def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(
+        monkeypatch, adapter_scope, processor_wrapped):
     # Isolate the loader function from CUDA imports, and exercise its actual branch.
     tree = ast.parse((BUNDLE / "src/utility/training.py").read_text(encoding="utf-8"))
     function = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
@@ -249,13 +258,14 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
     model.named_parameters = lambda: iter([] if adapter_scope == "empty" else [
         (f"base_model.model.model.{scope_name}.layers.0.self_attn.q_proj.lora_A.default.weight",
          SimpleNamespace(requires_grad=True))])
-    tokenizer = SimpleNamespace(pad_token_id=1)
+    tokenizer = SimpleNamespace(pad_token_id=1, chat_template="native")
+    processing_object = SimpleNamespace(tokenizer=tokenizer, chat_template="processor") if processor_wrapped else tokenizer
     calls = []
     class Loader:
         @staticmethod
         def from_pretrained(**kwargs):
             calls.append(kwargs)
-            return model, tokenizer
+            return model, processing_object
         @staticmethod
         def get_peft_model(actual_model, **kwargs):
             assert actual_model is model
@@ -274,6 +284,7 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
             return model
     monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastModel=Loader))
     namespace = {"FastLanguageModel": None, "resolve_dtype": lambda value: value,
+                 "text_only_tokenizer": text_only_tokenizer,
                  "clean_text": str, "get_chat_template": lambda *a, **k: pytest.fail("native template replaced")}
     compile_tree = ast.Module(body=[ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0), function], type_ignores=[])
     exec(compile(ast.fix_missing_locations(compile_tree), "isolated_loader", "exec"), namespace)
@@ -282,7 +293,9 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
                            lora_alpha=32, lora_dropout=0.05, seed=3407, prompt_format="chat",
                            preserve_native_chat_template=True)
     if adapter_scope == "language":
-        namespace["load_model_and_tokenizer"](args)
+        _, actual_tokenizer = namespace["load_model_and_tokenizer"](args)
+        assert actual_tokenizer is tokenizer
+        assert actual_tokenizer.chat_template == "native"
     else:
         message = "vision/projector" if adapter_scope == "vision" else "no trainable"
         with pytest.raises(ValueError, match=message):
@@ -290,3 +303,70 @@ def test_fast_model_loader_adapts_language_modules_and_keeps_native_template(mon
     assert calls[0]["local_files_only"] is True
     assert calls[1]["finetune_vision_layers"] is False
     assert calls[1]["target_modules"] == ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+
+def test_text_tokenizer_preserves_native_template_and_recovers_processor_only_template():
+    tokenizer = SimpleNamespace(chat_template="tokenizer native")
+    processor = SimpleNamespace(tokenizer=tokenizer, chat_template="processor native")
+    assert text_only_tokenizer(processor) is tokenizer
+    assert tokenizer.chat_template == "tokenizer native"
+    tokenizer.chat_template = None
+    assert text_only_tokenizer(processor).chat_template == "processor native"
+    tokenizer.chat_template = processor.chat_template = None
+    with pytest.raises(ValueError, match="no native text chat template"):
+        text_only_tokenizer(processor)
+    assert text_only_tokenizer(tokenizer) is tokenizer
+
+
+def test_text_only_preflight_bypasses_processor_content_block_error():
+    from run_expansion_sft_qwen3 import token_preflight
+
+    class TextTokenizer:
+        chat_template = "[INST]native[/INST]"
+
+        def apply_chat_template(self, messages, **kwargs):
+            assert all(isinstance(message["content"], str) for message in messages)
+            text = "[INST]" + messages[0]["content"] + "[/INST]" + messages[-1]["content"]
+            return [ord(c) for c in text] if kwargs["tokenize"] else text
+
+    class Processor:
+        tokenizer = TextTokenizer()
+
+        def apply_chat_template(self, messages, **kwargs):
+            # Reproduce ProcessorMixin's access that failed on Gadi.
+            return [content["type"] for message in messages for content in message["content"]]
+
+    processor = Processor()
+    rows = [{"question_id": "q", "messages": [
+        {"role": "user", "content": "full evidence"},
+        {"role": "assistant", "content": "Answer: [BE]15[EE]"}]}]
+    with pytest.raises(TypeError):
+        token_preflight(rows, processor, max_seq_length=8192, chat_template_kwargs={}, label="train")
+    summary, lengths = token_preflight(rows, text_only_tokenizer(processor),
+        max_seq_length=8192, chat_template_kwargs={}, label="train")
+    assert summary["overflow_count"] == 0
+    assert lengths["q"] == len("[INST]full evidence[/INST]Answer: [BE]15[EE]")
+
+
+def test_fast_model_inference_unwraps_processor_before_smoke_generation(monkeypatch):
+    # Exercise the inference loader without a GPU or the training imports.
+    with bundle_imports():
+        import run_extractive_expansion_8b as inference
+    tokenizer = SimpleNamespace(chat_template="native", pad_token_id=None,
+                                eos_token_id=2, eos_token="</s>")
+    processor = SimpleNamespace(tokenizer=tokenizer)
+    model = SimpleNamespace(eval=lambda: model)
+    inference_calls = []
+    loader = SimpleNamespace(from_pretrained=lambda **kwargs: (model, processor),
+                             for_inference=lambda actual: inference_calls.append(actual))
+    monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastModel=loader))
+    monkeypatch.setitem(sys.modules, "src.utility.eval_models", SimpleNamespace(
+        load_model_and_tokenizer_for_eval=None, prime_unsloth_runtime=lambda: None))
+    monkeypatch.setitem(sys.modules, "src.utility.eval_types", SimpleNamespace(
+        ModelSpec=lambda **kwargs: SimpleNamespace(**kwargs)))
+    monkeypatch.setitem(sys.modules, "src.utility.text_tokenizer", _text_module)
+    actual_model, actual_tokenizer = inference.load_model("pinned", 8192, True, "fast_model")
+    assert actual_model is model and actual_tokenizer is tokenizer
+    assert tokenizer.chat_template == "native"
+    assert tokenizer.pad_token == "</s>"
+    assert inference_calls == [model]

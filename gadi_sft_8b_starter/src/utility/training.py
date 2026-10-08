@@ -34,6 +34,7 @@ from .config import QUESTION_INSTRUCTIONS
 from .data import clean_multiline_text, clean_text, list_record_resources
 from .eval_models import generate_answer_samples
 from .eval_types import EvalExample
+from .text_tokenizer import text_only_tokenizer
 
 
 def resolve_selection_metric(args: argparse.Namespace) -> str:
@@ -959,6 +960,7 @@ def load_model_and_tokenizer(args: argparse.Namespace) -> Tuple[Any, Any]:
         load_in_4bit=not args.no_4bit,
         local_files_only=bool(getattr(args, "local_files_only", False)),
     )
+    tokenizer = text_only_tokenizer(tokenizer)
 
     peft_options = dict(
         r=args.lora_r,

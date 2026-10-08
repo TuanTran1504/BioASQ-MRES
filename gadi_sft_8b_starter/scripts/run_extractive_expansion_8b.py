@@ -329,6 +329,7 @@ def load_model(
 ):
     from src.utility.eval_models import load_model_and_tokenizer_for_eval, prime_unsloth_runtime
     from src.utility.eval_types import ModelSpec
+    from src.utility.text_tokenizer import text_only_tokenizer
 
     prime_unsloth_runtime()
     load_target = model_name
@@ -362,6 +363,7 @@ def load_model(
             load_in_4bit=True,
             local_files_only=not allow_download,
         )
+        tokenizer = text_only_tokenizer(tokenizer)
         class_handler = getattr(FastModel, "for_inference", None)
         if callable(class_handler):
             class_handler(model)

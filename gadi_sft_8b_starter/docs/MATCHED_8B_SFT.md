@@ -92,6 +92,16 @@ This submits two fresh smoke jobs and two dependent full jobs. The original
 failed smoke/full jobs are retained for audit. The datasets and matrix settings
 are unchanged; existing Llama and Qwen jobs need no resubmission for this fix.
 
+The next Ministral smoke jobs `180807925` and `180807927` passed LoRA setup
+but failed in chat-template preflight before training. FastModel returned a
+multimodal processor whose chat formatter expected typed content blocks, while
+our text-only messages contain strings. Both training and adapter inference now
+use the processor's underlying tokenizer, retaining its native template (or
+inheriting the processor's template if the tokenizer has none). This also gives
+the text trainer direct access to encoding, padding, masking and saving APIs.
+Pull this correction and use the same Ministral-only submission command above.
+The dropout warning is a performance notice, not the cause of these failures.
+
 ## Smoke checks and outputs
 
 Preflight checks every fitting/validation example and refuses truncation. The
