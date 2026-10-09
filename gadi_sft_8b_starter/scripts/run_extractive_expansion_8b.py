@@ -392,6 +392,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def prepare_inference_execution(config):
+    """Carry the recorded Ministral eager fallback into inference workers."""
+    mode = config.get("execution_mode", "default")
+    if mode == "default":
+        return lambda torch: None
+    if mode != "eager" or config.get("model_loader") != "fast_model":
+        raise ValueError("Eager inference requires the recovery FastModel loader")
+    from src.utility.training_execution import prepare_execution, activate_execution
+    prepare_execution(mode)
+    return lambda torch: activate_execution(mode, torch)
+
+
 def main() -> None:
     compiler_cache_root = configure_job_local_compiler_cache()
     if compiler_cache_root is not None:
@@ -464,7 +476,9 @@ def main() -> None:
     print("Run directory:", run_dir, flush=True)
     print("Completed before this process:", len(completed_ids), flush=True)
 
+    activate = prepare_inference_execution(config_template)
     import torch
+    activate(torch)
 
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required; submit this script through a Gadi GPU queue")

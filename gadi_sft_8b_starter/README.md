@@ -7,9 +7,10 @@ Qwen3-8B and Ministral-3-8B, use the [paired 8B training workflow](docs/MATCHED_
 It prepares six training conditions with shared question splits and base snapshots,
 each gated by a training-and-generation smoke job.
 
-For the completed Llama and Qwen pairs, the [matched 8B evaluation workflow](docs/MATCHED_8B_EVALUATION.md)
+For the completed Llama, Qwen and Ministral pairs, the [matched 8B evaluation workflow](docs/MATCHED_8B_EVALUATION.md)
 compares greedy single-answer SFT, ten sampled single answers and greedy expansion
 SFT on the same 160 dev questions, with official scores and paired comparisons.
+Select `ministral3` explicitly for its completed eager recovery adapters.
 
 The [ten-sample expansion SFT evaluation](docs/EXPANSION_SAMPLING_8B.md) adds ten
 stochastic expansion responses per question for those completed adapters. It

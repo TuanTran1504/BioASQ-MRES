@@ -10,7 +10,7 @@ from pathlib import Path
 
 from run_extractive_expansion_8b import (
     ROOT, configure_job_local_compiler_cache, file_sha256, input_token_count,
-    load_model, parse_equivalent_response, read_json, read_jsonl, render_prompt,
+    load_model, parse_equivalent_response, prepare_inference_execution, read_json, read_jsonl, render_prompt,
     tokenize_text, write_json, write_jsonl,
 )
 
@@ -112,7 +112,9 @@ def main():
     state = {"status": "running", "expected_questions": len(examples), "completed_questions": 0}
     generations, candidates, invalid_candidates = [], [], []
     write_json(output / "status.json", state)
+    activate = prepare_inference_execution(config)
     import torch
+    activate(torch)
     if not torch.cuda.is_available():
         raise RuntimeError("Submit sampling through the Gadi GPU queue")
     model = tokenizer = None

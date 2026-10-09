@@ -8,18 +8,21 @@ import subprocess
 import pytest
 
 
-@pytest.mark.parametrize("models,fail_validation,expected_jobs", [
-    ([], False, 4), (["llama31"], False, 2), (["ministral3"], False, 0),
-    (["qwen3", "qwen3"], False, 0), ([], True, 0),
+@pytest.mark.parametrize("workflow,models,fail_validation,expected_jobs", [
+    ("expansion_sampling", [], False, 4), ("expansion_sampling", ["llama31"], False, 2),
+    ("expansion_sampling", ["ministral3"], False, 0),
+    ("expansion_sampling", ["qwen3", "qwen3"], False, 0), ("expansion_sampling", [], True, 0),
+    ("matched", ["ministral3"], False, 2), ("matched", ["ministral3"], True, 0),
 ])
-def test_only_new_expansion_jobs_are_submitted_after_validation(tmp_path, models, fail_validation, expected_jobs):
+def test_only_selected_jobs_are_submitted_after_validation(tmp_path, workflow, models, fail_validation, expected_jobs):
     bash = shutil.which("bash")
     if os.name == "nt":
         bash = "C:/Program Files/Git/bin/bash.exe"
     if not bash or not Path(bash).is_file():
         pytest.skip("Bash is unavailable")
     root = Path(__file__).resolve().parents[1]
-    source = root / "gadi_sft_8b_starter/scripts/submit_expansion_sampling_8b.sh"
+    name = "submit_expansion_sampling_8b.sh" if workflow == "expansion_sampling" else "submit_matched_8b_evaluation.sh"
+    source = root / "gadi_sft_8b_starter/scripts" / name
     text = source.read_text().replace('source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"', ':')
     mocks = r'''
 module() { :; }
@@ -51,9 +54,10 @@ qsub() {
     assert result.returncode == (0 if expected_jobs else 1), result.stderr
     if not jobs:
         return
-    assert all("EXPANSION_SAMPLING_ONLY=1" in line for line in jobs)
+    assert all(("EXPANSION_SAMPLING_ONLY=1" in line) == (workflow == "expansion_sampling") for line in jobs)
     assert all("jobs/evaluate_matched_8b_sft.pbs" in line for line in jobs)
-    assert all("--expansion-sampling-only" in line for line in lines if line.startswith("validate "))
+    assert all(("--expansion-sampling-only" in line) == (workflow == "expansion_sampling")
+               for line in lines if line.startswith("validate "))
     first_job = next(i for i, line in enumerate(lines) if line.startswith("qsub "))
     assert first_job == len(models or ["llama31", "qwen3"])
     for i in range(0, expected_jobs, 2):

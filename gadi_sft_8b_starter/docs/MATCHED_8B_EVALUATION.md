@@ -3,9 +3,9 @@
 To add ten sampled expansion responses using the completed baseline runs, see
 the [ten-sample expansion workflow](EXPANSION_SAMPLING_8B.md).
 
-Evaluate the completed Llama-3.1-8B and Qwen3-8B pairs on the same 160 development
+Evaluate the completed Llama-3.1-8B, Qwen3-8B and Ministral-3-8B pairs on the same 160 development
 questions, with all scientific snippets retained. This launcher performs inference
-only. It does not retrain models or submit Ministral jobs.
+only. Select `ministral3` explicitly to evaluate its newly completed eager pair.
 
 | Condition | Adapter and prompt | Decoding | Requests per question |
 |---|---|---|---|
@@ -31,6 +31,15 @@ The configuration `configs/matched_8b_evaluation.json` points to these full runs
 |---|---|---|
 | Llama-3.1-8B | 180794568 | 180794570 |
 | Qwen3-8B | 180794572 | 180794574 |
+| Ministral-3-8B | 180878745 | 180872635 |
+
+Both Ministral recovery training jobs finished with exit status 0, as reported
+on 10 October 2026. The evaluator still checks completed status, adapter weights
+and completion records before any submission. Both arms use `eager` execution;
+their inference workers also disable Unsloth compilation before model loading
+and force eager LoRA execution. The existing dynamic-cache/FP16 generation
+workaround remains active. Llama and Qwen retain their default execution.
+Record these backend differences when comparing cost across backbones.
 
 The launcher validates both completed adapters, their nonempty weights and saved
 configuration, pinned training matrix and shared base revision. It revalidates
@@ -54,7 +63,16 @@ evaluation job dependent on successful smoke exit. Every job runs all three arms
 in separate processes. If an arm produces zero parseable answers in the smoke,
 the dependent full evaluation does not run. Smoke results validate execution and
 format, not answer quality. There are four jobs in total: two smokes and two full
-evaluations. To submit just one backbone, pass `llama31` or `qwen3`.
+evaluations by default (Llama and Qwen). To submit one backbone, pass `llama31`,
+`qwen3` or `ministral3`. For the completed Ministral pair only:
+
+```bash
+bash scripts/submit_matched_8b_evaluation.sh ministral3
+```
+
+This submits one smoke and one dependent full evaluation, without repeating
+Llama/Qwen jobs. Ten-sample expansion for Ministral can be added after this
+baseline has completed and its new evaluation job ID is known.
 
 Monitor the printed job IDs:
 
@@ -65,7 +83,7 @@ qstat -swx <smoke-ID> <full-ID>
 Outputs are under:
 
 ```text
-outputs/matched_8b_evaluation/<llama31|qwen3>-8b-evaluation-<PBS_JOBID>/
+outputs/matched_8b_evaluation/<llama31|qwen3|ministral3>-8b-evaluation-<PBS_JOBID>/
 ```
 
 Check `manifest.json` for status `complete`, `smoke_test: false`, and
@@ -101,6 +119,13 @@ generation denominators, native prompt hashes, adapter identity, shared backbone
 decoding settings, draw counts/seeds and absence of evidence truncation. Complete
 experiment directories can also be copied locally for scoring; archived prompts
 are used rather than requiring the original Gadi prompt path.
+
+For a completed Ministral full job:
+
+```bash
+python ../scripts/analyze_matched_8b_evaluation.py \
+  outputs/matched_8b_evaluation/ministral3-8b-evaluation-<FULL_JOB_ID>.gadi-pbs
+```
 
 Each experiment receives `comparison_summary.json` and
 `comparison_per_question.json`. Scores use the official BioASQ Java candidate

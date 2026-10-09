@@ -45,6 +45,8 @@ def validate_experiment(directory, conditions=CONDITIONS):
                 or config["model_loader"] != provenance["model_loader"]
                 or config["chat_template_kwargs"] != provenance["chat_template_kwargs"]):
             raise ValueError("Inference uses the wrong adapter or native template settings")
+        if config.get("execution_mode", "default") != provenance.get("execution_mode", "default"):
+            raise ValueError("Inference execution mode differs from its recorded training mode")
         if config["input_sha256"] != manifest["input_sha256"] or not config["gold_blind_generation"]:
             raise ValueError("Unpinned input or generation not marked gold blind")
         if not config["require_all_snippets"] or config["mark_snippets"]:
@@ -103,6 +105,8 @@ def score_validated_runs(directory, manifest, runs, jar):
     scored = {}
     modes = {key: source.get("execution_mode", "default") for key, source in manifest["provenance"].items()}
     result["training_execution_modes"] = modes
+    result["inference_execution_modes"] = {name: read(path / "config.json").get("execution_mode", "default")
+                                            for name, path in runs.items()}
     if len(set(modes.values())) > 1:
         result["quality_warnings"].append("Training execution modes differ between SFT formulations; interpret this as a backend-adjusted comparison.")
     for name, path in runs.items():

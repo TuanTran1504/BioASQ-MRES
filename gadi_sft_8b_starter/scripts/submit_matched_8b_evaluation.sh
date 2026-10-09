@@ -14,7 +14,7 @@ models=("$@")
 if (( ${#models[@]} == 0 )); then models=(llama31 qwen3); fi
 declare -A seen
 for model in "${models[@]}"; do
-  case "$model" in llama31|qwen3) ;; *) echo "Unsupported completed model: $model" >&2; exit 1 ;; esac
+  case "$model" in llama31|qwen3|ministral3) ;; *) echo "Unsupported completed model: $model" >&2; exit 1 ;; esac
   if [[ -n "${seen[$model]:-}" ]]; then echo "Duplicate model: $model" >&2; exit 1; fi
   seen[$model]=1
   python scripts/run_matched_8b_evaluation.py --config "$config" --model "$model" --mode validate

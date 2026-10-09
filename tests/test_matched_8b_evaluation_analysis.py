@@ -72,7 +72,7 @@ def experiment(tmp_path):
     return tmp_path
 
 
-@pytest.mark.parametrize("error", ["evidence", "nine_draws", "seed", "prompt", "backbone", "truncation"])
+@pytest.mark.parametrize("error", ["evidence", "nine_draws", "seed", "prompt", "backbone", "truncation", "execution_mode"])
 def test_analysis_rejects_unmatched_inputs_or_incomplete_draws(experiment, error):
     path = experiment / "original_sampling10"
     if error == "evidence":
@@ -85,6 +85,10 @@ def test_analysis_rejects_unmatched_inputs_or_incomplete_draws(experiment, error
         manifest = json.loads((experiment / "manifest.json").read_text())
         manifest["provenance"]["expansion"]["base_revision"] = "other revision"
         write(experiment / "manifest.json", manifest)
+    elif error == "execution_mode":
+        config = json.loads((path / "config.json").read_text())
+        config["execution_mode"] = "eager"
+        write(path / "config.json", config)
     else:
         rows = [json.loads(line) for line in (path / "generations.jsonl").read_text().splitlines()]
         if error == "nine_draws": rows[0]["samples"].pop()

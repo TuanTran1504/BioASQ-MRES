@@ -281,3 +281,22 @@ def test_gadi_equivalent_parser_recovers_and_deduplicates_truncated_json():
     assert rejected[0]["reason"] == "duplicate_answer_surface"
     assert "incomplete_top_level_json_recovered" in issues
     assert compliant is False
+
+
+def test_eager_inference_is_prepared_before_loading_and_default_is_untouched(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import pytest
+    runner = load_runner()
+    calls = []
+    monkeypatch.setitem(sys.modules, "src.utility.training_execution", SimpleNamespace(
+        prepare_execution=lambda mode: calls.append(("prepare", mode)),
+        activate_execution=lambda mode, torch: calls.append(("activate", mode, torch))))
+    runner.prepare_inference_execution({})("fake torch")
+    assert calls == []
+    activate = runner.prepare_inference_execution({"execution_mode": "eager", "model_loader": "fast_model"})
+    assert calls == [("prepare", "eager")]
+    activate("fake torch")
+    assert calls[-1] == ("activate", "eager", "fake torch")
+    with pytest.raises(ValueError):
+        runner.prepare_inference_execution({"execution_mode": "eager", "model_loader": "fast_language_model"})

@@ -46,7 +46,8 @@ def test_sampling_parser_rejects_multiple_answers_and_preserves_failed_draw_budg
 
 
 @pytest.mark.parametrize("draw_count,temperature,mark_snippets,expansion", [(10, 0.8, True, False), (10, 0.8, False, False), (1, 0, False, False), (10, 0.8, False, True)])
-def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkeypatch, draw_count, temperature, mark_snippets, expansion):
+@pytest.mark.parametrize("execution_mode", ["default", "eager"])
+def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkeypatch, draw_count, temperature, mark_snippets, expansion, execution_mode):
     sampler = load_script("run_single_answer_sampling")
     monkeypatch.setattr(sampler, "ROOT", tmp_path)
     monkeypatch.setattr(sampler, "configure_job_local_compiler_cache", lambda: None)
@@ -84,7 +85,16 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
                                  cuda=SimpleNamespace(is_available=lambda: True,
                                                       manual_seed_all=lambda seed: None, empty_cache=lambda: None))
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
-    monkeypatch.setattr(sampler, "load_model", lambda *a: (Model(), Tokenizer()))
+    execution_calls = []
+    monkeypatch.setitem(sys.modules, "src.utility.training_execution", SimpleNamespace(
+        prepare_execution=lambda mode: execution_calls.append(("prepare", mode)),
+        activate_execution=lambda mode, torch: execution_calls.append(("activate", mode))))
+
+    def load_model(*args):
+        assert execution_calls == ([("prepare", "eager"), ("activate", "eager")] if execution_mode == "eager" else [])
+        return Model(), Tokenizer()
+
+    monkeypatch.setattr(sampler, "load_model", load_model)
     (tmp_path / "dev.jsonl").write_text(json.dumps({"question_id": "q", "question": "Question?",
         "snippets": [{"snippet_id": "s", "text": "Evidence"}], "gold_aliases": ["SECRET_GOLD"]}) + "\n")
     (tmp_path / "prompt.txt").write_text("Single answer")
@@ -94,6 +104,9 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
               "response_mode": "single_answer_greedy" if draw_count == 1 else "single_answer_sampling"}
     if expansion:
         config["response_mode"] = "equivalent_sampling"
+    config["execution_mode"] = execution_mode
+    if execution_mode == "eager":
+        config["model_loader"] = "fast_model"
     (tmp_path / "config.json").write_text(json.dumps(config))
     output = tmp_path / "output"
     monkeypatch.setattr(sys, "argv", ["sampling", "--config", str(tmp_path / "config.json"),

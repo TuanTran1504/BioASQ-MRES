@@ -83,6 +83,7 @@ def arm_config(config, provenance, condition, prompt_path):
     source = provenance[formulation]
     result = {"input": config["input"], "prompt": str(prompt_path),
               "model_loader": source["model_loader"], "chat_template_kwargs": source["chat_template_kwargs"],
+              "execution_mode": source.get("execution_mode", "default"),
               "max_seq_length": config["max_seq_length"], "max_new_tokens": config["max_new_tokens"],
               "require_all_snippets": True, "seed": config["seed"], "expected_questions": 160,
               "prompt_version": "matched-8b-" + formulation + "-native-v1", "mark_snippets": False,

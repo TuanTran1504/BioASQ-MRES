@@ -444,6 +444,27 @@ def test_evaluation_rejects_changed_dev_export_before_loading_weights(completed_
         runner.validate_training_pair(config, "qwen3")
 
 
+def test_ministral_completed_eager_pair_uses_fast_model_and_eager_inference(completed_pairs):
+    root, config, runner = completed_pairs
+    matrix = prepare.read(root / "matrix.json")
+    matrix["models"] = {"ministral3": {"model_name": "Ministral/base", "model_loader": "fast_model",
+                                        "chat_template_kwargs": {}}}
+    prepare.write(root / "matrix.json", matrix)
+    config["models"] = {"ministral3": config["models"]["qwen3"]}
+    for name in config["models"]["ministral3"].values():
+        path = root / name / "status.json"
+        state = prepare.read(path)
+        state["configuration"].update(matrix["models"]["ministral3"], execution_mode="eager",
+                                      matrix_sha256=prepare.digest(root / "matrix.json"))
+        prepare.write(path, state)
+    provenance = runner.validate_training_pair(config, "ministral3")
+    assert {s["execution_mode"] for s in provenance.values()} == {"eager"}
+    for condition in runner.CONDITIONS:
+        arm = runner.arm_config(config, provenance, condition, root / "prompt.txt")
+        assert arm["model_loader"] == "fast_model" and arm["execution_mode"] == "eager"
+        assert arm["chat_template_kwargs"] == {}
+
+
 @pytest.mark.parametrize("empty_arm", [None, "original_sampling10"])
 def test_evaluation_runs_three_arms_with_native_prompts_and_gates_bad_smoke(completed_pairs, monkeypatch, empty_arm):
     root, config, runner = completed_pairs
