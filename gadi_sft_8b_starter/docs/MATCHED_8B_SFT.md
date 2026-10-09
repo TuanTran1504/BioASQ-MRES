@@ -129,6 +129,38 @@ and phase before changing hyperparameters or scheduling further full runs. The
 cache workaround needs Gadi verification and does not establish that the separate
 expansion CUDA failure is resolved.
 
+### Expansion-only eager recovery
+
+The original smoke `180860017` passed, releasing original full training
+`180860018`. Expansion smoke `180860019` aborted with exit status 134; full
+`180860020` never ran. With synchronous CUDA diagnostics, the trace points to a
+Triton kernel in the TorchInductor-compiled LoRA forward within the Ministral MLP
+down projection. This identifies the failing execution path, not a defective
+dataset or a confirmed out-of-memory event.
+
+Retry just expansion without duplicating a running original job:
+
+```bash
+bash scripts/submit_matched_8b_sft.sh ministral3 --formulation expansion --eager
+```
+
+This submits one smoke and one dependent full training job. It sets
+`UNSLOTH_COMPILE_DISABLE=1` before importing Unsloth and uses
+[`torch.compiler.set_stance("force_eager")`](https://docs.pytorch.org/docs/main/generated/torch.compiler.set_stance.html)
+to bypass compiled LoRA forwards. The
+[Unsloth compiler](https://github.com/unslothai/unsloth-zoo/blob/main/unsloth_zoo/compiler.py)
+supports this disable setting. It is a recovery attempt requiring Gadi smoke
+verification, and may be slower. It retains all snippets, targets, sequence limits
+and optimization settings. The submission TSV and saved configuration explicitly
+record the execution mode. This fallback is restricted to Ministral.
+
+Leave the current original full job running. Comparing its default execution
+against an eager expansion run must disclose the backend difference; the
+evaluation summary warns if the two execution modes differ. For a final strictly
+controlled Ministral comparison, both formulations should use the same execution
+mode. After checking the current job and successful eager smoke, the launcher
+also supports `--formulation original --eager` for a fresh matched original run.
+
 ## Smoke checks and outputs
 
 Preflight checks every fitting/validation example and refuses truncation. The

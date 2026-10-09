@@ -67,6 +67,7 @@ def validate_training_pair(config, key):
             "status_sha256": digest(directory / "status.json"),
             "base_snapshot": str(snapshot), "base_revision": saved["base_revision"],
             "matrix_sha256": saved["matrix_sha256"], "system_prompt": system_prompt,
+            "execution_mode": saved.get("execution_mode", "default"),
             "model_loader": saved["model_loader"], "chat_template_kwargs": saved["chat_template_kwargs"]}
         states[formulation] = saved
     for field in ("base_snapshot", "base_revision", "matrix_sha256", "model_loader", "chat_template_kwargs"):

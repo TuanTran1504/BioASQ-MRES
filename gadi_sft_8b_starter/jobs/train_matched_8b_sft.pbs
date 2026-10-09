@@ -37,6 +37,7 @@ if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
 fi
 python scripts/run_matched_8b_sft.py \
   --model "$MODEL_KEY" --formulation "$SFT_FORMULATION" \
+  --execution-mode "${EXECUTION_MODE:-default}" \
   --pins "$BASE_PINS" --run-name "$run_name" "${options[@]}"
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
   python scripts/check_matched_8b_sft_smoke.py "outputs/matched_8b_sft/${run_name}"

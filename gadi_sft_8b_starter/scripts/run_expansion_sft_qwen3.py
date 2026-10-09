@@ -254,8 +254,12 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         sys.path.insert(0, str(BUNDLE_ROOT))
 
     # Import the CUDA/Unsloth stack only for an actual training invocation.
+    from src.utility.training_execution import prepare_execution, activate_execution
+    execution_mode = config.get("execution_mode", "default")
+    prepare_execution(execution_mode)
     import unsloth
     import torch
+    activate_execution(execution_mode, torch)
     from src.utility.adapter_save import save_adapter_and_tokenizer
     from src.utility.dataset_builder import prepare_dataset
     from src.utility.training import (

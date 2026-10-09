@@ -17,7 +17,10 @@ def main():
     parser.add_argument("--pins", type=Path, required=True)
     parser.add_argument("--run-name", required=True)
     parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--execution-mode", choices=("default", "eager"), default="default")
     args = parser.parse_args()
+    if args.execution_mode == "eager" and args.model != "ministral3":
+        raise ValueError("Eager recovery is restricted to Ministral")
     matrix = read(args.config)
     validate(matrix)
     pins = read(args.pins)
@@ -31,7 +34,8 @@ def main():
         raise ValueError("Pinned base snapshot is unavailable locally")
     config = resolved_config(matrix, args.model, args.formulation)
     config.update(base_revision=pin["revision"], base_snapshot=str(snapshot),
-                  matrix_sha256=pins["matrix_sha256"], checkpoint_selection="internal validation loss")
+                  matrix_sha256=pins["matrix_sha256"], checkpoint_selection="internal validation loss",
+                  execution_mode=args.execution_mode)
     train_rows, eval_rows, validation = validate_inputs(config)
     output_root = "outputs/matched_8b_sft"
     if (ROOT / output_root / args.run_name).exists():

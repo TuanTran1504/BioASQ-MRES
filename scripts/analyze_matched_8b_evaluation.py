@@ -93,6 +93,10 @@ def score_experiment(directory, jar):
                                  "Both SFT formulations share fitting/validation questions and a pinned backbone.",
                                  "Development-only results from one training seed; coverage at ten is diagnostic."]}
     scored = {}
+    modes = {key: source.get("execution_mode", "default") for key, source in manifest["provenance"].items()}
+    result["training_execution_modes"] = modes
+    if len(set(modes.values())) > 1:
+        result["quality_warnings"].append("Training execution modes differ between SFT formulations; interpret this as a backend-adjusted comparison.")
     for name, path in runs.items():
         report, summary, rows = analyze_local_expansion(path, jar_path=jar)
         metrics, scored[name] = ranking_metrics(rows)
