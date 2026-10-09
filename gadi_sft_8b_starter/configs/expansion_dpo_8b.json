@@ -1,0 +1,17 @@
+{
+  "evaluation_config": "configs/matched_8b_evaluation.json",
+  "output_root": "outputs/expansion_dpo_8b",
+  "seed": 3407,
+  "pilot_questions": {"train": 100, "validation": 32},
+  "sampled_responses": 4,
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "max_seq_length": 8192,
+  "max_new_tokens": 512,
+  "max_pairs_per_question": 2,
+  "beta": 0.1,
+  "learning_rate": 0.000005,
+  "num_train_epochs": 1,
+  "gradient_accumulation_steps": 16,
+  "checkpoint_selection": "internal validation preference loss; pilot setting, not confirmatory MRR selection"
+}

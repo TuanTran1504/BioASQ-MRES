@@ -1,5 +1,7 @@
 # BioASQ 8B Experiments for Gadi
 
+The completed Llama, Qwen3 and Ministral expansion SFT checkpoints now have a staged [expansion DPO workflow](../docs/EXPANSION_DPO_8B.md). From this directory, `bash scripts/submit_expansion_dpo_8b.sh generate` submits a shared-question pilot response bank for all three models. Biomedical review and validated whole-response preference pairs are required before the separate DPO training stage; development evaluation responses are excluded.
+
 This is a small, portable package for Gadi. It supports the original SFT jobs plus gold-blind exact-span and equivalent-expression expansion experiments. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.
 
 For fresh, matched single-answer and expansion SFT across Llama-3.1-8B,
