@@ -35,6 +35,12 @@ evaluation. Paired question bootstrap intervals use 10,000 resamples and seed
 3407; secondary intervals are unadjusted. One training seed and a reused
 development set still limit the conclusions.
 
+Legacy baseline manifests written before execution-mode controls omit
+`execution_mode`; the validator treats that omission as `default`. An explicit
+`eager` mode, changed adapter/tokenizer hashes, prompts or other provenance fields
+still fail validation. Baseline manifests are retained unchanged, and their
+original file hashes remain checked. Mismatch errors name the differing fields.
+
 ## Submit on Gadi
 
 From the repository's bundle directory:

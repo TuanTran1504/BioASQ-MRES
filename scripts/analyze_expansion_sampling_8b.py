@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.analyze_matched_8b_evaluation import validate_experiment, score_validated_runs
 from scripts.analyze_original_qwen25_inference import read, records
+from gadi_sft_8b_starter.scripts.matched_8b_provenance import validate_provenance
 
 
 def validate_sampling_comparison(directory, baseline):
@@ -18,9 +19,9 @@ def validate_sampling_comparison(directory, baseline):
     previous, runs = validate_experiment(baseline)
     if (hashlib.sha256((baseline / "manifest.json").read_bytes()).hexdigest() != manifest["baseline_manifest_sha256"]
             or manifest["model_key"] != previous["model_key"]
-            or manifest["provenance"] != previous["provenance"]
             or manifest["input_sha256"] != previous["input_sha256"]):
-        raise ValueError("Baseline adapter provenance, data or manifest differs")
+        raise ValueError("Baseline model, data or manifest hash differs")
+    validate_provenance(previous["provenance"], manifest["provenance"])
     path = sampled["expansion_sampling10"]
     if records(path / "examples.jsonl") != records(runs["expansion_greedy"] / "examples.jsonl"):
         raise ValueError("Baseline and sampled evaluation questions/evidence differ")

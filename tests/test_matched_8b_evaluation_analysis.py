@@ -120,6 +120,9 @@ def expansion_sampling(experiment):
     manifest = {**baseline_manifest, "runs": {"expansion_sampling10": "sampled"},
                 "baseline_experiment": str(experiment),
                 "baseline_manifest_sha256": hashlib.sha256((experiment / "manifest.json").read_bytes()).hexdigest()}
+    # Reproduce a new sampler reusing manifests written before execution_mode.
+    manifest["provenance"] = {name: {**source, "execution_mode": "default"}
+                              for name, source in baseline_manifest["provenance"].items()}
     path = directory / "sampled"
     path.mkdir()
     (directory / "expansion_prompt.txt").write_bytes((experiment / "expansion_prompt.txt").read_bytes())

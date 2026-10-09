@@ -488,14 +488,19 @@ def test_evaluation_runs_three_arms_with_native_prompts_and_gates_bad_smoke(comp
 
 
 @pytest.mark.parametrize("empty", [False, True])
-def test_expansion_sampling_runs_only_new_arm_and_gates_failed_smoke(completed_pairs, monkeypatch, empty):
+@pytest.mark.parametrize("legacy", [False, True])
+def test_expansion_sampling_runs_only_new_arm_and_gates_failed_smoke(completed_pairs, monkeypatch, empty, legacy):
     root, config, runner = completed_pairs
     provenance = runner.validate_training_pair(config, "qwen3")
+    baseline_provenance = json.loads(json.dumps(provenance))
+    if legacy:
+        for source in baseline_provenance.values():
+            source.pop("execution_mode")
     baseline = root / "old-evaluation"
     baseline.mkdir()
     prepare.write(baseline / "manifest.json", {"status": "complete", "smoke_test": False,
         "expected_questions": 160, "model_key": "qwen3", "input_sha256": config["input_sha256"],
-        "provenance": provenance, "runs": {name: name for name in runner.CONDITIONS}})
+        "provenance": baseline_provenance, "runs": {name: name for name in runner.CONDITIONS}})
     config["baseline_experiments"] = {"qwen3": "old-evaluation"}
     config_path = root / "evaluation.json"
     prepare.write(config_path, config)

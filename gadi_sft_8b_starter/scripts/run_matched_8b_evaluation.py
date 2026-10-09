@@ -10,6 +10,7 @@ import sys
 
 from prepare_matched_8b_sft import ROOT, digest, read, records, resolved_config, validate, write
 from run_original_qwen25_inference import validate_smoke_outputs
+from matched_8b_provenance import validate_provenance
 
 DEFAULT_CONFIG = ROOT / "configs/matched_8b_evaluation.json"
 CONDITIONS = ("original_greedy", "original_sampling10", "expansion_greedy")
@@ -112,11 +113,14 @@ def main():
     if args.expansion_sampling_only:
         baseline = (ROOT / config["baseline_experiments"][args.model]).resolve()
         previous = read(baseline / "manifest.json")
-        if (previous["status"] != "complete" or previous["smoke_test"]
-                or previous["expected_questions"] != 160 or previous["model_key"] != args.model
-                or previous["input_sha256"] != config["input_sha256"]
-                or previous["provenance"] != provenance or set(previous["runs"]) != set(CONDITIONS)):
-            raise ValueError("Baseline must be a complete evaluation of these exact adapter files and data")
+        expected = {"status": "complete", "smoke_test": False, "expected_questions": 160,
+                    "model_key": args.model, "input_sha256": config["input_sha256"]}
+        differences = [field for field, value in expected.items() if previous.get(field) != value]
+        if set(previous["runs"]) != set(CONDITIONS):
+            differences.append("runs")
+        if differences:
+            raise ValueError("Baseline evaluation differs in: " + ", ".join(differences))
+        validate_provenance(previous["provenance"], provenance)
     if args.mode == "validate":
         return
     name = args.run_name or f"{args.model}-8b-evaluation-{os.environ.get('PBS_JOBID', 'manual')}"
