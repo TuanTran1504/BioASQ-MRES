@@ -1,6 +1,8 @@
 # Matched Llama and Qwen 8B SFT results
 
 Recorded 9 October 2026 from the Gadi scoring output supplied by the user.
+The later [ten-sample expansion results](EXPANSION_SAMPLING_8B_RESULTS.md) add a
+fourth condition and reuse these baseline scores.
 [Complete aggregate reports](../results/matched_8b_sft_dev160_20261009.json) retain
 all scores, paired intervals, diagnostics, generation costs and the source-output
 SHA256. Absolute Gadi paths are converted to repository-relative paths. Raw

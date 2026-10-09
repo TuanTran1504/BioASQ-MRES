@@ -1,0 +1,1014 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-09",
+  "source": {
+    "kind": "user-provided Gadi analyzer stdout",
+    "sha256": "cbd3d6784ec3a4308c6956ad35d76c88350ab140ac571bf9ad37cfa1e5b621cf",
+    "verification": "Aggregate stdout consistency checked against prior baseline export; raw generation and per-question files remain on Gadi."
+  },
+  "evaluation_jobs": {
+    "llama31": "180878412.gadi-pbs",
+    "qwen3": "180878414.gadi-pbs"
+  },
+  "baseline_evaluation_jobs": {
+    "llama31": "180848513.gadi-pbs",
+    "qwen3": "180848515.gadi-pbs"
+  },
+  "results": [
+    {
+      "model_key": "llama31",
+      "question_count": 160,
+      "evaluation": "development-only ten-sample expansion SFT comparison",
+      "selection": "first five unique candidates in draw then within-response order",
+      "scoring": "official BioASQ Java candidate matcher",
+      "conditions": {
+        "original_greedy": {
+          "metrics": {
+            "mrr_at5": 0.48125,
+            "strict_accuracy": 0.48125,
+            "lenient_accuracy": 0.48125,
+            "coverage_at1": 0.48125,
+            "coverage_at5": 0.48125,
+            "coverage_at10": 0.48125,
+            "coverage_full_pool": 0.48125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 1.0,
+            "mean_unique_candidates": 1.0,
+            "extractive_candidate_rate": 0.89375,
+            "candidate_type_counts": {
+              "sampled_single_answer": 160
+            },
+            "response_mode": "single_answer_greedy",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-original-sft-180794568.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 77,
+            "coverage_at1": 0.48125,
+            "covered_at5": 77,
+            "coverage_at5": 0.48125,
+            "covered_at10": 77,
+            "coverage_at10": 0.48125
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 132155,
+            "output_tokens": 2401,
+            "generation_seconds": 144.35368032741826,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/original_greedy/analysis-b9c94a3c"
+        },
+        "original_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.47020833333333334,
+            "strict_accuracy": 0.375,
+            "lenient_accuracy": 0.6125,
+            "coverage_at1": 0.375,
+            "coverage_at5": 0.6125,
+            "coverage_at10": 0.65,
+            "coverage_full_pool": 0.65
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 4.09375,
+            "mean_unique_candidates": 4.09375,
+            "extractive_candidate_rate": 0.6,
+            "candidate_type_counts": {
+              "sampled_single_answer": 655
+            },
+            "response_mode": "single_answer_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-original-sft-180794568.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 60,
+            "coverage_at1": 0.375,
+            "covered_at5": 98,
+            "coverage_at5": 0.6125,
+            "covered_at10": 104,
+            "coverage_at10": 0.65
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1321550,
+            "output_tokens": 24179,
+            "generation_seconds": 1437.1586288039107,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/original_sampling10/analysis-38a3d77d",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "coverage_within_first_1_draws": 0.375,
+            "coverage_within_first_5_draws": 0.5875,
+            "coverage_within_first_10_draws": 0.65
+          }
+        },
+        "expansion_greedy": {
+          "metrics": {
+            "mrr_at5": 0.5010416666666667,
+            "strict_accuracy": 0.4625,
+            "lenient_accuracy": 0.55,
+            "coverage_at1": 0.4625,
+            "coverage_at5": 0.55,
+            "coverage_at10": 0.55,
+            "coverage_full_pool": 0.55
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 3.21875,
+            "mean_unique_candidates": 3.21875,
+            "extractive_candidate_rate": 0.5941747572815534,
+            "candidate_type_counts": {
+              "original": 160,
+              "numerically_equivalent": 14,
+              "abbreviation_expansion": 86,
+              "spelling_or_inflection": 43,
+              "nomenclature_variant": 104,
+              "synonym": 105,
+              "harmless_formatting": 3
+            },
+            "response_mode": "equivalent",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-expansion-sft-180794570.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 74,
+            "coverage_at1": 0.4625,
+            "covered_at5": 88,
+            "coverage_at5": 0.55,
+            "covered_at10": 88,
+            "coverage_at10": 0.55
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 183195,
+            "output_tokens": 11534,
+            "generation_seconds": 559.8974123612279,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/expansion_greedy/20261009-030445-llama31-8b-evaluation-180848513-gadi-pbs/analysis-c9c48e1b"
+        },
+        "expansion_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.45739583333333333,
+            "strict_accuracy": 0.4,
+            "lenient_accuracy": 0.55,
+            "coverage_at1": 0.4,
+            "coverage_at5": 0.55,
+            "coverage_at10": 0.63125,
+            "coverage_full_pool": 0.675
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 13.64375,
+            "mean_unique_candidates": 13.64375,
+            "extractive_candidate_rate": 0.34906092533211175,
+            "candidate_type_counts": {
+              "original": 462,
+              "numerically_equivalent": 69,
+              "abbreviation_expansion": 260,
+              "spelling_or_inflection": 206,
+              "nomenclature_variant": 460,
+              "synonym": 700,
+              "harmless_formatting": 25,
+              "unrecognized": 1
+            },
+            "response_mode": "equivalent_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-expansion-sft-180794570.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 64,
+            "coverage_at1": 0.4,
+            "covered_at5": 88,
+            "coverage_at5": 0.55,
+            "covered_at10": 101,
+            "coverage_at10": 0.63125
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1831950,
+            "output_tokens": 105788,
+            "generation_seconds": 5048.089740679599,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/expansion_sampling_8b/llama31-8b-evaluation-180878412.gadi-pbs/expansion_sampling10/analysis-c9717ed0",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "schema_compliant_draws": 1596,
+            "recovered_draws": 0,
+            "draws_with_candidate_limit_applied": 3,
+            "invalid_candidate_count": 41,
+            "coverage_within_first_1_draws": 0.49375,
+            "coverage_within_first_5_draws": 0.63125,
+            "coverage_within_first_10_draws": 0.675
+          }
+        }
+      },
+      "paired_contrasts": {
+        "original_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.05864583333333334,
+              0.0378125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01104166666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.16875,
+              -0.04375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.10625
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.075,
+              0.1875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.13125
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.1125,
+              0.23125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.16875
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.1125,
+              0.23125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.16875
+          }
+        },
+        "expansion_greedy_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.021875,
+              0.059375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.019791666666666666
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.05625,
+              0.01875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          }
+        },
+        "expansion_greedy_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.02333333333333333,
+              0.08375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.030833333333333334
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              0.01875,
+              0.15625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.11875,
+              -0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0625
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.1625,
+              -0.04375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.1
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              -0.1625,
+              -0.04375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.1
+          }
+        },
+        "expansion_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.06770833333333334,
+              0.017291666666666667
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.02385416666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.13125,
+              -0.0375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.08125
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.09375,
+              0.2125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.15
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.1375,
+              0.25625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.19375
+          }
+        },
+        "expansion_sampling10_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.0553125,
+              0.028958333333333336
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0128125
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.03125,
+              0.08125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.025
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.1125,
+              -0.0125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0625
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.075,
+              0.0375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01875
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              -0.025,
+              0.075
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.025
+          }
+        },
+        "expansion_sampling10_minus_expansion_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.090625,
+              0.0024999999999999996
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.043645833333333335
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.11875,
+              -0.0125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0625
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.05,
+              0.05
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.03125,
+              0.1375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.08125
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.075,
+              0.18125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.125
+          }
+        }
+      },
+      "quality_warnings": [],
+      "interpretation": [
+        "Greedy original and greedy expansion each use one request per question.",
+        "Ten-sample original uses ten requests; efficiency is reported separately.",
+        "Both SFT formulations share fitting/validation questions and a pinned backbone.",
+        "Development-only results from one training seed; coverage at ten is diagnostic.",
+        "Ten-sample expansion uses ten requests and at most 100 candidates before deduplication; report fixed top-ten and full-pool coverage separately."
+      ],
+      "training_execution_modes": {
+        "original": "default",
+        "expansion": "default"
+      }
+    },
+    {
+      "model_key": "qwen3",
+      "question_count": 160,
+      "evaluation": "development-only ten-sample expansion SFT comparison",
+      "selection": "first five unique candidates in draw then within-response order",
+      "scoring": "official BioASQ Java candidate matcher",
+      "conditions": {
+        "original_greedy": {
+          "metrics": {
+            "mrr_at5": 0.51875,
+            "strict_accuracy": 0.51875,
+            "lenient_accuracy": 0.51875,
+            "coverage_at1": 0.51875,
+            "coverage_at5": 0.51875,
+            "coverage_at10": 0.51875,
+            "coverage_full_pool": 0.51875
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 1.0,
+            "mean_unique_candidates": 1.0,
+            "extractive_candidate_rate": 0.9,
+            "candidate_type_counts": {
+              "sampled_single_answer": 160
+            },
+            "response_mode": "single_answer_greedy",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-original-sft-180794572.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 83,
+            "coverage_at1": 0.51875,
+            "covered_at5": 83,
+            "coverage_at5": 0.51875,
+            "covered_at10": 83,
+            "coverage_at10": 0.51875
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 131629,
+            "output_tokens": 2364,
+            "generation_seconds": 163.20015289995354,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/original_greedy/analysis-93f57e76"
+        },
+        "original_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.4965625,
+            "strict_accuracy": 0.4125,
+            "lenient_accuracy": 0.60625,
+            "coverage_at1": 0.4125,
+            "coverage_at5": 0.60625,
+            "coverage_at10": 0.6125,
+            "coverage_full_pool": 0.6125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 3.46875,
+            "mean_unique_candidates": 3.46875,
+            "extractive_candidate_rate": 0.6972972972972973,
+            "candidate_type_counts": {
+              "sampled_single_answer": 555
+            },
+            "response_mode": "single_answer_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-original-sft-180794572.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 66,
+            "coverage_at1": 0.4125,
+            "covered_at5": 97,
+            "coverage_at5": 0.60625,
+            "covered_at10": 98,
+            "coverage_at10": 0.6125
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1316290,
+            "output_tokens": 23467,
+            "generation_seconds": 1620.1263740416616,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/original_sampling10/analysis-3f084082",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "coverage_within_first_1_draws": 0.4125,
+            "coverage_within_first_5_draws": 0.58125,
+            "coverage_within_first_10_draws": 0.6125
+          }
+        },
+        "expansion_greedy": {
+          "metrics": {
+            "mrr_at5": 0.5260416666666667,
+            "strict_accuracy": 0.5,
+            "lenient_accuracy": 0.56875,
+            "coverage_at1": 0.5,
+            "coverage_at5": 0.56875,
+            "coverage_at10": 0.56875,
+            "coverage_full_pool": 0.56875
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 4.11875,
+            "mean_unique_candidates": 4.11875,
+            "extractive_candidate_rate": 0.5144157814871017,
+            "candidate_type_counts": {
+              "original": 160,
+              "numerically_equivalent": 19,
+              "abbreviation_expansion": 107,
+              "nomenclature_variant": 126,
+              "spelling_or_inflection": 24,
+              "synonym": 217,
+              "harmless_formatting": 6
+            },
+            "response_mode": "equivalent",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-expansion-sft-180794574.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 80,
+            "coverage_at1": 0.5,
+            "covered_at5": 91,
+            "coverage_at5": 0.56875,
+            "covered_at10": 91,
+            "coverage_at10": 0.56875
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 182669,
+            "output_tokens": 16890,
+            "generation_seconds": 917.6309365965426,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/expansion_greedy/20261009-030916-qwen3-8b-evaluation-180848515-gadi-pbs/analysis-7fb77dff"
+        },
+        "expansion_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.4694791666666666,
+            "strict_accuracy": 0.425,
+            "lenient_accuracy": 0.55625,
+            "coverage_at1": 0.425,
+            "coverage_at5": 0.55625,
+            "coverage_at10": 0.625,
+            "coverage_full_pool": 0.68125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 17.7375,
+            "mean_unique_candidates": 17.7375,
+            "extractive_candidate_rate": 0.31853417899929526,
+            "candidate_type_counts": {
+              "original": 460,
+              "numerically_equivalent": 65,
+              "nomenclature_variant": 652,
+              "synonym": 1195,
+              "abbreviation_expansion": 301,
+              "harmless_formatting": 37,
+              "spelling_or_inflection": 128
+            },
+            "response_mode": "equivalent_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-expansion-sft-180794574.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 68,
+            "coverage_at1": 0.425,
+            "covered_at5": 89,
+            "coverage_at5": 0.55625,
+            "covered_at10": 100,
+            "coverage_at10": 0.625
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1826690,
+            "output_tokens": 135701,
+            "generation_seconds": 7720.72553957568,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/expansion_sampling_8b/qwen3-8b-evaluation-180878414.gadi-pbs/expansion_sampling10/analysis-8816c924",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "schema_compliant_draws": 1593,
+            "recovered_draws": 2,
+            "draws_with_candidate_limit_applied": 3,
+            "invalid_candidate_count": 293,
+            "coverage_within_first_1_draws": 0.50625,
+            "coverage_within_first_5_draws": 0.6375,
+            "coverage_within_first_10_draws": 0.68125
+          }
+        }
+      },
+      "paired_contrasts": {
+        "original_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.0671875,
+              0.02333333333333333
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.022187500000000002
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.16875,
+              -0.05
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.10625
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0375,
+              0.1375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.04375,
+              0.14375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.04375,
+              0.14375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          }
+        },
+        "expansion_greedy_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.022916666666666665,
+              0.035416666666666666
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.007291666666666666
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.05,
+              0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05
+          }
+        },
+        "expansion_greedy_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.011875,
+              0.07166666666666667
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.029479166666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              0.03125,
+              0.15
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.08125,
+              0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0375
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.09375,
+              0.0
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.04375
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              -0.09375,
+              0.0
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.04375
+          }
+        },
+        "expansion_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.10145833333333334,
+              0.0008333333333333314
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.04927083333333333
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.15625,
+              -0.0375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.09375
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.01875,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0375
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.05,
+              0.1625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.10625
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.10625,
+              0.21875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.1625
+          }
+        },
+        "expansion_sampling10_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.08104166666666666,
+              0.024895833333333332
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.02708333333333333
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.0625,
+              0.0875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0125
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.1,
+              0.0
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.05
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.03125,
+              0.05625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0125
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.025,
+              0.11875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          }
+        },
+        "expansion_sampling10_minus_expansion_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.10239583333333332,
+              -0.013229166666666667
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0565625
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.13125,
+              -0.025
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.075
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.05625,
+              0.03125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0125
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.10625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05625
+          },
+          "coverage_full_pool": {
+            "paired_bootstrap_95ci": [
+              0.0625,
+              0.1625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.1125
+          }
+        }
+      },
+      "quality_warnings": [],
+      "interpretation": [
+        "Greedy original and greedy expansion each use one request per question.",
+        "Ten-sample original uses ten requests; efficiency is reported separately.",
+        "Both SFT formulations share fitting/validation questions and a pinned backbone.",
+        "Development-only results from one training seed; coverage at ten is diagnostic.",
+        "Ten-sample expansion uses ten requests and at most 100 candidates before deduplication; report fixed top-ten and full-pool coverage separately."
+      ],
+      "training_execution_modes": {
+        "original": "default",
+        "expansion": "default"
+      }
+    }
+  ]
+}

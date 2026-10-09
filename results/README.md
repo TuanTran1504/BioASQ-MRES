@@ -15,6 +15,13 @@ greedy single-answer SFT, ten sampled single answers and greedy expansion SFT,
 with paired confidence intervals and measured generation costs. The original
 6 October snapshot below retains its historical scope.
 
+The subsequent [ten-sample expansion SFT results](../docs/EXPANSION_SAMPLING_8B_RESULTS.md)
+add the fourth inference condition and are saved in
+[expansion_sampling_8b_dev160_20261009.json](expansion_sampling_8b_dev160_20261009.json).
+This snapshot preserves all four conditions, fixed top-ten versus full-pool
+coverage, paired intervals and generation costs; its reused baseline scores
+agree with the earlier matched export.
+
 Sanitized per-question model responses and parsed candidates from the Qwen3-8B
 base, Gemma-3-27B base and Qwen3-8B expansion-SFT Gadi runs are preserved in
 [expansion_generations](expansion_generations/README.md). They omit BioASQ
