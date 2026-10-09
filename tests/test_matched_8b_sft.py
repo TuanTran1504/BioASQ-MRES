@@ -17,6 +17,10 @@ _text_spec = importlib.util.spec_from_file_location(
 _text_module = importlib.util.module_from_spec(_text_spec)
 _text_spec.loader.exec_module(_text_module)
 text_only_tokenizer = _text_module.text_only_tokenizer
+_generation_spec = importlib.util.spec_from_file_location(
+    "bundle_ministral_generation", BUNDLE / "src/utility/ministral_generation.py")
+_generation_module = importlib.util.module_from_spec(_generation_spec)
+_generation_spec.loader.exec_module(_generation_module)
 
 
 @contextmanager
@@ -365,6 +369,7 @@ def test_fast_model_inference_unwraps_processor_before_smoke_generation(monkeypa
     monkeypatch.setitem(sys.modules, "src.utility.eval_types", SimpleNamespace(
         ModelSpec=lambda **kwargs: SimpleNamespace(**kwargs)))
     monkeypatch.setitem(sys.modules, "src.utility.text_tokenizer", _text_module)
+    monkeypatch.setitem(sys.modules, "src.utility.ministral_generation", _generation_module)
     actual_model, actual_tokenizer = inference.load_model("pinned", 8192, True, "fast_model")
     assert actual_model is model and actual_tokenizer is tokenizer
     assert tokenizer.chat_template == "native"

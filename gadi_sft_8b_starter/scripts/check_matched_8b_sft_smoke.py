@@ -23,6 +23,8 @@ def main():
     config = status["configuration"]
     configure_job_local_compiler_cache()
     model, tokenizer = load_model(str(directory / "adapter"), 8192, False, config["model_loader"])
+    backend = getattr(model, "_bioasq_generation_backend", "loader-default")
+    write(directory / "generation_smoke.json", {"status": "running", "generation_backend": backend})
     import torch
     rows = records(ROOT / config["eval_input"])
     prepared = []
@@ -58,6 +60,7 @@ def main():
                             "schema_compliant": False, "parse_error": str(exc)})
     usable = sum(bool(row["answers"]) for row in results)
     write(directory / "generation_smoke.json", {"questions": results, "usable_questions": usable,
+                                                "generation_backend": backend,
                                                 "status": "passed" if usable else "failed"})
     if not usable:
         raise RuntimeError("Trained smoke adapter produced zero parseable answers; full training remains held")

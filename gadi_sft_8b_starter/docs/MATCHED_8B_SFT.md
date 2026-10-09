@@ -102,6 +102,33 @@ the text trainer direct access to encoding, padding, masking and saving APIs.
 Pull this correction and use the same Ministral-only submission command above.
 The dropout warning is a performance notice, not the cause of these failures.
 
+The subsequent smoke jobs `180847064` and `180847066` got further. The original
+arm completed smoke training and saved an adapter, then generation failed with
+Float cache values versus Half attention values. The expansion arm logged all
+four optimizer steps and epoch validation, then exited with an illegal CUDA
+memory access before writing its final training completion record. Its dependent
+full run did not start. These are distinct failures; the exact expansion CUDA
+operation is not established by the asynchronous error log.
+
+For Ministral inference on the V100, the loader now keeps the outer PEFT
+generation method and adapter hooks, but uses the backbone's original
+Transformers generation method with a dynamic cache, FP16 autocast and decode
+compilation disabled. Simply passing a cache option to FastModel is insufficient:
+its [generation wrapper](https://github.com/unslothai/unsloth/blob/main/unsloth/models/vision.py)
+can force static caching. Transformers' [dynamic cache](https://github.com/huggingface/transformers/blob/main/src/transformers/cache_utils.py)
+initializes from attention tensor dtype. This workaround changes inference
+execution, not prompts, sampling rules or the SFT objective. It is restricted to
+Mistral3/Ministral3 backbones; Llama and Qwen inference are unchanged.
+
+Ministral smoke retries additionally enable `CUDA_LAUNCH_BLOCKING=1` to localize
+the unresolved CUDA fault; full training does not enable this diagnostic option.
+Training status now records `phase` as `trainer_train`, `final_validation`,
+`save_adapter`, `save_training_curves` or `completed`. The generation smoke records
+its backend and running/pass/fail state. If a retry fails, inspect its error log
+and phase before changing hyperparameters or scheduling further full runs. The
+cache workaround needs Gadi verification and does not establish that the separate
+expansion CUDA failure is resolved.
+
 ## Smoke checks and outputs
 
 Preflight checks every fitting/validation example and refuses truncation. The

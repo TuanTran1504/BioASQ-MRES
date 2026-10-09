@@ -441,14 +441,22 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
                 "train": audit_response_masks(trainer.train_dataset, tokenizer, response_part),
                 "validation": audit_response_masks(trainer.eval_dataset, tokenizer, response_part)}
             write_json(status_path, status)
+        status["phase"] = "trainer_train"
+        write_json(status_path, status)
         result = train_trainer(trainer, training_args)
+        status["phase"] = "final_validation"
+        write_json(status_path, status)
         eval_metrics = dict(trainer.evaluate())
+        status["phase"] = "save_adapter"
+        write_json(status_path, status)
         save_adapter_and_tokenizer(
             model,
             tokenizer,
             adapter_dir,
             save_dtype=training_args.save_dtype,
         )
+        status["phase"] = "save_training_curves"
+        write_json(status_path, status)
         artifacts = save_training_curves(trainer, run_dir)
         completion = {
             "status": "completed",
@@ -463,6 +471,7 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         }
         write_json(adapter_dir / "training_complete.json", completion)
         status.update(completion)
+        status["phase"] = "completed"
         write_json(status_path, status)
         print(json.dumps(completion, indent=2, default=str))
     except Exception as exc:

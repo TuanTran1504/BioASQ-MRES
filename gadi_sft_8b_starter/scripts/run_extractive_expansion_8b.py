@@ -330,6 +330,7 @@ def load_model(
     from src.utility.eval_models import load_model_and_tokenizer_for_eval, prime_unsloth_runtime
     from src.utility.eval_types import ModelSpec
     from src.utility.text_tokenizer import text_only_tokenizer
+    from src.utility.ministral_generation import configure_ministral_generation
 
     prime_unsloth_runtime()
     load_target = model_name
@@ -374,7 +375,7 @@ def load_model(
             and getattr(tokenizer, "eos_token_id", None) is not None
         ):
             tokenizer.pad_token = tokenizer.eos_token
-        return model.eval(), tokenizer
+        return configure_ministral_generation(model.eval()), tokenizer
     return load_model_and_tokenizer_for_eval(spec, args)
 
 

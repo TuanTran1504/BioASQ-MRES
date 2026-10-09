@@ -30,6 +30,10 @@ options=()
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
   run_name="${run_name}-smoke"
   options+=(--smoke-test)
+  if [[ "$MODEL_KEY" == ministral3 ]]; then
+    # Localise asynchronous CUDA failures in diagnostics; full training is unchanged.
+    export CUDA_LAUNCH_BLOCKING=1
+  fi
 fi
 python scripts/run_matched_8b_sft.py \
   --model "$MODEL_KEY" --formulation "$SFT_FORMULATION" \
