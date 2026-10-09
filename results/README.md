@@ -8,6 +8,13 @@ hashes. Regenerate it from a workspace containing the original local artifacts:
 python scripts/export_main_results.py
 ```
 
+The subsequent [matched Llama/Qwen 8B SFT results](../docs/MATCHED_8B_SFT_RESULTS.md)
+from 9 October 2026 are saved separately in
+[matched_8b_sft_dev160_20261009.json](matched_8b_sft_dev160_20261009.json). They compare
+greedy single-answer SFT, ten sampled single answers and greedy expansion SFT,
+with paired confidence intervals and measured generation costs. The original
+6 October snapshot below retains its historical scope.
+
 Sanitized per-question model responses and parsed candidates from the Qwen3-8B
 base, Gemma-3-27B base and Qwen3-8B expansion-SFT Gadi runs are preserved in
 [expansion_generations](expansion_generations/README.md). They omit BioASQ
