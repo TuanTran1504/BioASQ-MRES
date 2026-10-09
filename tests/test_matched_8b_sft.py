@@ -485,3 +485,47 @@ def test_evaluation_runs_three_arms_with_native_prompts_and_gates_bad_smoke(comp
     assert calls[0][1]["prompt"] == calls[1][1]["prompt"]
     assert Path(calls[0][1]["prompt"]).read_text() == "Return exactly one tagged answer."
     assert calls[0][2][calls[0][2].index("--model-name") + 1] != calls[2][2][calls[2][2].index("--model-name") + 1]
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_expansion_sampling_runs_only_new_arm_and_gates_failed_smoke(completed_pairs, monkeypatch, empty):
+    root, config, runner = completed_pairs
+    provenance = runner.validate_training_pair(config, "qwen3")
+    baseline = root / "old-evaluation"
+    baseline.mkdir()
+    prepare.write(baseline / "manifest.json", {"status": "complete", "smoke_test": False,
+        "expected_questions": 160, "model_key": "qwen3", "input_sha256": config["input_sha256"],
+        "provenance": provenance, "runs": {name: name for name in runner.CONDITIONS}})
+    config["baseline_experiments"] = {"qwen3": "old-evaluation"}
+    config_path = root / "evaluation.json"
+    prepare.write(config_path, config)
+    calls = []
+
+    def run(command, check):
+        assert check and "--output-parent" not in command
+        assert Path(command[1]).name == "run_single_answer_sampling.py"
+        arm = prepare.read(Path(command[command.index("--config") + 1]))
+        calls.append(arm)
+        assert arm["response_mode"] == "equivalent_sampling"
+        assert arm["num_generations"] == 10 and arm["temperature"] == 0.8
+        assert arm["top_p"] == 0.95 and arm["top_k"] == 0 and not arm["mark_snippets"]
+        target = Path(command[command.index("--output-dir") + 1])
+        target.mkdir()
+        prepare.write(target / "status.json", {"status": "complete", "completed_questions": 4})
+        (target / "generations.jsonl").write_text(''.join(json.dumps({"question_id": str(i)}) + '\n' for i in range(4)))
+        (target / "candidates.jsonl").write_text('' if empty else json.dumps({"question_id": "0", "answer": "15"}) + '\n')
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--config", str(config_path), "--model", "qwen3",
+        "--mode", "run", "--smoke-test", "--expansion-sampling-only", "--run-name", "new"])
+    if empty:
+        with pytest.raises(ValueError, match="zero parseable"):
+            runner.main()
+    else:
+        runner.main()
+    assert len(calls) == 1
+    manifest = prepare.read(root / "outputs/expansion_sampling_8b/new/manifest.json")
+    assert manifest["status"] == ("failed" if empty else "complete")
+    assert set(manifest["runs"]) == {"expansion_sampling10"}
+    assert manifest["baseline_manifest_sha256"] == prepare.digest(baseline / "manifest.json")
+    assert Path(calls[0]["prompt"]).read_text() == provenance["expansion"]["system_prompt"]

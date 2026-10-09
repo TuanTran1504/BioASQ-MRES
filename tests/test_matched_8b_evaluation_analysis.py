@@ -110,3 +110,84 @@ def test_all_three_paired_contrasts_include_failures_and_request_costs(experimen
     assert contrasts["original_sampling10_minus_original_greedy"]["mrr_at5"]["paired_bootstrap_95ci"][0] > 0
     assert result["conditions"]["original_greedy"]["candidate_diagnostics"]["parse_success_rate"] == 0.5
     assert (experiment / "comparison_summary.json").is_file()
+
+
+@pytest.fixture
+def expansion_sampling(experiment):
+    directory = experiment / "extra"
+    directory.mkdir()
+    baseline_manifest = json.loads((experiment / "manifest.json").read_text())
+    manifest = {**baseline_manifest, "runs": {"expansion_sampling10": "sampled"},
+                "baseline_experiment": str(experiment),
+                "baseline_manifest_sha256": hashlib.sha256((experiment / "manifest.json").read_bytes()).hexdigest()}
+    path = directory / "sampled"
+    path.mkdir()
+    (directory / "expansion_prompt.txt").write_bytes((experiment / "expansion_prompt.txt").read_bytes())
+    config = json.loads((experiment / "expansion_greedy/config.json").read_text())
+    config.update(response_mode="equivalent_sampling", num_generations=10, temperature=0.8, top_p=0.95, top_k=0)
+    write(path / "config.json", config)
+    write(path / "status.json", {"status": "complete"})
+    (path / "examples.jsonl").write_bytes((experiment / "expansion_greedy/examples.jsonl").read_bytes())
+    generations, candidates = [], []
+    for i in range(160):
+        samples = []
+        for d in range(1, 11):
+            # An accepted answer appears after ten unique wrong candidates.
+            answers = [{"answer": "15" if d == 2 else f"wrong-{j}", "relation_type": "original" if j == 1 else "synonym",
+                        "raw_position": j} for j in range(1, 11 if d == 1 else 2)]
+            samples.append({"draw": d, "seed": int.from_bytes(hashlib.sha256(f"3407:{i}:{d}".encode()).digest()[:4], "big"),
+                            "answers": answers, "parse_error": None})
+        generations.append({"question_id": str(i), "samples": samples, "parse_error": None,
+                            "snippets_truncated": False, "included_snippets": 1, "total_snippets": 1,
+                            "request_count": 10, "input_tokens": 50, "output_tokens": 100, "generation_seconds": 1})
+        for j, answer in enumerate(samples[0]["answers"] + samples[1]["answers"], 1):
+            candidates.append({"question_id": str(i), **answer, "position": j, "draw": 1 if j <= 10 else 2,
+                               "within_draw_position": answer["raw_position"]})
+    jsonl(path / "generations.jsonl", generations)
+    jsonl(path / "candidates.jsonl", candidates)
+    write(directory / "manifest.json", manifest)
+    return directory, experiment
+
+
+@pytest.mark.parametrize("failure", [None, "order", "prompt", "seed", "nine_draws", "baseline"])
+def test_expansion_sampling_checks_pool_protocol(expansion_sampling, failure):
+    from scripts.analyze_expansion_sampling_8b import validate_sampling_comparison
+    directory, baseline = expansion_sampling
+    path = directory / "sampled"
+    if failure == "order":
+        rows = [json.loads(line) for line in (path / "candidates.jsonl").read_text().splitlines()]
+        rows[0]["position"] = 2
+        jsonl(path / "candidates.jsonl", rows)
+    elif failure == "prompt":
+        (directory / "expansion_prompt.txt").write_text("changed")
+    elif failure == "baseline":
+        (baseline / "manifest.json").write_text((baseline / "manifest.json").read_text() + '\n')
+    elif failure:
+        rows = [json.loads(line) for line in (path / "generations.jsonl").read_text().splitlines()]
+        if failure == "seed": rows[0]["samples"][0]["seed"] = 0
+        if failure == "nine_draws": rows[0]["samples"].pop()
+        jsonl(path / "generations.jsonl", rows)
+    if failure:
+        with pytest.raises(ValueError):
+            validate_sampling_comparison(directory, baseline)
+    else:
+        _, runs = validate_sampling_comparison(directory, baseline)
+        assert len(runs) == 4
+
+
+def test_expansion_sampling_separates_full_pool_from_top_ten(expansion_sampling, monkeypatch):
+    from scripts.analyze_expansion_sampling_8b import validate_sampling_comparison
+    from scripts.analyze_matched_8b_evaluation import score_validated_runs
+    from src.notebook_workflows import local_expansion
+    directory, baseline = expansion_sampling
+    manifest, runs = validate_sampling_comparison(directory, baseline)
+    monkeypatch.setattr(local_expansion, "official_candidate_matches", lambda examples, candidates, *a, **k:
+        {(r["question_id"], r["answer"]): r["answer"] == "15" for r in candidates})
+    result = score_validated_runs(directory, manifest, runs, Path("unused.jar"))
+    arm = result["conditions"]["expansion_sampling10"]
+    assert arm["metrics"]["coverage_at10"] == arm["metrics"]["mrr_at5"] == 0
+    assert arm["metrics"]["coverage_full_pool"] == 1
+    assert arm["efficiency"]["request_count"] == 1600
+    assert arm["sampling_diagnostics"]["coverage_within_first_1_draws"] == 0
+    assert arm["sampling_diagnostics"]["coverage_within_first_5_draws"] == 1
+    assert len(result["paired_contrasts"]) == 6

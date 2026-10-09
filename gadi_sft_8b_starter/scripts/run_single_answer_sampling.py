@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate greedy or ten sampled single answers without gold-guided selection."""
+"""Generate single answers or ten expansion responses without gold-guided selection."""
 
 import argparse
 import gc
@@ -10,7 +10,8 @@ from pathlib import Path
 
 from run_extractive_expansion_8b import (
     ROOT, configure_job_local_compiler_cache, file_sha256, input_token_count,
-    load_model, read_json, read_jsonl, render_prompt, tokenize_text, write_json, write_jsonl,
+    load_model, parse_equivalent_response, read_json, read_jsonl, render_prompt,
+    tokenize_text, write_json, write_jsonl,
 )
 
 PARSER_VERSION = "single-tagged-answer-v2-trained-prefix"
@@ -47,6 +48,20 @@ def unique_candidates(samples):
     return result
 
 
+def expansion_candidates(samples):
+    """Flatten draw order then within-response order, keeping first occurrences."""
+    seen, result = set(), []
+    for sample in samples:
+        for row in sample["answers"]:
+            key = re.sub(r"\s+", " ", row["answer"].casefold()).strip()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append({**row, "position": len(result) + 1,
+                           "draw": sample["draw"], "within_draw_position": row["raw_position"]})
+    return result
+
+
 def generation_options(config):
     if config.get("response_mode") == "single_answer_greedy":
         if config["num_generations"] != 1 or config["temperature"] != 0:
@@ -79,6 +94,7 @@ def main():
     cache = configure_job_local_compiler_cache()
     config = read_json(args.config)
     options = generation_options(config)
+    expansion = config.get("response_mode") == "equivalent_sampling"
     examples = read_jsonl(ROOT / config["input"])[:args.limit]
     prompt_path = ROOT / config["prompt"]
     prompt = prompt_path.read_text(encoding="utf-8").strip()
@@ -88,11 +104,13 @@ def main():
                   input_sha256=file_sha256(ROOT / config["input"]),
                   prompt_sha256=file_sha256(prompt_path), gold_blind_generation=True,
                   local_files_only=True, selection="first five unique answers in draw order",
-                  parser_version=PARSER_VERSION)
+                  parser_version="equivalent-expansion-sampling-v1" if expansion else PARSER_VERSION)
+    if expansion:
+        config["selection"] = "first five unique candidates in draw then within-response order"
     write_json(output / "config.json", config)
     write_jsonl(output / "examples.jsonl", examples)
     state = {"status": "running", "expected_questions": len(examples), "completed_questions": 0}
-    generations, candidates = [], []
+    generations, candidates, invalid_candidates = [], [], []
     write_json(output / "status.json", state)
     import torch
     if not torch.cuda.is_available():
@@ -135,16 +153,29 @@ def main():
                 new_ids = ids[0, encoded["input_ids"].shape[-1]:]
                 raw = tokenizer.decode(new_ids, skip_special_tokens=True).strip()
                 elapsed = time.perf_counter() - started
-                answer, error = None, None
+                answer, error, details = None, None, {}
                 try:
-                    answer = parse_single_answer(raw)
+                    if expansion:
+                        answers, rejected, issues, compliant = parse_equivalent_response(raw)
+                        details = {"answers": answers, "candidate_limit_applied": any(
+                            r.get("reason") == "unique_candidate_limit_exceeded" for r in rejected),
+                                   "schema_compliant": compliant,
+                                   "validation_issues": issues, "invalid_candidate_count": len(rejected)}
+                        invalid_candidates.extend({"question_id": qid, "draw": draw, **r} for r in rejected)
+                        if not answers:
+                            error = "No usable expansion candidates"
+                    else:
+                        answer = parse_single_answer(raw)
                 except ValueError as exc:
                     error = str(exc)
+                    if expansion:
+                        details = {"answers": [], "schema_compliant": False,
+                                   "validation_issues": [], "invalid_candidate_count": 0}
                 samples.append({"draw": draw, "seed": seed, "raw_response": raw,
-                                "answer": answer, "parse_error": error,
+                                **({} if expansion else {"answer": answer}), **details, "parse_error": error,
                                 "output_tokens": int(new_ids.numel()), "generation_seconds": elapsed})
                 del ids, new_ids
-            unique = unique_candidates(samples)
+            unique = expansion_candidates(samples) if expansion else unique_candidates(samples)
             candidates.extend({"question_id": qid, **row} for row in unique)
             generations.append({"question_id": qid, "question": example["question"],
                                 "samples": samples, "parse_error": None if unique else "All samples failed",
@@ -156,6 +187,8 @@ def main():
             state["completed_questions"] = len(generations)
             write_jsonl(output / "generations.jsonl", generations)
             write_jsonl(output / "candidates.jsonl", candidates)
+            if expansion:
+                write_jsonl(output / "invalid_candidates.jsonl", invalid_candidates)
             write_json(output / "status.json", state)
             print(f"{len(generations)}/{len(examples)}: {len(samples)} draws; {len(unique)} unique answers", flush=True)
             del encoded
@@ -166,6 +199,8 @@ def main():
     finally:
         write_jsonl(output / "generations.jsonl", generations)
         write_jsonl(output / "candidates.jsonl", candidates)
+        if expansion:
+            write_jsonl(output / "invalid_candidates.jsonl", invalid_candidates)
         write_json(output / "status.json", state)
         del model, tokenizer
         gc.collect()

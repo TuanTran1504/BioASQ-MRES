@@ -1,5 +1,8 @@
 # Matched 8B SFT evaluation
 
+To add ten sampled expansion responses using the completed baseline runs, see
+the [ten-sample expansion workflow](EXPANSION_SAMPLING_8B.md).
+
 Evaluate the completed Llama-3.1-8B and Qwen3-8B pairs on the same 160 development
 questions, with all scientific snippets retained. This launcher performs inference
 only. It does not retrain models or submit Ministral jobs.

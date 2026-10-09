@@ -28,12 +28,12 @@ def ranking_metrics(rows):
     return {key: sum(r[key] for r in output) / len(output) for key in output[0] if key != "question_id"}, output
 
 
-def paired_contrast(base, sft, resamples=10000):
+def paired_contrast(base, sft, resamples=10000, metrics=("mrr_at5", "coverage_at1", "coverage_at5", "coverage_at10")):
     by_id = {row["question_id"]: row for row in base}
     if len(by_id) != len(base) or len({r["question_id"] for r in sft}) != len(sft) or set(by_id) != {r["question_id"] for r in sft}:
         raise ValueError("Paired results have different or duplicate questions")
     result = {}
-    for metric in ("mrr_at5", "coverage_at1", "coverage_at5", "coverage_at10"):
+    for metric in metrics:
         differences = [r[metric] - by_id[r["question_id"]][metric] for r in sft]
         rng = random.Random(3407)
         samples = sorted(sum(rng.choices(differences, k=len(differences))) / len(differences) for _ in range(resamples))

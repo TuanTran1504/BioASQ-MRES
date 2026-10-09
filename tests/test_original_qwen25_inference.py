@@ -45,8 +45,8 @@ def test_sampling_parser_rejects_multiple_answers_and_preserves_failed_draw_budg
     assert sampler.sample_seed("q", 2) != sampler.sample_seed("q", 3)
 
 
-@pytest.mark.parametrize("draw_count,temperature,mark_snippets", [(10, 0.8, True), (10, 0.8, False), (1, 0, False)])
-def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkeypatch, draw_count, temperature, mark_snippets):
+@pytest.mark.parametrize("draw_count,temperature,mark_snippets,expansion", [(10, 0.8, True, False), (10, 0.8, False, False), (1, 0, False, False), (10, 0.8, False, True)])
+def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkeypatch, draw_count, temperature, mark_snippets, expansion):
     sampler = load_script("run_single_answer_sampling")
     monkeypatch.setattr(sampler, "ROOT", tmp_path)
     monkeypatch.setattr(sampler, "configure_job_local_compiler_cache", lambda: None)
@@ -73,6 +73,11 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
             return "question and evidence"
         def __call__(self, **kwargs): return {"input_ids": Tokens()}
         def decode(self, ids, **kwargs):
+            if expansion:
+                if len(calls) == 2:
+                    return "invalid"
+                return json.dumps({"answers": [{"answer": "Alpha", "relation_type": "original"},
+                    {"answer": "Beta" if len(calls) == 10 else "alpha", "relation_type": "synonym"}]})
             return "invalid" if len(calls) == 2 else "Answer: [BE] Beta [EE]" if len(calls) == 10 else "Answer: [BE] Alpha [EE]"
 
     fake_torch = SimpleNamespace(inference_mode=nullcontext, manual_seed=seeds.append,
@@ -87,6 +92,8 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
               "temperature": temperature, "top_p": 0.95, "seed": 3407, "max_seq_length": 6144,
               "max_new_tokens": 512, "mark_snippets": mark_snippets,
               "response_mode": "single_answer_greedy" if draw_count == 1 else "single_answer_sampling"}
+    if expansion:
+        config["response_mode"] = "equivalent_sampling"
     (tmp_path / "config.json").write_text(json.dumps(config))
     output = tmp_path / "output"
     monkeypatch.setattr(sys, "argv", ["sampling", "--config", str(tmp_path / "config.json"),
@@ -107,6 +114,11 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
     assert generation["request_count"] == draw_count and generation["input_tokens"] == 5 * draw_count
     assert len(generation["samples"]) == draw_count
     assert [json.loads(line)["answer"] for line in (output / "candidates.jsonl").read_text().splitlines()] == (["Alpha", "Beta"] if draw_count == 10 else ["Alpha"])
+    if expansion:
+        candidates = [json.loads(line) for line in (output / "candidates.jsonl").read_text().splitlines()]
+        assert [(c["position"], c["draw"], c["within_draw_position"]) for c in candidates] == [(1, 1, 1), (2, 10, 2)]
+        assert generation["samples"][1]["answers"] == []
+        assert (output / "invalid_candidates.jsonl").is_file()
 
 
 def test_sampling_diagnostics_distinguish_draws_from_unique_ranks(tmp_path):

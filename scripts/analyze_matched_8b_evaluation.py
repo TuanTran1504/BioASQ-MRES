@@ -15,16 +15,16 @@ from scripts.analyze_original_qwen25_inference import efficiency, read, records,
 CONDITIONS = ("original_greedy", "original_sampling10", "expansion_greedy")
 
 
-def validate_experiment(directory):
+def validate_experiment(directory, conditions=CONDITIONS):
     manifest = read(directory / "manifest.json")
     if manifest["status"] != "complete" or manifest["smoke_test"] or manifest["expected_questions"] != 160:
         raise ValueError("Expected a complete full 160-question matched evaluation")
-    if set(manifest["runs"]) != set(CONDITIONS):
-        raise ValueError("Expected all three inference arms")
+    if set(manifest["runs"]) != set(conditions):
+        raise ValueError("Expected all declared inference arms")
     runs = {}
     configs = {}
     examples = None
-    for name in CONDITIONS:
+    for name in conditions:
         path = (directory / manifest["runs"][name]).resolve()
         if not path.is_relative_to(directory.resolve()):
             raise ValueError("Inference arm must stay within the experiment directory")
@@ -34,7 +34,7 @@ def validate_experiment(directory):
             raise ValueError("Inference arms have different questions, evidence or gold")
         examples = saved_examples
         config = read(path / "config.json")
-        formulation = "expansion" if name == "expansion_greedy" else "original"
+        formulation = "expansion" if name.startswith("expansion_") else "original"
         provenance = manifest["provenance"][formulation]
         # Use the archived prompt so complete experiments can be copied locally.
         prompt = directory / (formulation + "_prompt.txt")
@@ -54,6 +54,9 @@ def validate_experiment(directory):
         if name == "original_sampling10":
             expected.update(num_generations=10, temperature=0.8, top_p=0.95, seed=3407,
                             response_mode="single_answer_sampling")
+        if name == "expansion_sampling10":
+            expected.update(num_generations=10, temperature=0.8, top_p=0.95, top_k=0, seed=3407,
+                            response_mode="equivalent_sampling")
         if any(config.get(field) != value for field, value in expected.items()):
             raise ValueError("Unexpected inference protocol")
         for row in records(path / "generations.jsonl"):
@@ -76,13 +79,18 @@ def validate_experiment(directory):
     for field in ("base_snapshot", "base_revision", "matrix_sha256"):
         if original[field] != expansion[field]:
             raise ValueError(f"Training pair differs in {field}")
-    if configs["original_greedy"]["prompt_sha256"] != configs["original_sampling10"]["prompt_sha256"]:
+    if ("original_greedy" in configs and "original_sampling10" in configs and
+            configs["original_greedy"]["prompt_sha256"] != configs["original_sampling10"]["prompt_sha256"]):
         raise ValueError("Original greedy and sampled prompts differ")
     return manifest, runs
 
 
 def score_experiment(directory, jar):
     manifest, runs = validate_experiment(directory)
+    return score_validated_runs(directory, manifest, runs, jar)
+
+
+def score_validated_runs(directory, manifest, runs, jar):
     from src.notebook_workflows.local_expansion import analyze_local_expansion
     result = {"model_key": manifest["model_key"], "question_count": 160,
               "evaluation": manifest["evaluation"], "selection": manifest["selection"],
@@ -100,16 +108,27 @@ def score_experiment(directory, jar):
     for name, path in runs.items():
         report, summary, rows = analyze_local_expansion(path, jar_path=jar)
         metrics, scored[name] = ranking_metrics(rows)
+        if "expansion_sampling10" in runs:
+            for row, scored_row in zip(rows, scored[name]):
+                scored_row["coverage_full_pool"] = float(bool(row["matching_answers"]))
+            metrics["coverage_full_pool"] = sum(r["coverage_full_pool"] for r in scored[name]) / len(rows)
         result["conditions"][name] = {"metrics": metrics, "candidate_diagnostics": summary,
                                       "efficiency": efficiency(path), "report": str(report)}
         if not summary["parse_success_count"]:
             result["quality_warnings"].append(f"{name}: zero parseable responses; inspect raw outputs before interpreting accuracy.")
-        if name == "original_sampling10":
+        if name in ("original_sampling10", "expansion_sampling10"):
             result["conditions"][name]["sampling_diagnostics"] = sampling_diagnostics(path, rows)
-    for first, second in (("original_greedy", "original_sampling10"),
+    contrasts = [("original_greedy", "original_sampling10"),
                           ("original_greedy", "expansion_greedy"),
-                          ("original_sampling10", "expansion_greedy")):
-        contrast = paired_contrast(scored[first], scored[second])
+                          ("original_sampling10", "expansion_greedy")]
+    if "expansion_sampling10" in runs:
+        contrasts.extend((name, "expansion_sampling10") for name in CONDITIONS)
+        result["interpretation"].append("Ten-sample expansion uses ten requests and at most 100 candidates before deduplication; report fixed top-ten and full-pool coverage separately.")
+    for first, second in contrasts:
+        metrics = ("mrr_at5", "coverage_at1", "coverage_at5", "coverage_at10")
+        if "expansion_sampling10" in runs:
+            metrics += ("coverage_full_pool",)
+        contrast = paired_contrast(scored[first], scored[second], metrics=metrics)
         for values in contrast.values():
             values["second_minus_first"] = values.pop("sft_minus_base")
         result["paired_contrasts"][f"{second}_minus_{first}"] = contrast

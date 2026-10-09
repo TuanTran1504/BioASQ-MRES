@@ -78,7 +78,7 @@ def validate_training_pair(config, key):
 
 
 def arm_config(config, provenance, condition, prompt_path):
-    formulation = "expansion" if condition == "expansion_greedy" else "original"
+    formulation = "expansion" if condition.startswith("expansion_") else "original"
     source = provenance[formulation]
     result = {"input": config["input"], "prompt": str(prompt_path),
               "model_loader": source["model_loader"], "chat_template_kwargs": source["chat_template_kwargs"],
@@ -92,6 +92,8 @@ def arm_config(config, provenance, condition, prompt_path):
         result["response_mode"] = "single_answer_greedy"
     if condition == "original_sampling10":
         result.update(response_mode="single_answer_sampling", num_generations=10, temperature=0.8, top_p=0.95)
+    if condition == "expansion_sampling10":
+        result.update(response_mode="equivalent_sampling", num_generations=10, temperature=0.8, top_p=0.95, top_k=0)
     return result
 
 
@@ -102,15 +104,25 @@ def main():
     parser.add_argument("--mode", choices=("validate", "run"), default="validate")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--run-name")
+    parser.add_argument("--expansion-sampling-only", action="store_true")
     args = parser.parse_args()
     config = read(args.config)
     provenance = validate_training_pair(config, args.model)
+    baseline = None
+    if args.expansion_sampling_only:
+        baseline = (ROOT / config["baseline_experiments"][args.model]).resolve()
+        previous = read(baseline / "manifest.json")
+        if (previous["status"] != "complete" or previous["smoke_test"]
+                or previous["expected_questions"] != 160 or previous["model_key"] != args.model
+                or previous["input_sha256"] != config["input_sha256"]
+                or previous["provenance"] != provenance or set(previous["runs"]) != set(CONDITIONS)):
+            raise ValueError("Baseline must be a complete evaluation of these exact adapter files and data")
     if args.mode == "validate":
         return
     name = args.run_name or f"{args.model}-8b-evaluation-{os.environ.get('PBS_JOBID', 'manual')}"
     if Path(name).name != name or name in (".", ".."):
         raise ValueError("run-name must be a directory name")
-    output = ROOT / "outputs/matched_8b_evaluation" / name
+    output = ROOT / ("outputs/expansion_sampling_8b" if args.expansion_sampling_only else "outputs/matched_8b_evaluation") / name
     output.mkdir(parents=True, exist_ok=False)
     manifest = {"status": "running", "model_key": args.model, "smoke_test": args.smoke_test,
                 "expected_questions": 4 if args.smoke_test else 160, "runs": {},
@@ -119,26 +131,31 @@ def main():
                 "evaluation": "development-only matched SFT formulation comparison",
                 "selection": "first five unique candidates in response/draw order"}
     write(output / "manifest.json", manifest)
+    if baseline is not None:
+        manifest.update(baseline_experiment=str(baseline), baseline_manifest_sha256=digest(baseline / "manifest.json"),
+                        selection="first five unique candidates in draw then within-response order",
+                        evaluation="development-only ten-sample expansion SFT comparison")
+        write(output / "manifest.json", manifest)
     try:
-        for condition in CONDITIONS:
-            formulation = "expansion" if condition == "expansion_greedy" else "original"
+        for condition in (("expansion_sampling10",) if args.expansion_sampling_only else CONDITIONS):
+            formulation = "expansion" if condition.startswith("expansion_") else "original"
             prompt_path = output / (formulation + "_prompt.txt")
             prompt_path.write_text(provenance[formulation]["system_prompt"], encoding="utf-8")
             configuration = arm_config(config, provenance, condition, prompt_path)
             path = output / (condition + "_config.json")
             write(path, configuration)
             command = [sys.executable, str(ROOT / "scripts" / (
-                "run_extractive_expansion_8b.py" if formulation == "expansion" else "run_single_answer_sampling.py")),
+                "run_extractive_expansion_8b.py" if condition == "expansion_greedy" else "run_single_answer_sampling.py")),
                 "--config", str(path), "--model-name", provenance[formulation]["adapter"],
                 "--limit", str(manifest["expected_questions"])]
             target = output / condition
-            if formulation == "expansion":
+            if condition == "expansion_greedy":
                 target.mkdir()
                 command.extend(["--output-parent", str(target), "--run-name", name])
             else:
                 command.extend(["--output-dir", str(target)])
             subprocess.run(command, check=True)
-            if formulation == "expansion":
+            if condition == "expansion_greedy":
                 children = list(target.iterdir())
                 if len(children) != 1:
                     raise ValueError("Expected one expansion run")

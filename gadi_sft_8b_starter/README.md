@@ -11,6 +11,10 @@ For the completed Llama and Qwen pairs, the [matched 8B evaluation workflow](doc
 compares greedy single-answer SFT, ten sampled single answers and greedy expansion
 SFT on the same 160 dev questions, with official scores and paired comparisons.
 
+The [ten-sample expansion SFT evaluation](docs/EXPANSION_SAMPLING_8B.md) adds ten
+stochastic expansion responses per question for those completed adapters. It
+reuses the baseline runs and reports fixed top-ten and full-pool coverage separately.
+
 To evaluate the historical Qwen2.5 0.5B/3B SFT checkpoints with the existing
 expansion prompt and ten high-temperature single-answer draws, use the
 [original SFT inference workflow](docs/ORIGINAL_QWEN25_INFERENCE.md). The exact

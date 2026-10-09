@@ -1,0 +1,23 @@
+{
+  "description": "Ten sampled expansion responses from the completed matched Llama and Qwen adapters.",
+  "training_matrix": "configs/matched_8b_sft.json",
+  "input": "data/expansion_dev160.jsonl",
+  "input_sha256": "0b4b342f62391e0d6d21577957a454ffbfe8a2619978462c03bbdf36161379b8",
+  "max_seq_length": 6144,
+  "max_new_tokens": 512,
+  "seed": 3407,
+  "models": {
+    "llama31": {
+      "original": "outputs/matched_8b_sft/llama31-8b-original-sft-180794568.gadi-pbs",
+      "expansion": "outputs/matched_8b_sft/llama31-8b-expansion-sft-180794570.gadi-pbs"
+    },
+    "qwen3": {
+      "original": "outputs/matched_8b_sft/qwen3-8b-original-sft-180794572.gadi-pbs",
+      "expansion": "outputs/matched_8b_sft/qwen3-8b-expansion-sft-180794574.gadi-pbs"
+    }
+  },
+  "baseline_experiments": {
+    "llama31": "outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs",
+    "qwen3": "outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs"
+  }
+}

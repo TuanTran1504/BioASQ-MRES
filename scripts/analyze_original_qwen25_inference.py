@@ -53,9 +53,16 @@ def sampling_diagnostics(path, rows):
     samples = [s for row in generations for s in row["samples"]]
     result = {"attempted_draws": len(samples), "parse_successful_draws": sum(not s["parse_error"] for s in samples),
               "parse_success_rate_per_draw": sum(not s["parse_error"] for s in samples) / len(samples)}
+    if any("answers" in s for s in samples):
+        result.update(schema_compliant_draws=sum(s.get("schema_compliant", False) for s in samples),
+                      recovered_draws=sum("incomplete_top_level_json_recovered" in s.get("validation_issues", []) for s in samples),
+                      draws_with_candidate_limit_applied=sum(s.get("candidate_limit_applied", False) for s in samples),
+                      invalid_candidate_count=sum(s.get("invalid_candidate_count", 0) for s in samples))
     for k in (1, 5, 10):
         result[f"coverage_within_first_{k}_draws"] = sum(
-            any(s["answer"] in accepted[row["question_id"]] for s in row["samples"][:k])
+            any(any(answer in accepted[row["question_id"]] for answer in
+                    ([s["answer"]] if "answer" in s else [a["answer"] for a in s["answers"]]))
+                for s in row["samples"][:k])
             for row in generations) / len(generations)
     return result
 

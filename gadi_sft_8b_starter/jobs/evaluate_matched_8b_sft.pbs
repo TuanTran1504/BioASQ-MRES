@@ -24,5 +24,6 @@ cd "${PBS_O_WORKDIR}"
 args=(--mode run --model "${MODEL_KEY:?MODEL_KEY is required}"
       --config "${EVAL_CONFIG:?EVAL_CONFIG is required}")
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then args+=(--smoke-test); fi
+if [[ "${EXPANSION_SAMPLING_ONLY:-0}" == 1 ]]; then args+=(--expansion-sampling-only); fi
 python scripts/run_matched_8b_evaluation.py "${args[@]}" \
   --run-name "${MODEL_KEY}-8b-evaluation-${PBS_JOBID}"
