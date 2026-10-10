@@ -1,0 +1,829 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-10",
+  "sources": {
+    "llama31_qwen3": {
+      "kind": "user-provided Gadi analyzer stdout",
+      "sha256": "8139f348bf3c5f71ba81516ff384b48c11971ac565c9ca63d9e6879bf00d7c03",
+      "verification": "Aggregate stdout consistency checked; raw generation and per-question files remain on Gadi."
+    },
+    "ministral3": {
+      "kind": "user-provided Gadi analyzer stdout",
+      "sha256": "3aa838da77cf3babccb882cee64a6de208494f8cbada719552936d2689a4079d",
+      "verification": "Aggregate stdout consistency checked; raw generation and per-question files remain on Gadi."
+    }
+  },
+  "evaluation_jobs": {
+    "llama31": "180848513.gadi-pbs",
+    "qwen3": "180848515.gadi-pbs",
+    "ministral3": "180897174.gadi-pbs"
+  },
+  "results": [
+    {
+      "model_key": "llama31",
+      "question_count": 160,
+      "evaluation": "development-only matched SFT formulation comparison",
+      "selection": "first five unique candidates in response/draw order",
+      "scoring": "official BioASQ Java candidate matcher",
+      "conditions": {
+        "original_greedy": {
+          "metrics": {
+            "mrr_at5": 0.48125,
+            "strict_accuracy": 0.48125,
+            "lenient_accuracy": 0.48125,
+            "coverage_at1": 0.48125,
+            "coverage_at5": 0.48125,
+            "coverage_at10": 0.48125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 1.0,
+            "mean_unique_candidates": 1.0,
+            "extractive_candidate_rate": 0.89375,
+            "candidate_type_counts": {
+              "sampled_single_answer": 160
+            },
+            "response_mode": "single_answer_greedy",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-original-sft-180794568.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 77,
+            "coverage_at1": 0.48125,
+            "covered_at5": 77,
+            "coverage_at5": 0.48125,
+            "covered_at10": 77,
+            "coverage_at10": 0.48125
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 132155,
+            "output_tokens": 2401,
+            "generation_seconds": 144.35368032741826,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/original_greedy/analysis-3e8d4439"
+        },
+        "original_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.47020833333333334,
+            "strict_accuracy": 0.375,
+            "lenient_accuracy": 0.6125,
+            "coverage_at1": 0.375,
+            "coverage_at5": 0.6125,
+            "coverage_at10": 0.65
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 4.09375,
+            "mean_unique_candidates": 4.09375,
+            "extractive_candidate_rate": 0.6,
+            "candidate_type_counts": {
+              "sampled_single_answer": 655
+            },
+            "response_mode": "single_answer_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-original-sft-180794568.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 60,
+            "coverage_at1": 0.375,
+            "covered_at5": 98,
+            "coverage_at5": 0.6125,
+            "covered_at10": 104,
+            "coverage_at10": 0.65
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1321550,
+            "output_tokens": 24179,
+            "generation_seconds": 1437.1586288039107,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/original_sampling10/analysis-5ecc0c65",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "coverage_within_first_1_draws": 0.375,
+            "coverage_within_first_5_draws": 0.5875,
+            "coverage_within_first_10_draws": 0.65
+          }
+        },
+        "expansion_greedy": {
+          "metrics": {
+            "mrr_at5": 0.5010416666666667,
+            "strict_accuracy": 0.4625,
+            "lenient_accuracy": 0.55,
+            "coverage_at1": 0.4625,
+            "coverage_at5": 0.55,
+            "coverage_at10": 0.55
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 3.21875,
+            "mean_unique_candidates": 3.21875,
+            "extractive_candidate_rate": 0.5941747572815534,
+            "candidate_type_counts": {
+              "original": 160,
+              "numerically_equivalent": 14,
+              "abbreviation_expansion": 86,
+              "spelling_or_inflection": 43,
+              "nomenclature_variant": 104,
+              "synonym": 105,
+              "harmless_formatting": 3
+            },
+            "response_mode": "equivalent",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/llama31-8b-expansion-sft-180794570.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 74,
+            "coverage_at1": 0.4625,
+            "covered_at5": 88,
+            "coverage_at5": 0.55,
+            "covered_at10": 88,
+            "coverage_at10": 0.55
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 183195,
+            "output_tokens": 11534,
+            "generation_seconds": 559.8974123612279,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/llama31-8b-evaluation-180848513.gadi-pbs/expansion_greedy/20261009-030445-llama31-8b-evaluation-180848513-gadi-pbs/analysis-65e28836"
+        }
+      },
+      "paired_contrasts": {
+        "original_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.05864583333333334,
+              0.0378125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01104166666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.16875,
+              -0.04375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.10625
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.075,
+              0.1875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.13125
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.1125,
+              0.23125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.16875
+          }
+        },
+        "expansion_greedy_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.021875,
+              0.059375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.019791666666666666
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.05625,
+              0.01875
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.0125,
+              0.125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.06875
+          }
+        },
+        "expansion_greedy_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.02333333333333333,
+              0.08375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.030833333333333334
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              0.01875,
+              0.15625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.11875,
+              -0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0625
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.1625,
+              -0.04375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.1
+          }
+        }
+      },
+      "quality_warnings": [],
+      "interpretation": [
+        "Greedy original and greedy expansion each use one request per question.",
+        "Ten-sample original uses ten requests; efficiency is reported separately.",
+        "Both SFT formulations share fitting/validation questions and a pinned backbone.",
+        "Development-only results from one training seed; coverage at ten is diagnostic."
+      ],
+      "training_execution_modes": {
+        "original": "default",
+        "expansion": "default"
+      }
+    },
+    {
+      "model_key": "qwen3",
+      "question_count": 160,
+      "evaluation": "development-only matched SFT formulation comparison",
+      "selection": "first five unique candidates in response/draw order",
+      "scoring": "official BioASQ Java candidate matcher",
+      "conditions": {
+        "original_greedy": {
+          "metrics": {
+            "mrr_at5": 0.51875,
+            "strict_accuracy": 0.51875,
+            "lenient_accuracy": 0.51875,
+            "coverage_at1": 0.51875,
+            "coverage_at5": 0.51875,
+            "coverage_at10": 0.51875
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 1.0,
+            "mean_unique_candidates": 1.0,
+            "extractive_candidate_rate": 0.9,
+            "candidate_type_counts": {
+              "sampled_single_answer": 160
+            },
+            "response_mode": "single_answer_greedy",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-original-sft-180794572.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 83,
+            "coverage_at1": 0.51875,
+            "covered_at5": 83,
+            "coverage_at5": 0.51875,
+            "covered_at10": 83,
+            "coverage_at10": 0.51875
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 131629,
+            "output_tokens": 2364,
+            "generation_seconds": 163.20015289995354,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/original_greedy/analysis-f1f4a923"
+        },
+        "original_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.4965625,
+            "strict_accuracy": 0.4125,
+            "lenient_accuracy": 0.60625,
+            "coverage_at1": 0.4125,
+            "coverage_at5": 0.60625,
+            "coverage_at10": 0.6125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 3.46875,
+            "mean_unique_candidates": 3.46875,
+            "extractive_candidate_rate": 0.6972972972972973,
+            "candidate_type_counts": {
+              "sampled_single_answer": 555
+            },
+            "response_mode": "single_answer_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-original-sft-180794572.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 66,
+            "coverage_at1": 0.4125,
+            "covered_at5": 97,
+            "coverage_at5": 0.60625,
+            "covered_at10": 98,
+            "coverage_at10": 0.6125
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1316290,
+            "output_tokens": 23467,
+            "generation_seconds": 1620.1263740416616,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/original_sampling10/analysis-8d93540a",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "coverage_within_first_1_draws": 0.4125,
+            "coverage_within_first_5_draws": 0.58125,
+            "coverage_within_first_10_draws": 0.6125
+          }
+        },
+        "expansion_greedy": {
+          "metrics": {
+            "mrr_at5": 0.5260416666666667,
+            "strict_accuracy": 0.5,
+            "lenient_accuracy": 0.56875,
+            "coverage_at1": 0.5,
+            "coverage_at5": 0.56875,
+            "coverage_at10": 0.56875
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 4.11875,
+            "mean_unique_candidates": 4.11875,
+            "extractive_candidate_rate": 0.5144157814871017,
+            "candidate_type_counts": {
+              "original": 160,
+              "numerically_equivalent": 19,
+              "abbreviation_expansion": 107,
+              "nomenclature_variant": 126,
+              "spelling_or_inflection": 24,
+              "synonym": 217,
+              "harmless_formatting": 6
+            },
+            "response_mode": "equivalent",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/qwen3-8b-expansion-sft-180794574.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 80,
+            "coverage_at1": 0.5,
+            "covered_at5": 91,
+            "coverage_at5": 0.56875,
+            "covered_at10": 91,
+            "coverage_at10": 0.56875
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 182669,
+            "output_tokens": 16890,
+            "generation_seconds": 917.6309365965426,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/qwen3-8b-evaluation-180848515.gadi-pbs/expansion_greedy/20261009-030916-qwen3-8b-evaluation-180848515-gadi-pbs/analysis-2f08833b"
+        }
+      },
+      "paired_contrasts": {
+        "original_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.0671875,
+              0.02333333333333333
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.022187500000000002
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.16875,
+              -0.05
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.10625
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0375,
+              0.1375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.04375,
+              0.14375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          }
+        },
+        "expansion_greedy_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.022916666666666665,
+              0.035416666666666666
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.007291666666666666
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.05,
+              0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.01875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.00625,
+              0.09375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.05
+          }
+        },
+        "expansion_greedy_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.011875,
+              0.07166666666666667
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.029479166666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              0.03125,
+              0.15
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.0875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.08125,
+              0.00625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0375
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.09375,
+              0.0
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.04375
+          }
+        }
+      },
+      "quality_warnings": [],
+      "interpretation": [
+        "Greedy original and greedy expansion each use one request per question.",
+        "Ten-sample original uses ten requests; efficiency is reported separately.",
+        "Both SFT formulations share fitting/validation questions and a pinned backbone.",
+        "Development-only results from one training seed; coverage at ten is diagnostic."
+      ],
+      "training_execution_modes": {
+        "original": "default",
+        "expansion": "default"
+      }
+    },
+    {
+      "model_key": "ministral3",
+      "question_count": 160,
+      "evaluation": "development-only matched SFT formulation comparison",
+      "selection": "first five unique candidates in response/draw order",
+      "scoring": "official BioASQ Java candidate matcher",
+      "conditions": {
+        "original_greedy": {
+          "metrics": {
+            "mrr_at5": 0.48125,
+            "strict_accuracy": 0.48125,
+            "lenient_accuracy": 0.48125,
+            "coverage_at1": 0.48125,
+            "coverage_at5": 0.48125,
+            "coverage_at10": 0.48125
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 1.0,
+            "mean_unique_candidates": 1.0,
+            "extractive_candidate_rate": 0.88125,
+            "candidate_type_counts": {
+              "sampled_single_answer": 160
+            },
+            "response_mode": "single_answer_greedy",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/ministral3-8b-original-sft-180878745.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 77,
+            "coverage_at1": 0.48125,
+            "covered_at5": 77,
+            "coverage_at5": 0.48125,
+            "covered_at10": 77,
+            "coverage_at10": 0.48125
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 125610,
+            "output_tokens": 2295,
+            "generation_seconds": 282.9613766244147,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/ministral3-8b-evaluation-180897174.gadi-pbs/original_greedy/analysis-4e5f4080"
+        },
+        "original_sampling10": {
+          "metrics": {
+            "mrr_at5": 0.5092708333333333,
+            "strict_accuracy": 0.4125,
+            "lenient_accuracy": 0.65,
+            "coverage_at1": 0.4125,
+            "coverage_at5": 0.65,
+            "coverage_at10": 0.6625
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 3.9875,
+            "mean_unique_candidates": 3.9875,
+            "extractive_candidate_rate": 0.5877742946708464,
+            "candidate_type_counts": {
+              "sampled_single_answer": 638
+            },
+            "response_mode": "single_answer_sampling",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/ministral3-8b-original-sft-180878745.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 66,
+            "coverage_at1": 0.4125,
+            "covered_at5": 104,
+            "coverage_at5": 0.65,
+            "covered_at10": 106,
+            "coverage_at10": 0.6625
+          },
+          "efficiency": {
+            "request_count": 1600,
+            "input_tokens": 1256100,
+            "output_tokens": 23846,
+            "generation_seconds": 2865.372700718348,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/ministral3-8b-evaluation-180897174.gadi-pbs/original_sampling10/analysis-775adea1",
+          "sampling_diagnostics": {
+            "attempted_draws": 1600,
+            "parse_successful_draws": 1600,
+            "parse_success_rate_per_draw": 1.0,
+            "coverage_within_first_1_draws": 0.4125,
+            "coverage_within_first_5_draws": 0.60625,
+            "coverage_within_first_10_draws": 0.6625
+          }
+        },
+        "expansion_greedy": {
+          "metrics": {
+            "mrr_at5": 0.534375,
+            "strict_accuracy": 0.50625,
+            "lenient_accuracy": 0.575,
+            "coverage_at1": 0.50625,
+            "coverage_at5": 0.575,
+            "coverage_at10": 0.575
+          },
+          "candidate_diagnostics": {
+            "question_count": 160,
+            "parse_success_count": 160,
+            "parse_success_rate": 1.0,
+            "questions_with_truncated_snippets": 0,
+            "mean_candidates": 2.95625,
+            "mean_unique_candidates": 2.95625,
+            "extractive_candidate_rate": 0.6575052854122622,
+            "candidate_type_counts": {
+              "original": 160,
+              "numerically_equivalent": 12,
+              "abbreviation_expansion": 82,
+              "nomenclature_variant": 102,
+              "synonym": 78,
+              "spelling_or_inflection": 36,
+              "harmless_formatting": 3
+            },
+            "response_mode": "equivalent",
+            "model": "gadi_sft_8b_starter/outputs/matched_8b_sft/ministral3-8b-expansion-sft-180872635.gadi-pbs/adapter",
+            "scoring": "Official BioASQ Java matcher applied independently to every candidate",
+            "covered_at1": 81,
+            "coverage_at1": 0.50625,
+            "covered_at5": 92,
+            "coverage_at5": 0.575,
+            "covered_at10": 92,
+            "coverage_at10": 0.575
+          },
+          "efficiency": {
+            "request_count": 160,
+            "input_tokens": 177610,
+            "output_tokens": 10868,
+            "generation_seconds": 1118.7829558347585,
+            "note": "Generation time excludes model load/preflight; null means older run did not record this field"
+          },
+          "report": "gadi_sft_8b_starter/outputs/matched_8b_evaluation/ministral3-8b-evaluation-180897174.gadi-pbs/expansion_greedy/20261009-162730-ministral3-8b-evaluation-180897174-gadi-pbs/analysis-e2f7143d"
+        }
+      },
+      "paired_contrasts": {
+        "original_sampling10_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.021041666666666674,
+              0.07864583333333333
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.028020833333333335
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.13125,
+              -0.0125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.06875
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.1125,
+              0.23125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.16875
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.125,
+              0.24375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.18125
+          }
+        },
+        "expansion_greedy_minus_original_greedy": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              0.005208333333333333,
+              0.103125
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.053125
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              -0.025,
+              0.075
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.025
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              0.0375,
+              0.15
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              0.0375,
+              0.15
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          }
+        },
+        "expansion_greedy_minus_original_sampling10": {
+          "mrr_at5": {
+            "paired_bootstrap_95ci": [
+              -0.02333333333333333,
+              0.07375000000000001
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.025104166666666667
+          },
+          "coverage_at1": {
+            "paired_bootstrap_95ci": [
+              0.03125,
+              0.15625
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": 0.09375
+          },
+          "coverage_at5": {
+            "paired_bootstrap_95ci": [
+              -0.125,
+              -0.025
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.075
+          },
+          "coverage_at10": {
+            "paired_bootstrap_95ci": [
+              -0.1375,
+              -0.0375
+            ],
+            "resamples": 10000,
+            "seed": 3407,
+            "second_minus_first": -0.0875
+          }
+        }
+      },
+      "quality_warnings": [],
+      "interpretation": [
+        "Greedy original and greedy expansion each use one request per question.",
+        "Ten-sample original uses ten requests; efficiency is reported separately.",
+        "Both SFT formulations share fitting/validation questions and a pinned backbone.",
+        "Development-only results from one training seed; coverage at ten is diagnostic."
+      ],
+      "training_execution_modes": {
+        "original": "eager",
+        "expansion": "eager"
+      },
+      "inference_execution_modes": {
+        "original_greedy": "eager",
+        "original_sampling10": "eager",
+        "expansion_greedy": "eager"
+      }
+    }
+  ]
+}

@@ -15,6 +15,13 @@ greedy single-answer SFT, ten sampled single answers and greedy expansion SFT,
 with paired confidence intervals and measured generation costs. The original
 6 October snapshot below retains its historical scope.
 
+The [three-backbone matched SFT snapshot](matched_8b_sft_dev160_20261010.json)
+adds the Ministral evaluation from 10 October 2026 while preserving the earlier
+Llama/Qwen scores and separate source hashes. Ministral expansion SFT has MRR@5
+0.534375, original greedy SFT 0.48125 and original ten-sample SFT 0.509271.
+Its expansion-minus-greedy MRR interval excludes zero before multiplicity
+correction; these remain development results from one training seed.
+
 The subsequent [ten-sample expansion SFT results](../docs/EXPANSION_SAMPLING_8B_RESULTS.md)
 add the fourth inference condition and are saved in
 [expansion_sampling_8b_dev160_20261009.json](expansion_sampling_8b_dev160_20261009.json).
