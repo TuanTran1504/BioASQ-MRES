@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-10",
+  "scope": "automatic LLM annotation pilot; not model evaluation or human-validated labels",
+  "judge_model": "gpt-4.1-2025-04-14",
+  "question_panel": {
+    "fitting": 100,
+    "internal_validation": 32,
+    "outer_development_used": 0
+  },
+  "saved_responses": 1980,
+  "unique_original_candidate_relation_contexts": 3598,
+  "judge_request_attempts": 541,
+  "final_label_requests": 242,
+  "final_pass_request_attempts": 299,
+  "calibration_pass_requests": 242,
+  "request_statuses": {
+    "complete": 484,
+    "error": 57
+  },
+  "estimated_api_cost_usd_with_cached_input_discount": 6.798708000000006,
+  "failed_attempts_without_usage_reserved_usd": 2.944978,
+  "conservative_full_input_rate_or_reserved_usd": 9.878469999999997,
+  "authorized_cap_usd": 10,
+  "pricing_source": "https://developers.openai.com/api/docs/models/gpt-4.1",
+  "models": {
+    "llama31": {
+      "saved_responses": 660,
+      "included_responses": 443,
+      "excluded_responses": 217,
+      "included_candidate_classes": {
+        "C3": 318,
+        "C2": 921,
+        "C1": 76
+      }
+    },
+    "qwen3": {
+      "saved_responses": 660,
+      "included_responses": 372,
+      "excluded_responses": 288,
+      "included_candidate_classes": {
+        "C3": 230,
+        "C2": 1033,
+        "C1": 113
+      }
+    },
+    "ministral3": {
+      "saved_responses": 660,
+      "included_responses": 459,
+      "excluded_responses": 201,
+      "included_candidate_classes": {
+        "C3": 340,
+        "C2": 857,
+        "C1": 36
+      }
+    }
+  },
+  "included_responses": 1274,
+  "exclusion_reason_counts_not_mutually_exclusive": {
+    "inconsistent_repeated_candidate_judgment": 152,
+    "uncertain_or_invalid_judgment": 388,
+    "invalid_primary_schema": 148,
+    "invalid_declared_relation": 53,
+    "official_semantic_conflict": 7
+  },
+  "pair_counts": {
+    "train": 159,
+    "validation": 48
+  },
+  "represented_questions": {
+    "train": 83,
+    "validation": 25
+  },
+  "pair_source_combinations": {
+    "ministral3>llama31": 34,
+    "llama31>ministral3": 33,
+    "ministral3>ministral3": 23,
+    "qwen3>ministral3": 19,
+    "ministral3>qwen3": 19,
+    "qwen3>llama31": 24,
+    "llama31>llama31": 20,
+    "llama31>qwen3": 18,
+    "qwen3>qwen3": 17
+  },
+  "pair_categories_not_mutually_exclusive": {
+    "accepted_expression_gain": 48,
+    "correct_expression_gain": 162,
+    "incorrect_removal": 45,
+    "non_equivalent_removal": 74,
+    "unsupported_removal": 38
+  },
+  "pair_candidate_count_comparisons": {
+    "chosen_more_candidates": 141,
+    "chosen_fewer_candidates": 22,
+    "equal_candidate_counts": 44
+  },
+  "human_audit_complete": false,
+  "dpo_training_complete": false,
+  "rubric_calibration": "A fitting-question spot-check exposed incorrect conflation of added specificity with scientific error; final annotations reran with a clarified correctness/equivalence distinction.",
+  "source_hashes": {
+    "judge_prompt": "ee17df38aeafffa3a35ba656e960c706e07ea47d2f8e645810ff3449e982a900",
+    "judge_implementation": "7129740d33439538f7c96f4187126cb22c7d6de74040e7a2bed9cf415277cf90",
+    "official_review_input": "fa57b3d32a916a6fd3e9d129d30ec495c5ded37bc668adba7a828d2daf65297f",
+    "llm_review_output": "4696289a7b7ef6416e5388f27131b20c86a9eba38d6558b75c56c8dcc7aaeaf7",
+    "preferences": {
+      "train": "738f4beda7a51c633f0cd4f362508402e0482090d366eeb0e9686f5256fa69f6",
+      "validation": "a904d8a48b382ee9fb16677a007fdca1fb15449d3e0903f734dc2acef5d49bd4"
+    },
+    "response_banks": {
+      "llama31": "f70b05ef1c4f9e853799da10070575792826b435b89efc74838c314807ac88ab",
+      "qwen3": "0d9f3e04f2b353b89b233d49044654b5d4fd9c38f225ebf6a28c7b7c36addee3",
+      "ministral3": "825c173bf4de9a13f2829425d97320c61b040f8f8eae2fa443430898661e5bcf"
+    }
+  },
+  "limitations": [
+    "No independent human audit; confidence is not calibrated.",
+    "Full GPT-4.1 also verified expansion SFT teacher targets; annotation errors can be correlated.",
+    "Exact quote checks verify provenance, not semantic correctness.",
+    "Pilot selected 100 fitting and 32 validation questions, not the full dataset.",
+    "No held-out DPO outcome has been measured."
+  ]
+}

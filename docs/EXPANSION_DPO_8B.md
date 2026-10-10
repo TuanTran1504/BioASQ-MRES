@@ -68,7 +68,35 @@ For each included response:
 - Record the supporting snippet IDs/text or the reason for lack of support in `evidence`. An incorrect candidate can appear in a snippet while still answering the wrong question.
 - Use `excluded_reason` for unresolved, conflicting or unreliable cases. Null labels are excluded automatically. Model-generated review should be identified and independently audited before research claims.
 
-These annotations require biomedical judgment. The workflow does not call a paid judge or invent semantic/evidence labels. The review file retains model and draw identifiers for provenance; a blinded human audit should conceal these during judgment.
+These annotations require biomedical judgment. The optional LLM annotation stage below can supply an automated first pass. The review file retains model and draw identifiers for provenance; these are hidden from the judge. A blinded human audit should conceal them as well.
+
+### Optional automated GPT-4.1 annotation
+
+The completed 10 October pilot produced **159 fitting and 48 internal-validation pairs** from the three banks. See the [annotation report](EXPANSION_DPO_JUDGE_PILOT.md) for final counts, exclusions and cost accounting. The reviewed annotation file remains local; DPO training has not yet been submitted.
+
+The repository-root helper `scripts/judge_expansion_dpo_annotations.py` validates all three source banks and the officially scored annotation file before preparing requests. It uses the pinned `gpt-4.1-2025-04-14` snapshot, full supplied snippets and accepted fitting/validation aliases. It sends neither generator identity nor draw identifiers nor official match flags to the judge. Identical original/candidate/relation contexts are judged once across all models, and candidates are deterministically shuffled within each question. Different originals require separate equivalence judgments.
+
+From the repository root, first prepare the plan without paid calls:
+
+```bash
+python scripts/judge_expansion_dpo_annotations.py PATH_TO_REVIEW_OFFICIAL.jsonl \
+  --banks PATH_TO_LLAMA_BANK PATH_TO_QWEN_BANK PATH_TO_MINISTRAL_BANK \
+  --output-dir Artifacts/expansion_dpo_8b/judge-gpt41-pilot-v2 --max-usd 10
+```
+
+The input and all three bank paths must exist on the machine running annotation. Run on a login node with outgoing access or on the local machine, never on an offline GPU worker. The default credential file is the existing repository-root `open_ai_api.txt`; do not copy it into artifacts or commit it.
+
+After authorizing the paid budget, add `--run --max-new-calls 300 --workers 4`. The helper enforces a cumulative US-dollar cap (up to US$10 per output directory), charges conservatively at full input-token prices without assuming prompt-cache discounts, and reserves a worst-case amount before each request. Failed or interrupted requests with unknown usage retain their reserve. No hidden retries occur. Every completed response is cached by exact request hash; resuming the same plan reuses those caches. The plan, raw API responses and spend ledger remain under the ignored output directory. Published rates and schema are documented in [GPT-4.1 model documentation](https://developers.openai.com/api/docs/models/gpt-4.1) and [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat).
+
+The judge supplies correctness, evidence support, equivalence, relation validity, confidence, exact snippet quotes and a short rationale. Official matcher labels remain authoritative for C3. Correct unmatched answers become C2; incorrect unmatched answers become C1. An officially accepted answer called incorrect by the judge causes the response to be excluded rather than relabelled. Other exclusions include medium/low confidence, unresolved attributes, invalid snippet IDs/quotes, and contradictory repeated candidate judgments. An incorrectly declared transformation is retained as a potential negative when decisive correctness, support or equivalence errors already establish a contrast under the preference rule; otherwise relation-only disagreements are excluded because the current objective does not reward transformation labels separately. This avoids discarding false synonyms merely because their declared relation is also wrong. Confidence is a model assertion, not a calibrated probability. A valid quote establishes textual provenance, not the truth of the judge's semantic interpretation.
+
+The generated `reviewed-llm.jsonl` preserves all raw outputs and explicitly identifies its reviewer as an LLM. The manifest reports included/excluded responses, prospective pair counts and usage-based cost bounds. It is **automatically annotated pilot data**, not human-validated gold. LLM judges have documented biases and limitations; see [Zheng et al.](https://arxiv.org/abs/2306.05685). Independently audit a stratified sample before publication-quality claims. If no human audit is available, report that limitation and use the resulting training/evaluation as exploratory.
+
+Scientific correctness and strict equivalence are separate judge attributes. A true, snippet-supported more specific expression can answer the question correctly (C2) while being non-equivalent to a more general original. Added specificity alone must not cause a C1 label. Conversely, a true statement that does not adequately answer the requested relation is not rescued by snippet occurrence. The pilot rubric was clarified after a fitting-question spot-check exposed this confusion, and the final labels were regenerated with the clarified prompt. Costs of both passes count toward the authorized total; restarting in a new output directory is not permission to spend the full budget again.
+
+Pass `reviewed-llm.jsonl` to the existing pair constructor below. The deterministic preference rule, not an LLM's overall response rating, chooses preferred completions. Do not train when the helper reports a partial annotation run or insufficient reliable fitting/validation pairs without explicitly investigating the missing labels and pair yield.
+
+If annotation runs locally and training runs on Gadi, transfer only the reviewed annotation JSONL back to Gadi, then rebuild preferences there using the original Gadi bank directories. A locally built preference manifest contains local absolute bank paths and cannot be used directly as a Gadi training manifest.
 
 ## 3. Construct shared whole-response pairs
 

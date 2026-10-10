@@ -34,6 +34,14 @@ base, Gemma-3-27B base and Qwen3-8B expansion-SFT Gadi runs are preserved in
 [expansion_generations](expansion_generations/README.md). They omit BioASQ
 question text, snippets and gold answers.
 
+The [expansion DPO annotation pilot](../docs/EXPANSION_DPO_JUDGE_PILOT.md)
+uses pinned GPT-4.1 to label the three generated banks and constructs 159 fitting
+and 48 internal-validation preference pairs. Aggregate annotation costs,
+exclusions and source hashes are saved in
+[expansion_dpo_judge_pilot_20261010.json](expansion_dpo_judge_pilot_20261010.json).
+These are automatically annotated pilot preferences, not human-validated labels
+or a trained DPO model's evaluation results. Raw annotations remain local.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official
