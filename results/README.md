@@ -42,6 +42,12 @@ exclusions and source hashes are saved in
 These are automatically annotated pilot preferences, not human-validated labels
 or a trained DPO model's evaluation results. Raw annotations remain local.
 
+All three expansion DPO training jobs subsequently completed successfully on Gadi,
+using 159 fitting pairs, 48 validation pairs and ten optimiser updates each.
+The [training diagnostics](expansion_dpo_training_20261010.json) record the
+user-reported job statuses and preference losses. Held-out DPO answer scores are
+not yet available; these losses do not establish improved BioASQ performance.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official

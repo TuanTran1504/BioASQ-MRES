@@ -1,0 +1,11 @@
+{
+  "sft_evaluation_config": "configs/matched_8b_evaluation.json",
+  "dpo_config": "configs/expansion_dpo_8b.json",
+  "preferences": "outputs/expansion_dpo_8b/preferences-llm-pilot-v4",
+  "output_root": "outputs/expansion_dpo_evaluation",
+  "models": {
+    "llama31": "outputs/expansion_dpo_8b/llama31-train-180920014.gadi-pbs",
+    "qwen3": "outputs/expansion_dpo_8b/qwen3-train-180920016.gadi-pbs",
+    "ministral3": "outputs/expansion_dpo_8b/ministral3-train-180920018.gadi-pbs"
+  }
+}

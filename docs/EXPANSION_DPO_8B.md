@@ -72,7 +72,7 @@ These annotations require biomedical judgment. The optional LLM annotation stage
 
 ### Optional automated GPT-4.1 annotation
 
-The completed 10 October pilot produced **159 fitting and 48 internal-validation pairs** from the three banks. See the [annotation report](EXPANSION_DPO_JUDGE_PILOT.md) for final counts, exclusions and cost accounting. The reviewed annotation file remains local; DPO training has not yet been submitted.
+The completed 10 October pilot produced **159 fitting and 48 internal-validation pairs** from the three banks. See the [annotation report](EXPANSION_DPO_JUDGE_PILOT.md) for final counts, exclusions and cost accounting. The reviewed annotation file remains local. Subsequent successful Gadi training and matched evaluation instructions are recorded below.
 
 The repository-root helper `scripts/judge_expansion_dpo_annotations.py` validates all three source banks and the officially scored annotation file before preparing requests. It uses the pinned `gpt-4.1-2025-04-14` snapshot, full supplied snippets and accepted fitting/validation aliases. It sends neither generator identity nor draw identifiers nor official match flags to the judge. Identical original/candidate/relation contexts are judged once across all models, and candidates are deterministically shuffled within each question. Different originals require separate equivalence judgments.
 
@@ -149,5 +149,25 @@ The pilot selects the best epoch by **internal-validation preference loss**. Thi
 ## Comparison after training
 
 Compare unchanged expansion SFT with its DPO continuation using the same development questions, snippets, native expansion prompt, greedy decoding and first-five candidate ordering. Ten-sample comparisons must use identical sampling settings on both sides. Score official MRR at five and coverage separately, with paired question-level confidence intervals and cost measurements.
+
+The user-provided Gadi status confirms successful full DPO training for Llama (180920014), Qwen3 (180920016) and Ministral (180920018). All three trained on 159 fitting and 48 validation pairs for 10 optimiser updates and saved adapters. Their validation preference losses were 0.683772, 0.689139 and 0.684185 respectively. These are training diagnostics, not BioASQ answer scores; preference losses should not be used to rank different backbones.
+
+The matched evaluation helper pins those three runs in `configs/expansion_dpo_evaluation.json`. From the bundle directory on Gadi:
+
+```bash
+git pull --ff-only
+bash scripts/submit_expansion_dpo_evaluation.sh
+```
+
+It validates every selected source before submitting a four-question smoke and a dependent full job per model. Each job runs four arms: expansion SFT greedy, expansion SFT ten samples, expansion DPO greedy and expansion DPO ten samples. The SFT arms are regenerated alongside DPO. Sampling uses temperature 0.8, top-p 0.95, top-k 0 and question/draw seeds derived from 3407. All arms use the same 160 disjoint development questions, native expansion prompt, unmarked full snippets, 6,144-token total limit and 512 output tokens. Qwen thinking remains disabled; Ministral retains its recorded eager backend.
+
+After a full evaluation completes, score its directory on the login node with Python 3.12 and a Java JDK available:
+
+```bash
+python ../scripts/analyze_expansion_dpo_evaluation.py \
+  outputs/expansion_dpo_evaluation/llama31-dpo-evaluation-JOB_ID.gadi-pbs
+```
+
+Replace the directory with the actual completed run; the scorer accepts multiple directories. It verifies archived prompts, native settings, sample seeds, raw parsed candidates and pooling order. It reports official MRR at five, coverage at one/five/ten and full-pool coverage, paired DPO-minus-SFT bootstrap intervals separately for greedy and ten-sample generation, efficiency, parser diagnostics and strict training-schema validity. Parse failures stay in denominators. Full-pool coverage is not an official five-answer submission score. Scientific correctness/evidence support is not inferred from exact-match failures or format validity. Outputs are `comparison_summary.json` and `comparison_per_question.json` inside each experiment directory.
 
 A continued-SFT control, validation-MRR hyperparameter search, seed repeats and genuinely unseen final evaluation are still needed for a confirmatory claim. Improved fitting preferences or lower preference loss do not establish improved held-out BioASQ performance. DPO may add little benefit or reduce useful diversity; retain those outcomes.

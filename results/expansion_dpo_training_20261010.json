@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-10",
+  "scope": "training diagnostics only; no held-out DPO answer scores yet",
+  "evidence_source": "User-pasted Gadi qstat exit statuses and training manifest summaries",
+  "local_adapter_files_inspected": false,
+  "preference_pairs": {"train": 159, "validation": 48},
+  "global_steps_per_model": 10,
+  "models": {
+    "llama31": {
+      "smoke_job": "180920013.gadi-pbs", "smoke_exit_status": 0,
+      "full_job": "180920014.gadi-pbs", "full_exit_status": 0,
+      "status": "complete", "adapter_weights_present_reported": true,
+      "best_validation_preference_loss": 0.683772087097168
+    },
+    "qwen3": {
+      "smoke_job": "180920015.gadi-pbs", "smoke_exit_status": 0,
+      "full_job": "180920016.gadi-pbs", "full_exit_status": 0,
+      "status": "complete", "adapter_weights_present_reported": true,
+      "best_validation_preference_loss": 0.6891388893127441
+    },
+    "ministral3": {
+      "smoke_job": "180920017.gadi-pbs", "smoke_exit_status": 0,
+      "full_job": "180920018.gadi-pbs", "full_exit_status": 0,
+      "status": "complete", "adapter_weights_present_reported": true,
+      "best_validation_preference_loss": 0.6841846108436584
+    }
+  },
+  "limitations": [
+    "Automatically labelled pilot preferences without an independent human audit",
+    "One training seed and ten optimiser updates",
+    "Preference losses do not establish BioASQ performance gains or rank model quality",
+    "GPU evaluation has not yet been submitted by the local assistant"
+  ]
+}

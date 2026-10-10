@@ -94,7 +94,8 @@
     "equal_candidate_counts": 44
   },
   "human_audit_complete": false,
-  "dpo_training_complete": false,
+  "dpo_training_complete_at_annotation_export": false,
+  "subsequent_training_diagnostics": "expansion_dpo_training_20261010.json",
   "rubric_calibration": "A fitting-question spot-check exposed incorrect conflation of added specificity with scientific error; final annotations reran with a clarified correctness/equivalence distinction.",
   "source_hashes": {
     "judge_prompt": "ee17df38aeafffa3a35ba656e960c706e07ea47d2f8e645810ff3449e982a900",
