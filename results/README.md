@@ -56,6 +56,13 @@ higher coverage at ten but lower MRR at five than greedy for every backbone,
 for both SFT and DPO under the current candidate ordering. Scores are copied
 from user-pasted output; full source summaries remain on Gadi.
 
+The subsequent [inspection of 40 exported DPO cases](../docs/EXPANSION_DPO_CASE_INSPECTION.md)
+is saved in [expansion_dpo_case_inspection_20261011.json](expansion_dpo_case_inspection_20261011.json).
+All 18 changed-MRR outcomes are present. Fourteen of the 15 sampled changes keep
+the same normalized accepted-answer set in the full pool, with different ranks.
+The local checks replay parsing/pooling on all 160 case–arm records. These selected
+cases do not support a population semantic-error rate; raw evidence remains local.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official

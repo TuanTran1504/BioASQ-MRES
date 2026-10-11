@@ -1,0 +1,542 @@
+{
+  "date": "2026-10-11",
+  "scope": "Local inspection of outcome-selected exports, not a representative semantic audit",
+  "official_labels": "Archived official acceptance flags; no new Java scoring",
+  "models": {
+    "llama31": {
+      "audit_summary": {
+        "model_key": "llama31",
+        "question_count": 160,
+        "mrr_changes": {
+          "greedy": {
+            "improved": 2,
+            "worsened": 0,
+            "unchanged": 158,
+            "raw_completions_changed": 52
+          },
+          "sampling10": {
+            "improved": 2,
+            "worsened": 2,
+            "unchanged": 156,
+            "raw_completions_changed": 143
+          }
+        },
+        "sampled_selection_misses": {
+          "sft": {
+            "within_first_ten": 13,
+            "anywhere_in_pool": 20
+          },
+          "dpo": {
+            "within_first_ten": 12,
+            "anywhere_in_pool": 19
+          }
+        },
+        "exported_cases": 13,
+        "selection_miss_examples_per_stratum": 2,
+        "sampling": "All MRR changes plus deterministic seed-3407 samples per policy and selection-miss stratum; cases merged by question ID",
+        "interpretation": "Outcome-selected diagnostic cases, not a representative semantic-quality audit; official acceptance is not a C1/C2 semantic label"
+      },
+      "export_files_sha256": {
+        "audit_summary.json": "8edb2c7beca50bd6c0afb19e43be3f83b000f2c51bca95a7ff65b78f80b58755",
+        "cases.jsonl": "b9628eb38e6e27c5ac6eeae910d8213960f6f83dc7f32fca98989e4af64f1e80",
+        "source_hashes.json": "e1bbfe0e25b1c6d523b8ec1c78ece8a11db1063b3b0abb368174ee225e9090f0"
+      }
+    },
+    "ministral3": {
+      "audit_summary": {
+        "model_key": "ministral3",
+        "question_count": 160,
+        "mrr_changes": {
+          "greedy": {
+            "improved": 0,
+            "worsened": 1,
+            "unchanged": 159,
+            "raw_completions_changed": 55
+          },
+          "sampling10": {
+            "improved": 1,
+            "worsened": 3,
+            "unchanged": 156,
+            "raw_completions_changed": 148
+          }
+        },
+        "sampled_selection_misses": {
+          "sft": {
+            "within_first_ten": 11,
+            "anywhere_in_pool": 14
+          },
+          "dpo": {
+            "within_first_ten": 11,
+            "anywhere_in_pool": 15
+          }
+        },
+        "exported_cases": 12,
+        "selection_miss_examples_per_stratum": 2,
+        "sampling": "All MRR changes plus deterministic seed-3407 samples per policy and selection-miss stratum; cases merged by question ID",
+        "interpretation": "Outcome-selected diagnostic cases, not a representative semantic-quality audit; official acceptance is not a C1/C2 semantic label"
+      },
+      "export_files_sha256": {
+        "audit_summary.json": "645874c43c27b0519abc3a117406c6be54f671a5e384ca7ac15d595128c953df",
+        "cases.jsonl": "004215f29fa3236dd1d05b0c822b65c707414a7532251fe5d72a8859c26aad9f",
+        "source_hashes.json": "213e5203e05d2c3181a2e6ae123295919f414ff3e4463fc38d015469b47f60fb"
+      }
+    },
+    "qwen3": {
+      "audit_summary": {
+        "model_key": "qwen3",
+        "question_count": 160,
+        "mrr_changes": {
+          "greedy": {
+            "improved": 0,
+            "worsened": 0,
+            "unchanged": 160,
+            "raw_completions_changed": 45
+          },
+          "sampling10": {
+            "improved": 5,
+            "worsened": 2,
+            "unchanged": 153,
+            "raw_completions_changed": 148
+          }
+        },
+        "sampled_selection_misses": {
+          "sft": {
+            "within_first_ten": 11,
+            "anywhere_in_pool": 20
+          },
+          "dpo": {
+            "within_first_ten": 11,
+            "anywhere_in_pool": 21
+          }
+        },
+        "exported_cases": 15,
+        "selection_miss_examples_per_stratum": 2,
+        "sampling": "All MRR changes plus deterministic seed-3407 samples per policy and selection-miss stratum; cases merged by question ID",
+        "interpretation": "Outcome-selected diagnostic cases, not a representative semantic-quality audit; official acceptance is not a C1/C2 semantic label"
+      },
+      "export_files_sha256": {
+        "audit_summary.json": "f253ecdb09a313ee730f4050d682765df87a57bf878c389ad3be46114b4549d6",
+        "cases.jsonl": "c79ef30f6cf9dc4d78db4038a790165a5c1a52e90d3beb27b9ec4dfe16f3a715",
+        "source_hashes.json": "355f46104e8f4e3d1a8cdd701ad17180c0de3e2b3a211f517b990c4f182c063b"
+      }
+    }
+  },
+  "changed_outcomes": [
+    {
+      "model_key": "llama31",
+      "question_id": "51596a8ad24251bc0500009e",
+      "mode": "sampling10",
+      "mrr_delta": -0.2,
+      "sft_first_accepted_rank": 5,
+      "dpo_first_accepted_rank": 6,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "In centrosome",
+        "In the centrosome",
+        "Centriolar protein Cep135 is found in the centrosomal region",
+        "Located in the centrosome",
+        "Centrosome"
+      ],
+      "dpo_first_five": [
+        "In centrosome",
+        "In the centrosome",
+        "Centriolar protein Cep135 is found in the centrosome",
+        "Cep135 localizes to the centrosome",
+        "Centrosomal protein Cep135"
+      ]
+    },
+    {
+      "model_key": "llama31",
+      "question_id": "53130a77e3eabad02100000f",
+      "mode": "greedy",
+      "mrr_delta": 0.3333333333333333,
+      "sft_first_accepted_rank": null,
+      "dpo_first_accepted_rank": 3,
+      "normalized_accepted_pool_set_unchanged": false,
+      "sft_first_five": [
+        "growth hormone",
+        "GH",
+        "growth hormone (GH)"
+      ],
+      "dpo_first_five": [
+        "growth hormone",
+        "GH",
+        "growth hormone deficiency",
+        "GH deficiency"
+      ]
+    },
+    {
+      "model_key": "llama31",
+      "question_id": "5323640b9b2d7acc7e000014",
+      "mode": "greedy",
+      "mrr_delta": 0.3333333333333333,
+      "sft_first_accepted_rank": null,
+      "dpo_first_accepted_rank": 3,
+      "normalized_accepted_pool_set_unchanged": false,
+      "sft_first_five": [
+        "NOTCH3",
+        "Notch homolog 3"
+      ],
+      "dpo_first_five": [
+        "NOTCH3",
+        "Notch homolog 3",
+        "Notch3 gene"
+      ]
+    },
+    {
+      "model_key": "llama31",
+      "question_id": "58bca2f302b8c6095300000c",
+      "mode": "sampling10",
+      "mrr_delta": 0.2,
+      "sft_first_accepted_rank": 6,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "X chromosome",
+        "X chr",
+        "X chromosome (X chr)",
+        "The X chromosome",
+        "X-chromosome"
+      ],
+      "dpo_first_five": [
+        "X chromosome",
+        "X chr",
+        "X chromosome (X chr)",
+        "X-chromosome",
+        "X"
+      ]
+    },
+    {
+      "model_key": "llama31",
+      "question_id": "5e355e20fbd6abf43b000065",
+      "mode": "sampling10",
+      "mrr_delta": -0.5,
+      "sft_first_accepted_rank": 1,
+      "dpo_first_accepted_rank": 2,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "LMNB1",
+        "lamin B1",
+        "lamin B1 (LMNB1)",
+        "lamin B1 (LMNB1) gene",
+        "lamin B1 gene"
+      ],
+      "dpo_first_five": [
+        "LMNB1 gene",
+        "lamin B1 gene",
+        "LMNB1",
+        "lamin B1",
+        "lamin B1 (LMNB1)"
+      ]
+    },
+    {
+      "model_key": "llama31",
+      "question_id": "626aa929e764a53204000039",
+      "mode": "sampling10",
+      "mrr_delta": 0.2,
+      "sft_first_accepted_rank": 10,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "Decrease",
+        "Downregulation",
+        "Reduced",
+        "Lowered",
+        "Decrease in abundance"
+      ],
+      "dpo_first_five": [
+        "Decrease",
+        "Downregulation",
+        "Reduced",
+        "Low",
+        "Decreased"
+      ]
+    },
+    {
+      "model_key": "ministral3",
+      "question_id": "51bdd9c2047fa84d1d000002",
+      "mode": "sampling10",
+      "mrr_delta": -0.1333333333333333,
+      "sft_first_accepted_rank": 3,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "Lysosome-associated membrane protein type 2A",
+        "LAMP-2A",
+        "lysosome-associated membrane protein 2 isoform A",
+        "lamp2a",
+        "lysosome-associated membrane protein type 2 isoform A"
+      ],
+      "dpo_first_five": [
+        "Lysosome-associated membrane protein type 2A",
+        "LAMP-2A",
+        "lysosome-associated membrane protein 2A",
+        "lysosome-associated membrane protein type IIA",
+        "lamp2a"
+      ]
+    },
+    {
+      "model_key": "ministral3",
+      "question_id": "56e857ae42442bac75000004",
+      "mode": "sampling10",
+      "mrr_delta": 1.0,
+      "sft_first_accepted_rank": 8,
+      "dpo_first_accepted_rank": 1,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "Zinc ion",
+        "Zn2+",
+        "Zinc ion at their active site",
+        "Zinc atom",
+        "Zinc ion (Zn2+)"
+      ],
+      "dpo_first_five": [
+        "Zinc",
+        "Zn",
+        "Zinc ion",
+        "Zn2+",
+        "Zinc atom"
+      ]
+    },
+    {
+      "model_key": "ministral3",
+      "question_id": "60292d191cb411341a00010e",
+      "mode": "sampling10",
+      "mrr_delta": -0.3,
+      "sft_first_accepted_rank": 2,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "cancer",
+        "bladder cancer",
+        "non-muscle invasive bladder cancer",
+        "NMIBC",
+        "urothelial carcinoma of the bladder"
+      ],
+      "dpo_first_five": [
+        "cancer",
+        "carcinoma",
+        "malignancy",
+        "neoplasm",
+        "bladder cancer"
+      ]
+    },
+    {
+      "model_key": "ministral3",
+      "question_id": "63f9cd0b33942b094c000010",
+      "mode": "greedy",
+      "mrr_delta": -0.08333333333333331,
+      "sft_first_accepted_rank": 3,
+      "dpo_first_accepted_rank": 4,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "Metastasis in colorectal cancer",
+        "Metastasis potential of colorectal cancer",
+        "Colorectal cancer metastasis",
+        "CRC metastasis"
+      ],
+      "dpo_first_five": [
+        "Metastasis in colorectal cancer",
+        "CRC metastasis",
+        "Metastasis potential in colorectal cancer",
+        "Colorectal cancer metastasis"
+      ]
+    },
+    {
+      "model_key": "ministral3",
+      "question_id": "66099a25fdcbea915f00001e",
+      "mode": "sampling10",
+      "mrr_delta": -0.25,
+      "sft_first_accepted_rank": 2,
+      "dpo_first_accepted_rank": 4,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "bevacizumab plus FOLFOXIRI",
+        "FOLFOXIRI plus bevacizumab",
+        "bevacizumab in combination with FOLFOXIRI",
+        "5-fluorouracil, leucovorin, oxaliplatin, and irinotecan plus bevacizumab",
+        "FOLFOXIRI combined with bevacizumab"
+      ],
+      "dpo_first_five": [
+        "5-fluorouracil, leucovorin, oxaliplatin, and irinotecan (FOLFOXIRI) plus bevacizumab in patients with a good performance status",
+        "FOLFOXIRI plus bevacizumab in patients with a good performance status",
+        "5-fluorouracil, leucovorin, oxaliplatin, and irinotecan combined with bevacizumab in patients with good performance status",
+        "FOLFOXIRI plus bevacizumab",
+        "FOLFOXIRI with bevacizumab"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "51bdd9c2047fa84d1d000002",
+      "mode": "sampling10",
+      "mrr_delta": 0.1333333333333333,
+      "sft_first_accepted_rank": 5,
+      "dpo_first_accepted_rank": 3,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "LAMP-2A",
+        "lysosome-associated membrane protein type 2A",
+        "Lysosome-associated membrane protein type 2 isoform A",
+        "lysosome-associated membrane protein 2A",
+        "Lamp2a"
+      ],
+      "dpo_first_five": [
+        "LAMP-2A",
+        "lysosome-associated membrane protein type 2A",
+        "LAMP2A",
+        "lysosome-associated membrane protein 2A",
+        "lysosomal membrane protein type 2A"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "5321bc309b2d7acc7e00000d",
+      "mode": "sampling10",
+      "mrr_delta": 0.2,
+      "sft_first_accepted_rank": 11,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "phosphoinositide 3-kinase delta",
+        "PI3Kδ",
+        "Phosphoinositol-3 kinase delta",
+        "Phosphatidylinositol 3-kinase delta",
+        "PI3K delta"
+      ],
+      "dpo_first_five": [
+        "phosphoinositide 3-kinase delta",
+        "PI3Kδ",
+        "phosphoinositide-3 kinase delta",
+        "phosphoinositide 3-kinase delta isoform",
+        "PI3K-δ"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "5323640b9b2d7acc7e000014",
+      "mode": "sampling10",
+      "mrr_delta": 0.1333333333333333,
+      "sft_first_accepted_rank": 5,
+      "dpo_first_accepted_rank": 3,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "NOTCH3",
+        "NOTCH-3",
+        "Notch homolog 3",
+        "Notch3 protein",
+        "NOTCH3 gene"
+      ],
+      "dpo_first_five": [
+        "NOTCH3",
+        "Notch Homolog 3",
+        "NOTCH3 gene",
+        "NOTCH3 receptor",
+        "Notch3 protein"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "5880b073c872c95565000003",
+      "mode": "sampling10",
+      "mrr_delta": -0.25,
+      "sft_first_accepted_rank": 4,
+      "dpo_first_accepted_rank": 8,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "Factor Xa inhibitors",
+        "factor Xa inhibitor",
+        "direct factor Xa inhibitors",
+        "Factor Xa",
+        "Factor Xa (FXa)"
+      ],
+      "dpo_first_five": [
+        "Factor Xa inhibitors",
+        "factor Xa inhibitor",
+        "direct factor Xa inhibitors",
+        "Xa inhibitors",
+        "direct FXa inhibitors"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "58bca2f302b8c6095300000c",
+      "mode": "sampling10",
+      "mrr_delta": 0.5,
+      "sft_first_accepted_rank": 7,
+      "dpo_first_accepted_rank": 2,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "X chromosome",
+        "X-chromosome",
+        "X chromosome (Xq)",
+        "X chromosome (Xq10)",
+        "X chromosome (Xq21)"
+      ],
+      "dpo_first_five": [
+        "X chromosome",
+        "X",
+        "X chromosome (X)",
+        "X chromosomal aberration",
+        "X monosomy"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "5a7610af83b0d9ea6600001a",
+      "mode": "sampling10",
+      "mrr_delta": 0.2,
+      "sft_first_accepted_rank": null,
+      "dpo_first_accepted_rank": 5,
+      "normalized_accepted_pool_set_unchanged": false,
+      "sft_first_five": [
+        "Janus kinase 3",
+        "JAK3",
+        "janus kinase three",
+        "JAK-3",
+        "Janus kinase-3"
+      ],
+      "dpo_first_five": [
+        "Janus kinase 3",
+        "JAK3",
+        "janus kinase three",
+        "JAK-3",
+        "Janus kinase 3 (JAK3)"
+      ]
+    },
+    {
+      "model_key": "qwen3",
+      "question_id": "6026ef9d1cb411341a0000d5",
+      "mode": "sampling10",
+      "mrr_delta": -0.08333333333333331,
+      "sft_first_accepted_rank": 3,
+      "dpo_first_accepted_rank": 4,
+      "normalized_accepted_pool_set_unchanged": true,
+      "sft_first_five": [
+        "February 2020",
+        "2020",
+        "In February 2020",
+        "2020 (February)",
+        "2020 February"
+      ],
+      "dpo_first_five": [
+        "February 2020",
+        "2020-02",
+        "2020",
+        "In February 2020",
+        "2020 (February)"
+      ]
+    }
+  ],
+  "checks": {
+    "exported_cases": 40,
+    "arm_case_records_replayed": 160,
+    "all_reported_mrr_changes_present": true,
+    "sampling_changed_cases": 15,
+    "sampling_changed_cases_with_same_normalized_accepted_pool_set": 14
+  },
+  "limits": [
+    "Full 160-question source generation files and scorer reports were not downloaded; source SHA values cannot be independently recomputed from excerpts",
+    "Case selection includes all MRR changes and a small deterministic sample of selection misses; no population rate of semantic errors can be estimated",
+    "Archived official acceptance is not a semantic correctness label; evidence observations are qualitative"
+  ]
+}

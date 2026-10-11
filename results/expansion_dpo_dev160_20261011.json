@@ -71,12 +71,14 @@
         "greedy": {
           "improved": 2,
           "worsened": 0,
-          "unchanged": 158
+          "unchanged": 158,
+          "raw_completions_changed": 52
         },
         "sampling10": {
           "improved": 2,
           "worsened": 2,
-          "unchanged": 156
+          "unchanged": 156,
+          "raw_completions_changed": 143
         }
       },
       "sampled_selection_misses_reported": {
@@ -88,7 +90,8 @@
           "within_first_ten": 12,
           "anywhere_in_pool": 19
         }
-      }
+      },
+      "exported_cases_inspected_locally": 13
     },
     "qwen3": {
       "smoke_job": "180936012.gadi-pbs",
@@ -124,12 +127,14 @@
         "greedy": {
           "improved": 0,
           "worsened": 0,
-          "unchanged": 160
+          "unchanged": 160,
+          "raw_completions_changed": 45
         },
         "sampling10": {
           "improved": 5,
           "worsened": 2,
-          "unchanged": 153
+          "unchanged": 153,
+          "raw_completions_changed": 148
         }
       },
       "sampled_selection_misses_reported": {
@@ -141,7 +146,8 @@
           "within_first_ten": 11,
           "anywhere_in_pool": 21
         }
-      }
+      },
+      "exported_cases_inspected_locally": 15
     },
     "ministral3": {
       "smoke_job": "180936014.gadi-pbs",
@@ -177,12 +183,14 @@
         "greedy": {
           "improved": 0,
           "worsened": 1,
-          "unchanged": 159
+          "unchanged": 159,
+          "raw_completions_changed": 55
         },
         "sampling10": {
           "improved": 1,
           "worsened": 3,
-          "unchanged": 156
+          "unchanged": 156,
+          "raw_completions_changed": 148
         }
       },
       "sampled_selection_misses_reported": {
@@ -194,7 +202,8 @@
           "within_first_ten": 11,
           "anywhere_in_pool": 15
         }
-      }
+      },
+      "exported_cases_inspected_locally": 12
     }
   },
   "interpretation": [
@@ -208,8 +217,10 @@
   "limitations": [
     "One training seed, ten optimiser updates and automatically judged pilot preferences without independent human audit",
     "Reused 160-question development set; no unseen final-test result",
-    "Full source summaries and raw generations not downloaded locally; per-question diagnostic counts supplied by the user",
+    "Full 160-question source summaries and generation/scoring files remain on Gadi; 40 selected cases and audit summaries were inspected locally",
     "Full-pool coverage, generation token/time costs and semantic/evidence quality are not supplied in the compact output",
     "Confidence intervals represent question-sampling uncertainty, not training-seed variation"
-  ]
+  ],
+  "selected_case_exports_inspected_locally": true,
+  "case_inspection": "expansion_dpo_case_inspection_20261011.json"
 }

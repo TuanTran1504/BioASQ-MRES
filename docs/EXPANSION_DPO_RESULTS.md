@@ -77,10 +77,12 @@ The export contains every MRR change plus two deterministic examples per policy 
 
 Download the three `case_audit` directories for local inspection. Compare changed cases for concept corrections, useful aliases, removed invalid variants and order changes before expanding training. Use the selection misses to assess whether evidence permits a selector to distinguish the accepted candidate. Raw exports remain in ignored output directories; the repository stores the helper and aggregate counts.
 
+The 40 exported cases were subsequently downloaded and [inspected locally](EXPANSION_DPO_CASE_INSPECTION.md). All 18 changed-MRR outcomes are present. Fourteen of the 15 sampled changed cases retain the same normalized accepted-answer set in the full pool, with different first accepted ranks. Examples reveal expression/order effects and remaining numerical and answer-type failures; this selected sample cannot estimate population semantic quality.
+
 ## Provenance and limits
 
 All smoke and full evaluation jobs exited with status zero. Full jobs were 180936011 (Llama), 180936013 (Qwen) and 180936015 (Ministral). Their elapsed times cover all four arms plus setup and are not isolated SFT/DPO generation-time measurements.
 
-The [saved aggregate](../results/expansion_dpo_dev160_20261011.json) records the user-pasted scores, intervals, per-question diagnostic counts, protocol, job identifiers and limits. Full Gadi summaries and raw per-question artifacts have not been downloaded or independently inspected locally. Their expected locations are `outputs/expansion_dpo_evaluation/<model>-dpo-evaluation-<job>.gadi-pbs/comparison_summary.json` and `comparison_per_question.json`.
+The [saved aggregate](../results/expansion_dpo_dev160_20261011.json) records the user-pasted scores, intervals, per-question diagnostic counts, protocol, job identifiers and limits. Full Gadi summaries and complete raw generation/scoring files have not been downloaded or independently inspected locally; selected case exports and their audit summaries have. The full summaries' expected locations are `outputs/expansion_dpo_evaluation/<model>-dpo-evaluation-<job>.gadi-pbs/comparison_summary.json` and `comparison_per_question.json`.
 
 This is a small, single-seed pilot on a development set already used to inform the design. There is no independent human label audit or unseen final-test result. Scientific correctness and evidence support cannot be inferred from exact scores or parser validity. The compact output does not supply full-pool coverage, token/time costs per condition or candidate-quality diagnostics. Confirmatory claims would additionally need matched optimisation controls, a predeclared validation protocol, seed repeats and unseen evaluation.
