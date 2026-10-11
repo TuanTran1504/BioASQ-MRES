@@ -295,5 +295,6 @@
   ],
   "selected_case_exports_inspected_locally": true,
   "case_inspection": "expansion_dpo_case_inspection_20261011.json",
-  "full_pool_transition_report": "expansion_dpo_coverage_transitions_20261011.json"
+  "full_pool_transition_report": "expansion_dpo_coverage_transitions_20261011.json",
+  "combined_full_pool_report": "expansion_dpo_combined_coverage_20261011.json"
 }

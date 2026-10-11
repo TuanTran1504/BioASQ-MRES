@@ -71,6 +71,13 @@ one question at the first-ten cutoff, while preserving full-pool coverage. These
 small gains are not statistically conclusive. Counts and intervals were supplied
 from the Gadi helper's console output; the combined source JSON remains on Gadi.
 
+The subsequent [three-model union comparison](expansion_dpo_combined_coverage_20261011.json)
+shows sampled full-pool coverage rising from 121/160 (75.625%) to 123/160 (76.875%),
+with two gains and no losses. Both new union questions come from Qwen; the other
+Qwen gain and both Ministral gains were already covered by the SFT union. The
+greedy union stays at 101/160. The sampled difference has CI [0, 0.03125] and
+McNemar p = 0.5; this small development-set gain is not statistically conclusive.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official

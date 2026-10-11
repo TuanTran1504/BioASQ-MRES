@@ -129,7 +129,16 @@ scp dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/BioASQ-MRES/gadi_sft_8b_starter/
 
 ## Combined three-model pool
 
-The individual coverage counts do not determine three-model union coverage. A Qwen or Ministral gain may already be covered by another SFT source; gains shared by two DPO sources count once in the union. Because no source loses sampled full-pool coverage, the sampled DPO union cannot lose a question covered by the SFT union in this dataset. Its additional coverage is between zero and five questions, pending the complete union report. The greedy union similarly cannot lose coverage, with between zero and two gains.
+The user subsequently supplied the complete three-model union report from Gadi:
+
+| Inference | SFT union coverage | DPO union coverage | Gained | Lost | Net | Paired 95% coverage-difference CI | McNemar p |
+|---|---:|---:|---:|---:|---:|---|---:|
+| Ten draws per model | 121/160 (75.625%) | 123/160 (76.875%) | 2 | 0 | +2 | [0.00000, 0.03125] | 0.5000 |
+| Greedy per model | 101/160 (63.125%) | 101/160 (63.125%) | 0 | 0 | 0 | [0.00000, 0.00000] | 1.0000 |
+
+The sampled union therefore gains two questions without losing any previously covered question, an increase of 1.25 percentage points. Both gains come from Qwen. One of Qwen's three individual gains was already covered by another SFT model, as were both Ministral gains; Llama had no sampled individual gains. The greedy union is unchanged because Llama's two individual greedy gains were already covered by another SFT model.
+
+This confirms why individual gains cannot simply be added. Coverage gains shared by sources count once, and gains on questions already covered by another SFT source add no union coverage. The sampled union's interval includes zero and McNemar p = 0.5, so the small observed benefit is not statistically conclusive. The [saved combined coverage aggregate](../results/expansion_dpo_combined_coverage_20261011.json) records these results and source-overlap counts from the console output. Gained-question IDs and source hashes remain in the combined JSON on Gadi.
 
 Compare the actual complete three-model unions without generation or new scoring:
 

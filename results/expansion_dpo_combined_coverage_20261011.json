@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-11",
+  "scope": "Exploratory development-only full-pool union of Llama-3.1-8B, Qwen3-8B and Ministral-3-8B",
+  "evidence_source": "User-pasted console output from summarize_expansion_dpo_coverage.py --combine-models on Gadi",
+  "source_json_inspected_locally": false,
+  "source_json_on_gadi": "gadi_sft_8b_starter/outputs/expansion_dpo_evaluation/coverage-combined-20261011.json",
+  "question_count": 160,
+  "coverage": "A question is covered if at least one candidate from any of the three models is officially accepted; no combined ranking is evaluated",
+  "bootstrap": {
+    "resamples": 10000,
+    "seed": 3407
+  },
+  "comparisons": {
+    "sampling10": {
+      "sft_covered": 121,
+      "dpo_covered": 123,
+      "sft_rate_derived": 0.75625,
+      "dpo_rate_derived": 0.76875,
+      "gained": 2,
+      "lost": 0,
+      "net_questions": 2,
+      "both_covered_derived": 121,
+      "neither_covered_derived": 37,
+      "dpo_minus_sft_derived": 0.0125,
+      "paired_bootstrap_95ci": [
+        0.0,
+        0.03125
+      ],
+      "mcnemar_exact_p_reported": 0.5,
+      "requests_per_question_per_policy": 30,
+      "max_candidate_slots_before_deduplication": 300,
+      "individual_gain_overlap": {
+        "llama31": {
+          "individual_gains": 0,
+          "new_to_union": 0,
+          "already_covered_by_another_sft_model": 0
+        },
+        "qwen3": {
+          "individual_gains": 3,
+          "new_to_union": 2,
+          "already_covered_by_another_sft_model": 1
+        },
+        "ministral3": {
+          "individual_gains": 2,
+          "new_to_union": 0,
+          "already_covered_by_another_sft_model": 2
+        }
+      }
+    },
+    "greedy": {
+      "sft_covered": 101,
+      "dpo_covered": 101,
+      "sft_rate_derived": 0.63125,
+      "dpo_rate_derived": 0.63125,
+      "gained": 0,
+      "lost": 0,
+      "net_questions": 0,
+      "both_covered_derived": 101,
+      "neither_covered_derived": 59,
+      "dpo_minus_sft_derived": 0.0,
+      "paired_bootstrap_95ci": [
+        0.0,
+        0.0
+      ],
+      "mcnemar_exact_p_reported": 1.0,
+      "requests_per_question_per_policy": 3,
+      "max_candidate_slots_before_deduplication": 30,
+      "individual_gain_overlap": {
+        "llama31": {
+          "individual_gains": 2,
+          "new_to_union": 0,
+          "already_covered_by_another_sft_model": 2
+        },
+        "qwen3": {
+          "individual_gains": 0,
+          "new_to_union": 0,
+          "already_covered_by_another_sft_model": 0
+        },
+        "ministral3": {
+          "individual_gains": 0,
+          "new_to_union": 0,
+          "already_covered_by_another_sft_model": 0
+        }
+      }
+    }
+  },
+  "interpretation": [
+    "Ten-draw combined DPO coverage is 123/160 versus 121/160 for SFT: two gains and no losses, an increase of 1.25 percentage points",
+    "Both new union questions are Qwen gains; the other Qwen gain and both Ministral gains were already covered by the SFT union",
+    "The greedy union remains at 101/160 with zero gains and losses; both individual Llama gains were already covered by another SFT model",
+    "The sampled union coverage interval includes zero and McNemar p=0.5: the small observed benefit is not statistically conclusive",
+    "Combined coverage is an oracle availability measure; it does not establish combined MRR@5 or an improvement in scientific correctness"
+  ],
+  "limitations": [
+    "One training seed on a reused development set; exploratory unadjusted p-values",
+    "Full-pool union can contain up to 300 candidate slots from 30 requests; it is not an official submission or a fixed ten-candidate evaluation",
+    "Source hashes and gained/lost question IDs are in the Gadi JSON, not the pasted console output"
+  ]
+}
