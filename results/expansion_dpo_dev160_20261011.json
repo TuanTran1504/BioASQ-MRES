@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-11",
+  "scope": "development-only matched expansion SFT versus DPO pilot",
+  "evidence_source": "User-pasted compact output of analyze_expansion_dpo_evaluation.py and Gadi qstat",
+  "source_summaries_inspected_locally": false,
+  "reported_precision": "MRR and differences rounded to six decimals; coverage rounded to four decimals; confidence intervals copied verbatim",
+  "question_count": 160,
+  "scoring": "official BioASQ Java candidate matcher via the configured analysis helper",
+  "selection": "first five unique candidates in draw then within-response order",
+  "preference_pairs": {"train": 159, "validation": 48},
+  "global_steps_per_model": 10,
+  "training_seeds": [3407],
+  "inference": {
+    "greedy": {"num_generations": 1, "temperature": 0},
+    "sampling10": {"num_generations": 10, "temperature": 0.8, "top_p": 0.95, "top_k": 0},
+    "seed": 3407,
+    "max_seq_length": 6144,
+    "max_new_tokens": 512,
+    "same_native_expansion_prompt_and_full_snippets": true
+  },
+  "paired_bootstrap": {"resamples": 10000, "seed": 3407, "confidence_level": 0.95},
+  "models": {
+    "llama31": {
+      "smoke_job": "180936010.gadi-pbs", "full_job": "180936011.gadi-pbs",
+      "smoke_exit_status": 0, "full_exit_status": 0,
+      "full_job_elapsed_includes_all_arms": "03:33:16",
+      "conditions": {
+        "greedy": {
+          "sft_mrr_at5_reported": 0.501042, "dpo_mrr_at5_reported": 0.505208,
+          "dpo_minus_sft_mrr_at5_reported": 0.004167,
+          "paired_bootstrap_95ci": [0.0, 0.010416666666666666],
+          "sft_coverage_at10_reported": 0.55, "dpo_coverage_at10_reported": 0.5625
+        },
+        "sampling10": {
+          "sft_mrr_at5_reported": 0.457396, "dpo_mrr_at5_reported": 0.455521,
+          "dpo_minus_sft_mrr_at5_reported": -0.001875,
+          "paired_bootstrap_95ci": [-0.01, 0.005],
+          "sft_coverage_at10_reported": 0.6312, "dpo_coverage_at10_reported": 0.6312
+        }
+      }
+    },
+    "qwen3": {
+      "smoke_job": "180936012.gadi-pbs", "full_job": "180936013.gadi-pbs",
+      "smoke_exit_status": 0, "full_exit_status": 0,
+      "full_job_elapsed_includes_all_arms": "04:59:57",
+      "conditions": {
+        "greedy": {
+          "sft_mrr_at5_reported": 0.526042, "dpo_mrr_at5_reported": 0.526042,
+          "dpo_minus_sft_mrr_at5_reported": 0.0,
+          "paired_bootstrap_95ci": [0.0, 0.0],
+          "sft_coverage_at10_reported": 0.5687, "dpo_coverage_at10_reported": 0.5687
+        },
+        "sampling10": {
+          "sft_mrr_at5_reported": 0.469479, "dpo_mrr_at5_reported": 0.474688,
+          "dpo_minus_sft_mrr_at5_reported": 0.005208,
+          "paired_bootstrap_95ci": [-0.001979166666666667, 0.014166666666666666],
+          "sft_coverage_at10_reported": 0.625, "dpo_coverage_at10_reported": 0.6375
+        }
+      }
+    },
+    "ministral3": {
+      "smoke_job": "180936014.gadi-pbs", "full_job": "180936015.gadi-pbs",
+      "smoke_exit_status": 0, "full_exit_status": 0,
+      "full_job_elapsed_includes_all_arms": "06:56:51",
+      "conditions": {
+        "greedy": {
+          "sft_mrr_at5_reported": 0.534375, "dpo_mrr_at5_reported": 0.533854,
+          "dpo_minus_sft_mrr_at5_reported": -0.000521,
+          "paired_bootstrap_95ci": [-0.0015624999999999997, 0.0],
+          "sft_coverage_at10_reported": 0.575, "dpo_coverage_at10_reported": 0.575
+        },
+        "sampling10": {
+          "sft_mrr_at5_reported": 0.483021, "dpo_mrr_at5_reported": 0.485,
+          "dpo_minus_sft_mrr_at5_reported": 0.001979,
+          "paired_bootstrap_95ci": [-0.008333333333333333, 0.0171875],
+          "sft_coverage_at10_reported": 0.675, "dpo_coverage_at10_reported": 0.6813
+        }
+      }
+    }
+  },
+  "interpretation": [
+    "All six MRR confidence intervals include zero: no clear improvement beyond expansion SFT in this pilot",
+    "Ten-sample pooling raises coverage at ten but lowers MRR at five versus greedy for both SFT and DPO in each backbone",
+    "These observations motivate testing selection, but do not isolate the cause of the sampling-versus-greedy MRR difference",
+    "Small or absent effects do not establish that expansion DPO cannot help with more data or a different protocol"
+  ],
+  "limitations": [
+    "One training seed, ten optimiser updates and automatically judged pilot preferences without independent human audit",
+    "Reused 160-question development set; no unseen final-test result",
+    "Full source summaries, raw generations and per-question changes not downloaded locally",
+    "Full-pool coverage, generation token/time costs and semantic/evidence quality are not supplied in the compact output",
+    "Confidence intervals represent question-sampling uncertainty, not training-seed variation"
+  ]
+}

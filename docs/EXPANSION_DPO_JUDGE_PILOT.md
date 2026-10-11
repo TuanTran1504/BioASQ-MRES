@@ -1,6 +1,6 @@
 # Expansion DPO annotation pilot
 
-The three completed response banks were automatically annotated with pinned GPT-4.1, producing shared whole-response preference pairs. These are exploratory LLM labels; no independent human audit or held-out DPO answer result is available. Subsequent successful Gadi training is recorded separately in the [training diagnostics](../results/expansion_dpo_training_20261010.json).
+The three completed response banks were automatically annotated with pinned GPT-4.1, producing shared whole-response preference pairs. These are exploratory LLM labels without an independent human audit. Subsequent successful Gadi training is recorded in the [training diagnostics](../results/expansion_dpo_training_20261010.json), and the development-only answer comparison in the [DPO results](EXPANSION_DPO_RESULTS.md).
 
 | Model | Saved responses | Included after filtering | Excluded |
 |---|---:|---:|---:|

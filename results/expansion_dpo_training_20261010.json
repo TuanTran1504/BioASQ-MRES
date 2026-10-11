@@ -1,6 +1,7 @@
 {
   "date": "2026-10-10",
-  "scope": "training diagnostics only; no held-out DPO answer scores yet",
+  "scope": "training diagnostics only; subsequent development answer scores recorded separately",
+  "subsequent_evaluation": "expansion_dpo_dev160_20261011.json",
   "evidence_source": "User-pasted Gadi qstat exit statuses and training manifest summaries",
   "local_adapter_files_inspected": false,
   "preference_pairs": {"train": 159, "validation": 48},

@@ -45,8 +45,16 @@ or a trained DPO model's evaluation results. Raw annotations remain local.
 All three expansion DPO training jobs subsequently completed successfully on Gadi,
 using 159 fitting pairs, 48 validation pairs and ten optimiser updates each.
 The [training diagnostics](expansion_dpo_training_20261010.json) record the
-user-reported job statuses and preference losses. Held-out DPO answer scores are
-not yet available; these losses do not establish improved BioASQ performance.
+user-reported job statuses and preference losses; those losses do not establish
+improved BioASQ performance.
+
+The subsequent [matched expansion DPO evaluation](../docs/EXPANSION_DPO_RESULTS.md)
+on 11 October is saved in [expansion_dpo_dev160_20261011.json](expansion_dpo_dev160_20261011.json).
+All six greedy/ten-sample MRR confidence intervals include zero. The largest
+positive point estimate is Qwen3 ten-sample DPO, +0.005208 MRR. Sampling gives
+higher coverage at ten but lower MRR at five than greedy for every backbone,
+for both SFT and DPO under the current candidate ordering. Scores are copied
+from user-pasted output; full source summaries remain on Gadi.
 
 ## Single-answer factoid SFT and DPO
 

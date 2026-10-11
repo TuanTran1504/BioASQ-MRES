@@ -117,6 +117,6 @@
     "Full GPT-4.1 also verified expansion SFT teacher targets; annotation errors can be correlated.",
     "Exact quote checks verify provenance, not semantic correctness.",
     "Pilot selected 100 fitting and 32 validation questions, not the full dataset.",
-    "No held-out DPO outcome has been measured."
+    "This annotation export itself does not measure held-out model performance."
   ]
 }

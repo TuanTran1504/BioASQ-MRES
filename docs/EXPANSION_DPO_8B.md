@@ -148,6 +148,8 @@ The pilot selects the best epoch by **internal-validation preference loss**. Thi
 
 ## Comparison after training
 
+The completed 11 October [matched DPO evaluation](EXPANSION_DPO_RESULTS.md) shows only small changes beyond expansion SFT; all six paired MRR confidence intervals include zero. Its reported scores and provenance are saved separately from training losses and annotation diagnostics.
+
 Compare unchanged expansion SFT with its DPO continuation using the same development questions, snippets, native expansion prompt, greedy decoding and first-five candidate ordering. Ten-sample comparisons must use identical sampling settings on both sides. Score official MRR at five and coverage separately, with paired question-level confidence intervals and cost measurements.
 
 The user-provided Gadi status confirms successful full DPO training for Llama (180920014), Qwen3 (180920016) and Ministral (180920018). All three trained on 159 fitting and 48 validation pairs for 10 optimiser updates and saved adapters. Their validation preference losses were 0.683772, 0.689139 and 0.684185 respectively. These are training diagnostics, not BioASQ answer scores; preference losses should not be used to rank different backbones.
