@@ -14,6 +14,7 @@ import run_expansion_dpo_evaluation as runner
 from run_extractive_expansion_8b import parse_equivalent_response
 from run_single_answer_sampling import expansion_candidates, sample_seed
 from scripts import analyze_expansion_dpo_evaluation as analysis
+from scripts import export_expansion_dpo_cases as case_export
 
 
 def write(path, value):
@@ -173,6 +174,83 @@ def test_analysis_rejects_changed_protocol(experiment, failure):
         jsonl(directory / "generations.jsonl", rows)
     with pytest.raises(ValueError):
         analysis.validate_experiment(experiment)
+
+
+@pytest.fixture
+def archived_scores(experiment):
+    """Archived candidate labels stand in for Java; no new scoring or bootstrap."""
+    summaries, per_question = {}, {}
+    for name in runner.CONDITIONS:
+        directory = experiment / name
+        candidates = analysis.records(directory / "candidates.jsonl")
+        rows = []
+        for example in analysis.records(directory / "examples.jsonl"):
+            answers = [c["answer"] for c in candidates if c["question_id"] == example["question_id"]]
+            rows.append({**example, "answers": answers,
+                         "matching_answers": [a for a in answers if a == "15"]})
+        report = directory / "analysis-archived"
+        report.mkdir()
+        jsonl(report / "per_question.jsonl", rows)
+        _, scores = case_export.ranking_metrics(rows)
+        for score, row in zip(scores, rows):
+            score["coverage_full_pool"] = float(bool(row["matching_answers"]))
+        per_question[name] = scores
+        summaries[name] = {"report": f"/scratch/old-machine/{name}/analysis-archived"}
+    write(experiment / "comparison_summary.json", {"model_key": "qwen3", "conditions": summaries})
+    write(experiment / "comparison_per_question.json", per_question)
+    return experiment
+
+
+def test_case_export_preserves_raw_evidence_and_portable_report_paths(archived_scores):
+    output, summary = case_export.export_cases(archived_scores)
+    assert summary["exported_cases"] == 40  # Same 40 changed questions in both modes.
+    assert summary["mrr_changes"]["greedy"] == {
+        "improved": 40, "worsened": 0, "unchanged": 120, "raw_completions_changed": 40}
+    assert summary["sampled_selection_misses"]["dpo"] == {
+        "within_first_ten": 0, "anywhere_in_pool": 0}
+    case = analysis.records(output / "cases.jsonl")[0]
+    assert case["snippets"] == [{"snippet_id": "s", "text": "There are 15."}]
+    assert case["gold_aliases"] == ["15"]
+    assert set(case["arms"]) == set(runner.CONDITIONS)
+    assert len(case["arms"]["dpo_sampling10"]["generation"]["samples"]) == 10
+    assert case["arms"]["dpo_greedy"]["first_accepted_rank"] == 1
+    assert case["arms"]["dpo_greedy"]["candidates"][0]["official_accepted"] is True
+    assert len(analysis.read(output / "source_hashes.json")["arms"]) == 4
+    with pytest.raises(FileExistsError):
+        case_export.export_cases(archived_scores)
+
+
+@pytest.mark.parametrize("failure", ["metrics", "answers", "gold"])
+def test_case_export_rejects_inconsistent_archived_scores(archived_scores, failure):
+    if failure == "metrics":
+        path = archived_scores / "comparison_per_question.json"
+        value = analysis.read(path)
+        value["sft_greedy"][0]["mrr_at5"] = 0
+        write(path, value)
+    else:
+        path = archived_scores / "sft_greedy/analysis-archived/per_question.jsonl"
+        value = analysis.records(path)
+        value[0]["answers" if failure == "answers" else "gold_aliases"] = ["different"]
+        jsonl(path, value)
+    with pytest.raises(ValueError):
+        case_export.export_cases(archived_scores)
+    assert not (archived_scores / "case_audit").exists()
+
+
+def test_case_export_selection_strata_are_limited_deterministic_and_separate():
+    scores = {str(i): {"mrr_at5": 0, "coverage_at5": 0,
+                      "coverage_at10": float(i < 5), "coverage_full_pool": 1}
+              for i in range(10)}
+    arms = {name: {"scores": copy.deepcopy(scores)} for name in runner.CONDITIONS}
+    arms["dpo_greedy"]["scores"]["9"]["mrr_at5"] = 1
+    chosen = case_export.choose_cases(arms, "qwen3", 2)
+    assert chosen == case_export.choose_cases(arms, "qwen3", 2)
+    assert "greedy_mrr_improved" in chosen["9"]
+    reasons = [reason for values in chosen.values() for reason in values]
+    for policy in ("sft", "dpo"):
+        for stratum in ("accepted_at_rank_6_to_10", "accepted_beyond_rank_10"):
+            assert reasons.count(f"{policy}_sampling10_{stratum}") == 2
+    assert set(case_export.choose_cases(arms, "qwen3", 0)) == {"9"}
 
 
 def test_scoring_keeps_failures_and_compares_equal_budgets(experiment, monkeypatch):
