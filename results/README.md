@@ -1,5 +1,10 @@
 # Main saved results
 
+The [paired SFT/DPO pool reranker experiment](../docs/EXPANSION_POOL_RERANKER_COMPARISON.md)
+is prepared for Gadi. It uses the same question folds to train SFT-pool,
+DPO-pool and shared logistic rerankers, then evaluates each on both held-out
+three-model pools. Results are pending; it is development-set cross-validation.
+
 Snapshot: 6 October 2026. [main_results.json](main_results.json) contains the
 aggregate scores, evaluation settings, DPO epoch history and source-file SHA-256
 hashes. Regenerate it from a workspace containing the original local artifacts:

@@ -1,0 +1,26 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=2GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N expansion-pool-rerank
+
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+python ../scripts/compare_expansion_pool_rerankers.py \
+  outputs/expansion_dpo_evaluation/llama31-dpo-evaluation-180936011.gadi-pbs \
+  outputs/expansion_dpo_evaluation/qwen3-dpo-evaluation-180936013.gadi-pbs \
+  outputs/expansion_dpo_evaluation/ministral3-dpo-evaluation-180936015.gadi-pbs \
+  --mode both \
+  --output "outputs/expansion_pool_rerankers/cv-${PBS_JOBID}"

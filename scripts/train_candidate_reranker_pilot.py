@@ -249,7 +249,7 @@ def make_text(row: dict[str, Any], example: dict[str, Any]) -> str:
     return f"question {example['question']} candidate {row['answer']}"
 
 
-def fit_components(train_rows, examples, labels):
+def fit_components(train_rows, examples, labels, sample_weight=None):
     word = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_features=20_000, sublinear_tf=True)
     char = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=30_000, sublinear_tf=True)
     meta = DictVectorizer(sparse=True)
@@ -264,7 +264,7 @@ def fit_components(train_rows, examples, labels):
         solver="liblinear",
         random_state=3407,
     )
-    model.fit(matrix, labels)
+    model.fit(matrix, labels, sample_weight=sample_weight)
     return {"word": word, "char": char, "meta": meta, "model": model}
 
 
