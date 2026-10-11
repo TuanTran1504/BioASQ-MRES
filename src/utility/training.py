@@ -153,7 +153,7 @@ def build_training_arguments(args: argparse.Namespace, has_eval: bool) -> Any:
         "output_dir": args.output_dir,
         "save_strategy": save_strategy,
         "report_to": "none",
-        "save_total_limit": 1,
+        "save_total_limit": int(getattr(args, "save_total_limit", 1)),
         "load_best_model_at_end": load_best_model_at_end,
     }
     if save_strategy == "steps":

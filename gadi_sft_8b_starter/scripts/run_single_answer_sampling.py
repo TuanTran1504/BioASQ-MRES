@@ -82,12 +82,28 @@ def prompt_example(example, config):
                                     for s in example["snippets"]]}
 
 
+def prepare_prompts(tokenizer, prompt, examples, config):
+    budget = config["max_seq_length"] - config["max_new_tokens"]
+    prepared = []
+    for example in examples:
+        # Historical adapters used markers; fresh matched 8B SFT did not.
+        marked = prompt_example(example, config)
+        text = render_prompt(tokenizer, prompt, marked, config.get("chat_template_kwargs", {}))
+        count = input_token_count(tokenize_text(tokenizer, text, add_special_tokens=True))
+        if count > budget:
+            raise ValueError(f"{example['question_id']}: all snippets exceed {budget} prompt tokens")
+        prepared.append((example, text, count))
+    return prepared
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--model-name", required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=160)
+    parser.add_argument("--preflight-all", action="store_true",
+                        help="Check every input prompt for truncation, even when generation is limited")
     args = parser.parse_args()
     if args.limit <= 0:
         raise ValueError("--limit must be positive")
@@ -95,7 +111,8 @@ def main():
     config = read_json(args.config)
     options = generation_options(config)
     expansion = config.get("response_mode") == "equivalent_sampling"
-    examples = read_jsonl(ROOT / config["input"])[:args.limit]
+    all_examples = read_jsonl(ROOT / config["input"])
+    examples = all_examples[:args.limit]
     prompt_path = ROOT / config["prompt"]
     prompt = prompt_path.read_text(encoding="utf-8").strip()
     output = args.output_dir.resolve()
@@ -128,16 +145,8 @@ def main():
         if hasattr(model, "gradient_checkpointing_disable"):
             model.gradient_checkpointing_disable()
         device = next(model.parameters()).device
-        budget = config["max_seq_length"] - config["max_new_tokens"]
-        prepared = []
-        for example in examples:
-            # Historical adapters used markers; fresh matched 8B SFT did not.
-            marked = prompt_example(example, config)
-            text = render_prompt(tokenizer, prompt, marked, config.get("chat_template_kwargs", {}))
-            count = input_token_count(tokenize_text(tokenizer, text, add_special_tokens=True))
-            if count > budget:
-                raise ValueError(f"{example['question_id']}: all snippets exceed {budget} prompt tokens")
-            prepared.append((example, text, count))
+        prepared = prepare_prompts(tokenizer, prompt,
+                                   all_examples if args.preflight_all else examples, config)[:args.limit]
         for example, text, count in prepared:
             qid = example["question_id"]
             encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)

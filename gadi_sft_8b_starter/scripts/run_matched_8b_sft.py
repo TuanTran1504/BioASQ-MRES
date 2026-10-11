@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--pins", type=Path, required=True)
     parser.add_argument("--run-name", required=True)
+    parser.add_argument("--output-root", default="outputs/matched_8b_sft")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--execution-mode", choices=("default", "eager"), default="default")
     args = parser.parse_args()
@@ -37,7 +38,7 @@ def main():
                   matrix_sha256=pins["matrix_sha256"], checkpoint_selection="internal validation loss",
                   execution_mode=args.execution_mode)
     train_rows, eval_rows, validation = validate_inputs(config)
-    output_root = "outputs/matched_8b_sft"
+    output_root = args.output_root
     if (ROOT / output_root / args.run_name).exists():
         raise FileExistsError("Choose a new run name; matched experiments never reuse an output directory")
     training_args = SimpleNamespace(

@@ -1,5 +1,10 @@
 # Main saved results
 
+The [fresh expansion SFT checkpoint-selection comparison](../docs/SFT_DUAL_CHECKPOINT_SELECTION.md)
+is prepared for all three 8B models. Each trains once and retains every epoch,
+then exports best validation full-pool coverage and best validation loss
+selections separately. Gadi runs and result scores are pending.
+
 The [paired SFT/DPO pool reranker experiment](../docs/EXPANSION_POOL_RERANKER_COMPARISON.md)
 is prepared for Gadi. It uses the same question folds to train SFT-pool,
 DPO-pool and shared logistic rerankers, then evaluates each on both held-out

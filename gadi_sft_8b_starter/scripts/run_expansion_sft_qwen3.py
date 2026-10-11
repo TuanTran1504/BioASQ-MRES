@@ -316,6 +316,7 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
         weight_decay=float(config["weight_decay"]),
         logging_steps=int(config["logging_steps"]),
         save_strategy=str(config["save_strategy"]),
+        save_total_limit=int(config.get("save_total_limit", 1)),
         save_steps=50,
         eval_strategy="auto",
         eval_steps=None,

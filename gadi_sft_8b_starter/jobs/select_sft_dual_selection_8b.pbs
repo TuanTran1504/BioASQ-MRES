@@ -1,0 +1,28 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=24:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N sft-epoch-coverage
+
+set -euo pipefail
+: "${MODEL_KEY:?}"
+: "${SUBMISSION_DIR:?}"
+: "${TRAINING_RUN:?}"
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+python scripts/select_sft_epoch_checkpoints.py \
+  --model "$MODEL_KEY" --training-run "$TRAINING_RUN" --submission-dir "$SUBMISSION_DIR" \
+  --output-dir "${TRAINING_RUN}/selection-${PBS_JOBID}"

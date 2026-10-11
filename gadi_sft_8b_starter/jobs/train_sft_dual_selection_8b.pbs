@@ -1,0 +1,42 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N sft-dual-selection
+
+set -euo pipefail
+: "${MODEL_KEY:?}"
+: "${SUBMISSION_DIR:?}"
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+mode=default
+if [[ "$MODEL_KEY" == ministral3 ]]; then mode=eager; fi
+options=()
+run_name="${MODEL_KEY}-expansion-sft-${PBS_JOBID}"
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  run_name="${run_name}-smoke"
+  options+=(--smoke-test)
+fi
+python scripts/run_matched_8b_sft.py \
+  --model "$MODEL_KEY" --formulation expansion --execution-mode "$mode" \
+  --config "${SUBMISSION_DIR}/training_matrix.json" --pins "${SUBMISSION_DIR}/base_pins.json" \
+  --output-root outputs/sft_dual_selection_8b --run-name "$run_name" "${options[@]}"
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  python scripts/select_sft_epoch_checkpoints.py \
+    --model "$MODEL_KEY" --training-run "outputs/sft_dual_selection_8b/${run_name}" \
+    --submission-dir "$SUBMISSION_DIR" --smoke-test \
+    --output-dir "outputs/sft_dual_selection_8b/${run_name}/selection-smoke"
+fi
