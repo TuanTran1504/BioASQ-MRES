@@ -15,6 +15,7 @@ from run_extractive_expansion_8b import parse_equivalent_response
 from run_single_answer_sampling import expansion_candidates, sample_seed
 from scripts import analyze_expansion_dpo_evaluation as analysis
 from scripts import export_expansion_dpo_cases as case_export
+from scripts import summarize_expansion_dpo_coverage as coverage_report
 
 
 def write(path, value):
@@ -251,6 +252,65 @@ def test_case_export_selection_strata_are_limited_deterministic_and_separate():
         for stratum in ("accepted_at_rank_6_to_10", "accepted_beyond_rank_10"):
             assert reasons.count(f"{policy}_sampling10_{stratum}") == 2
     assert set(case_export.choose_cases(arms, "qwen3", 0)) == {"9"}
+
+
+def test_coverage_report_distinguishes_rank_cutoff_losses_from_pool_losses():
+    # Case a drops from rank 7 to 11, b disappears, c gains an answer at rank 20.
+    def scores(ranks):
+        _, rows = analysis.ranking_metrics([{"question_id": q, "answers": ["wrong"] * (rank - 1) + ["hit"] if rank else [],
+            "matching_answers": ["hit"] if rank else []} for q, rank in ranks.items()])
+        for r in rows:
+            r["coverage_full_pool"] = float(ranks[r["question_id"]] is not None)
+        return rows
+    sft, dpo = scores({"a": 7, "b": 1, "c": None, "d": None}), scores({"a": 11, "b": None, "c": 20, "d": None})
+    full = coverage_report.coverage_transitions(sft, dpo, "coverage_full_pool")
+    assert (full["gained"], full["lost"], full["both_covered"], full["neither_covered"]) == (1, 1, 1, 1)
+    assert full["lost_question_ids"] == ["b"] and full["gained_question_ids"] == ["c"]
+    assert full["net_questions"] == 0 and full["mcnemar_exact_two_sided_p"] == 1
+    first10 = coverage_report.coverage_transitions(sft, dpo, "coverage_at10")
+    assert first10["lost_question_ids"] == ["a", "b"] and first10["gained"] == 0
+
+
+@pytest.mark.parametrize("failure", ["empty", "membership", "duplicate", "nonbinary"])
+def test_coverage_report_rejects_invalid_question_pairs(failure):
+    sft = [{"question_id": "a", "coverage_full_pool": 1}]
+    dpo = [{"question_id": "a", "coverage_full_pool": 0}]
+    if failure == "empty": sft, dpo = [], []
+    if failure == "membership": dpo[0]["question_id"] = "b"
+    if failure == "duplicate": dpo.append(dpo[0])
+    if failure == "nonbinary": dpo[0]["coverage_full_pool"] = 0.5
+    with pytest.raises(ValueError):
+        coverage_report.coverage_transitions(sft, dpo, "coverage_full_pool")
+
+
+def test_coverage_report_complete_archive_preserves_failures_and_source_files(archived_scores):
+    original = (archived_scores / "comparison_per_question.json").read_bytes()
+    report = coverage_report.summarize_scored(archived_scores, case_export.load_scored(archived_scores), resamples=100)
+    for mode in ("greedy", "sampling10"):
+        full = report["comparisons"][mode]["coverage_full_pool"]
+        assert full["question_count"] == 160
+        assert (full["sft_covered"], full["dpo_covered"], full["gained"], full["lost"]) == (80, 120, 40, 0)
+        assert full["neither_covered"] == 40 and full["observed_gains_without_losses"]
+        assert full["mcnemar_exact_two_sided_p"] == 2 / 2 ** 40
+        assert full["paired_bootstrap_95ci"][0] > 0
+        assert report["comparisons"][mode]["mrr_at5"]["dpo_minus_sft"] == 0.25
+    assert (archived_scores / "comparison_per_question.json").read_bytes() == original
+
+
+def test_coverage_report_cli_exports_summary_and_prevents_source_overwrite(archived_scores, monkeypatch):
+    actual_summary = coverage_report.summarize_scored
+    monkeypatch.setattr(coverage_report, "summarize_scored", lambda p, data: actual_summary(p, data, resamples=100))
+    destination = archived_scores / "coverage-transitions.json"
+    monkeypatch.setattr(sys, "argv", ["coverage", str(archived_scores), "--output", str(destination)])
+    coverage_report.main()
+    data = analysis.read(destination)
+    assert data["models"]["qwen3"]["comparisons"]["sampling10"]["coverage_full_pool"]["gained"] == 40
+    source = archived_scores / "comparison_per_question.json"
+    original = source.read_bytes()
+    monkeypatch.setattr(sys, "argv", ["coverage", str(archived_scores), "--output", str(source)])
+    with pytest.raises(FileExistsError):
+        coverage_report.main()
+    assert source.read_bytes() == original
 
 
 def test_scoring_keeps_failures_and_compares_equal_budgets(experiment, monkeypatch):

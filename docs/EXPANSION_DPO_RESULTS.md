@@ -79,6 +79,32 @@ Download the three `case_audit` directories for local inspection. Compare change
 
 The 40 exported cases were subsequently downloaded and [inspected locally](EXPANSION_DPO_CASE_INSPECTION.md). All 18 changed-MRR outcomes are present. Fourteen of the 15 sampled changed cases retain the same normalized accepted-answer set in the full pool, with different first accepted ranks. Examples reveal expression/order effects and remaining numerical and answer-type failures; this selected sample cannot estimate population semantic quality.
 
+## Full-pool gains and losses
+
+Ten expansion draws can produce up to 100 candidate slots before conservative deduplication. To test whether DPO generates accepted answers for more questions while preserving previously covered questions, compare `coverage_full_pool` across all 160 questions. Report DPO-only questions (gained), SFT-only questions (lost), both covered and neither covered. Net coverage changes alone hide regressions. Coverage@10 remains a separate fixed candidate-budget comparison; MRR@5 remains submission performance.
+
+For example, Llama's sampled incidence case moves its first accepted answer from rank 7 to 11, and Qwen's sampled polycystic kidney disease case moves from rank 10 to 11. Both lose coverage@10 while retaining full-pool coverage. Selected case exports cannot supply complete full-pool gain/loss counts, because they do not contain every unchanged-MRR question. Full-pool transition counts are pending the following report from the complete Gadi scores.
+
+From `gadi_sft_8b_starter`, run:
+
+```bash
+git pull --ff-only
+python ../scripts/summarize_expansion_dpo_coverage.py \
+  outputs/expansion_dpo_evaluation/llama31-dpo-evaluation-180936011.gadi-pbs \
+  outputs/expansion_dpo_evaluation/qwen3-dpo-evaluation-180936013.gadi-pbs \
+  outputs/expansion_dpo_evaluation/ministral3-dpo-evaluation-180936015.gadi-pbs \
+  --output outputs/expansion_dpo_evaluation/coverage-transitions-20261011.json
+```
+
+The helper uses the saved official candidate labels, verifies the complete experiment and candidate order, and recomputes aggregate coverage and MRR from all question-level rows. It reports paired question-level bootstrap intervals (10,000 resamples, seed 3407), exact two-sided McNemar p-values for binary coverage, and gained/lost question IDs. Failed parses remain in denominators. P-values are unadjusted exploratory diagnostics, and intervals do not capture training-seed uncertainty. No new generation, Java scoring, paid requests or GPU work are needed. Source files and existing report destinations are preserved; use a fresh output filename when repeating the report.
+
+The combined JSON is small enough to download for local interpretation:
+
+```powershell
+Set-Location 'C:\Users\Dustin\Projects\BioASQ-MRES'
+scp dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/BioASQ-MRES/gadi_sft_8b_starter/outputs/expansion_dpo_evaluation/coverage-transitions-20261011.json .\Artifacts\coverage-transitions-20261011.json
+```
+
 ## Provenance and limits
 
 All smoke and full evaluation jobs exited with status zero. Full jobs were 180936011 (Llama), 180936013 (Qwen) and 180936015 (Ministral). Their elapsed times cover all four arms plus setup and are not isolated SFT/DPO generation-time measurements.
