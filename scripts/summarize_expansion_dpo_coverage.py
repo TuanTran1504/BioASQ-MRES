@@ -18,6 +18,7 @@ from scripts.analyze_expansion_dpo_evaluation import digest
 from scripts.analyze_matched_qwen_expansion import paired_contrast
 
 COVERAGE = ("coverage_full_pool", "coverage_at10")
+BACKBONES = {"llama31", "qwen3", "ministral3"}
 
 
 def coverage_transitions(sft, dpo, metric):
@@ -67,10 +68,55 @@ def summarize_scored(directory, loaded, resamples=10000):
     return result
 
 
+def combined_full_pool(loaded, resamples=10000):
+    """Question-level union of accepted candidates; no ordering is implied."""
+    sources = {data[0]["model_key"]: data for _, data in loaded}
+    if len(loaded) != 3 or set(sources) != BACKBONES:
+        raise ValueError("Combined comparison requires Llama, Qwen3 and Ministral exactly once")
+    qids = set(next(iter(sources.values()))[1])
+    if not qids or any(set(data[1]) != qids for data in sources.values()):
+        raise ValueError("Combined pool questions differ")
+    result = {"sources": sorted(sources), "question_count": len(qids),
+        "pool": "All candidates from the same three backbones per policy; a question is covered if any backbone has an accepted candidate",
+        "ranking": "Full-pool oracle coverage only; no combined coverage@10 or MRR@5 ordering is defined",
+        "comparisons": {}, "paired_bootstrap": {"resamples": resamples, "seed": 3407}}
+    for mode in ("sampling10", "greedy"):
+        scores = {p: {model: data[2][p + "_" + mode]["scores"] for model, data in sources.items()}
+                  for p in ("sft", "dpo")}
+        if any(set(rows) != qids for policy in scores.values() for rows in policy.values()):
+            raise ValueError("Combined scoring question membership differs")
+        if any(row["coverage_full_pool"] not in (0, 1)
+               for policy in scores.values() for rows in policy.values() for row in rows.values()):
+            raise ValueError("Combined source coverage must be binary")
+        pooled = {p: [{"question_id": q, "coverage_full_pool": float(any(
+            scores[p][m][q]["coverage_full_pool"] for m in sources))} for q in sorted(qids)]
+            for p in ("sft", "dpo")}
+        transitions = coverage_transitions(pooled["sft"], pooled["dpo"], "coverage_full_pool")
+        contrast = paired_contrast(pooled["sft"], pooled["dpo"], resamples=resamples,
+                                   metrics=("coverage_full_pool",))["coverage_full_pool"]
+        gained = set(transitions["gained_question_ids"])
+        original_union = {r["question_id"] for r in pooled["sft"] if r["coverage_full_pool"]}
+        individual = {}
+        for model in sorted(sources):
+            own_gains = {q for q in qids if scores["dpo"][model][q]["coverage_full_pool"]
+                         and not scores["sft"][model][q]["coverage_full_pool"]}
+            individual[model] = {"gained_question_ids": sorted(own_gains),
+                "new_to_combined_pool_question_ids": sorted(own_gains & gained),
+                "already_covered_by_another_sft_model_question_ids": sorted(own_gains & original_union)}
+        result["comparisons"][mode] = {"coverage_full_pool": {
+                **transitions, "paired_bootstrap_95ci": contrast["paired_bootstrap_95ci"]},
+            "requests_per_question_per_policy": 30 if mode == "sampling10" else 3,
+            "max_candidate_slots_before_deduplication": 300 if mode == "sampling10" else 30,
+            "individual_gain_overlap": individual,
+            "per_question": pooled}
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("experiment_dirs", nargs="+", type=Path)
     parser.add_argument("--output", type=Path, required=True, help="New combined summary; source scoring files are preserved")
+    parser.add_argument("--combine-models", action="store_true", help="Also compare the complete three-backbone SFT and DPO unions")
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError("Summary destination already exists; choose a new filename: " + str(args.output))
@@ -78,6 +124,8 @@ def main():
     models = [data[0]["model_key"] for _, data in loaded]
     if len(set(models)) != len(models):
         raise ValueError("Duplicate backbone experiment")
+    if args.combine_models and set(models) != BACKBONES:
+        raise ValueError("Combined comparison requires Llama, Qwen3 and Ministral exactly once")
     if any(data[1] != loaded[0][1][1] for _, data in loaded[1:]):
         raise ValueError("Backbones have different questions or evidence")
     result = {"scope": "Exploratory development-only SFT/DPO comparison; one training seed",
@@ -91,6 +139,8 @@ def main():
             "Intervals represent question-sampling uncertainty, not training-seed variation; p-values are unadjusted exploratory diagnostics.",
             "No new official scoring or generation is performed."],
         "models": {data[0]["model_key"]: summarize_scored(p, data) for p, data in loaded}}
+    if args.combine_models:
+        result["combined_full_pool"] = combined_full_pool(loaded)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as handle:
         handle.write(json.dumps(result, indent=2) + "\n")
@@ -105,6 +155,17 @@ def main():
             r = metrics["mrr_at5"]
             print(f"  {mode} MRR@5: SFT={r['sft']:.6f}, DPO={r['dpo']:.6f}, "
                   f"delta={r['dpo_minus_sft']:+.6f}, 95% CI={r['paired_bootstrap_95ci']}")
+    if args.combine_models:
+        print("\nCOMBINED THREE-MODEL FULL POOL (same source composition for SFT and DPO)")
+        for mode, compared in result["combined_full_pool"]["comparisons"].items():
+            r = compared["coverage_full_pool"]
+            print(f"  {mode}: SFT={r['sft_covered']}/{r['question_count']}, DPO={r['dpo_covered']}/{r['question_count']}, "
+                  f"gained={r['gained']}, lost={r['lost']}, net={r['net_questions']:+d}, "
+                  f"95% CI={r['paired_bootstrap_95ci']}, McNemar p={r['mcnemar_exact_two_sided_p']:.4f}")
+            for model, overlap in compared["individual_gain_overlap"].items():
+                print(f"    {model}: individual gains={len(overlap['gained_question_ids'])}, "
+                      f"new to union={len(overlap['new_to_combined_pool_question_ids'])}, "
+                      f"already in another SFT pool={len(overlap['already_covered_by_another_sft_model_question_ids'])}")
     print(f"\nSaved: {args.output}")
 
 

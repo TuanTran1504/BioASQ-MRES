@@ -127,6 +127,26 @@ Set-Location 'C:\Users\Dustin\Projects\BioASQ-MRES'
 scp dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/BioASQ-MRES/gadi_sft_8b_starter/outputs/expansion_dpo_evaluation/coverage-transitions-20261011.json .\Artifacts\coverage-transitions-20261011.json
 ```
 
+## Combined three-model pool
+
+The individual coverage counts do not determine three-model union coverage. A Qwen or Ministral gain may already be covered by another SFT source; gains shared by two DPO sources count once in the union. Because no source loses sampled full-pool coverage, the sampled DPO union cannot lose a question covered by the SFT union in this dataset. Its additional coverage is between zero and five questions, pending the complete union report. The greedy union similarly cannot lose coverage, with between zero and two gains.
+
+Compare the actual complete three-model unions without generation or new scoring:
+
+```bash
+git pull --ff-only
+python ../scripts/summarize_expansion_dpo_coverage.py \
+  outputs/expansion_dpo_evaluation/llama31-dpo-evaluation-180936011.gadi-pbs \
+  outputs/expansion_dpo_evaluation/qwen3-dpo-evaluation-180936013.gadi-pbs \
+  outputs/expansion_dpo_evaluation/ministral3-dpo-evaluation-180936015.gadi-pbs \
+  --combine-models \
+  --output outputs/expansion_dpo_evaluation/coverage-combined-20261011.json
+```
+
+The `COMBINED THREE-MODEL FULL POOL` output reports distinct question gains and losses, rates, paired intervals and McNemar p-values. The JSON preserves both policies' 160-question union coverage and identifies individual gains already covered by another SFT source. Source-attributed new-to-union counts can overlap, so use the union's distinct gain count. SFT and DPO have identical three-source composition and request budgets: 30 sampled requests and up to 300 candidate slots before deduplication, or three greedy requests and up to 30 slots. Individual results still accompany the union report.
+
+This union report defines no combined ranking. A union of each source's first ten candidates can include 30 candidates and is not combined coverage@10. A combined fixed-budget or MRR@5 comparison would require a predeclared ordering/selection rule. Full-pool coverage simply asks whether any source supplies an accepted expression.
+
 ## Provenance and limits
 
 All smoke and full evaluation jobs exited with status zero. Full jobs were 180936011 (Llama), 180936013 (Qwen) and 180936015 (Ministral). Their elapsed times cover all four arms plus setup and are not isolated SFT/DPO generation-time measurements.

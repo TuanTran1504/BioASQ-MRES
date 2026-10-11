@@ -297,6 +297,69 @@ def test_coverage_report_complete_archive_preserves_failures_and_source_files(ar
     assert (archived_scores / "comparison_per_question.json").read_bytes() == original
 
 
+def union_inputs(pattern):
+    qids = {"a", "b", "c", "d"}
+    result = []
+    for model, (before, after) in pattern.items():
+        arms = {p + "_" + mode: {"scores": {q: {"question_id": q, "coverage_full_pool": float(q in hits)} for q in qids}}
+                for p, hits in (("sft", before), ("dpo", after)) for mode in ("greedy", "sampling10")}
+        result.append((Path(model), ({"model_key": model}, {q: {} for q in qids}, arms, {})))
+    return result
+
+
+def test_combined_coverage_gain_already_covered_by_other_source_adds_nothing():
+    loaded = union_inputs({"llama31": ({"a", "b"}, {"a", "b"}),
+        "qwen3": ({"a"}, {"a", "c"}), "ministral3": ({"b", "c"}, {"b", "c"})})
+    compared = coverage_report.combined_full_pool(loaded, resamples=100)["comparisons"]["sampling10"]
+    r = compared["coverage_full_pool"]
+    assert (r["sft_covered"], r["dpo_covered"], r["gained"], r["lost"]) == (3, 3, 0, 0)
+    assert compared["individual_gain_overlap"]["qwen3"]["already_covered_by_another_sft_model_question_ids"] == ["c"]
+
+
+def test_combined_coverage_deduplicates_shared_gains_and_ignores_cutoff_order():
+    loaded = union_inputs({"llama31": ({"a"}, {"a"}),
+        "qwen3": ({"b"}, {"b", "c"}), "ministral3": ({"a"}, {"a", "c"})})
+    result = coverage_report.combined_full_pool(loaded, resamples=100)
+    r = result["comparisons"]["sampling10"]["coverage_full_pool"]
+    assert (r["sft_covered"], r["dpo_covered"], r["gained"], r["lost"]) == (2, 3, 1, 0)
+    assert r["gained_question_ids"] == ["c"] and r["mcnemar_exact_two_sided_p"] == 1
+    assert result["comparisons"]["sampling10"]["requests_per_question_per_policy"] == 30
+    assert result["comparisons"]["sampling10"]["max_candidate_slots_before_deduplication"] == 300
+
+
+def test_combined_coverage_can_detect_loss_of_last_covering_source():
+    loaded = union_inputs({"llama31": ({"a"}, {"a"}),
+        "qwen3": ({"b"}, set()), "ministral3": ({"a"}, {"a"})})
+    r = coverage_report.combined_full_pool(loaded, resamples=100)["comparisons"]["sampling10"]["coverage_full_pool"]
+    assert r["lost_question_ids"] == ["b"] and r["net_questions"] == -1
+
+
+def test_combined_coverage_requires_all_three_models_and_identical_question_membership():
+    loaded = union_inputs({"llama31": ({"a"}, {"a"}),
+        "qwen3": ({"a"}, {"a"}), "ministral3": ({"a"}, {"a"})})
+    with pytest.raises(ValueError):
+        coverage_report.combined_full_pool(loaded[:2], resamples=100)
+    loaded[1][1][2]["dpo_sampling10"]["scores"].pop("d")
+    with pytest.raises(ValueError):
+        coverage_report.combined_full_pool(loaded, resamples=100)
+
+
+def test_combined_coverage_cli_saves_and_prints_the_union(tmp_path, monkeypatch, capsys):
+    loaded = union_inputs({"llama31": ({"a"}, {"a"}),
+        "qwen3": ({"b"}, {"b", "c"}), "ministral3": ({"a"}, {"a", "c"})})
+    by_model = {p.name: data for p, data in loaded}
+    monkeypatch.setattr(coverage_report, "load_scored", lambda p: by_model[p.name])
+    monkeypatch.setattr(coverage_report, "summarize_scored", lambda p, data: {"question_count": 4, "comparisons": {}})
+    actual_combined = coverage_report.combined_full_pool
+    monkeypatch.setattr(coverage_report, "combined_full_pool", lambda data: actual_combined(data, resamples=100))
+    destination = tmp_path / "combined.json"
+    monkeypatch.setattr(sys, "argv", ["coverage", *by_model, "--combine-models", "--output", str(destination)])
+    coverage_report.main()
+    result = analysis.read(destination)["combined_full_pool"]["comparisons"]["sampling10"]["coverage_full_pool"]
+    assert result["gained"] == 1 and result["lost"] == 0
+    assert "COMBINED THREE-MODEL FULL POOL" in capsys.readouterr().out
+
+
 def test_coverage_report_cli_exports_summary_and_prevents_source_overwrite(archived_scores, monkeypatch):
     actual_summary = coverage_report.summarize_scored
     monkeypatch.setattr(coverage_report, "summarize_scored", lambda p, data: actual_summary(p, data, resamples=100))
