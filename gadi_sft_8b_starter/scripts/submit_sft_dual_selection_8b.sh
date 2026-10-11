@@ -2,7 +2,17 @@
 # Train each base once; score all epochs, then export two independent winners.
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-models=("$@")
+models=()
+reuse_record=""
+while (( $# )); do
+  case "$1" in
+    --reuse-smoke-record)
+      if (( $# < 2 )); then echo 'Missing smoke submission record' >&2; exit 2; fi
+      reuse_record="$2"; shift 2 ;;
+    --*) echo "Unknown option: $1" >&2; exit 2 ;;
+    *) models+=("$1"); shift ;;
+  esac
+done
 if (( ${#models[@]} == 0 )); then models=(llama31 qwen3 ministral3); fi
 declare -A seen=()
 for model in "${models[@]}"; do
@@ -24,13 +34,29 @@ if [[ "$submission" == *','* || "$submission" == *$'\n'* ]]; then
 fi
 # Verify data, historical backbone pins, scorer and all models before any qsub.
 python scripts/prepare_sft_dual_selection.py --submission-dir "$submission" --models "${models[@]}"
+declare -A reusable=()
+if [[ -n "$reuse_record" ]]; then
+  if [[ ! -f "$reuse_record" ]]; then echo 'Smoke submission record not found' >&2; exit 2; fi
+  for model in "${models[@]}"; do
+    job=$(awk -F '\t' -v model="$model" 'NR>1 && $1==model && $2=="smoke" {print $3}' "$reuse_record")
+    if [[ ! "$job" =~ ^[0-9]+\.gadi-pbs$ ]]; then echo "Expected one smoke job for $model" >&2; exit 2; fi
+    training_run="${PWD}/outputs/sft_dual_selection_8b/${model}-expansion-sft-${job}-smoke"
+    stored_run=$(awk -F '\t' -v model="$model" 'NR>1 && $1==model && $2=="smoke" {print $5}' "$reuse_record")
+    if [[ -n "$stored_run" ]]; then training_run="$stored_run"; fi
+    python scripts/select_sft_epoch_checkpoints.py --model "$model" \
+      --training-run "$training_run" --submission-dir "$submission" --smoke-test --validate-only
+    reusable[$model]="$training_run"
+  done
+fi
 record="${submission}/jobs.tsv"
 printf 'model\tstage\tjob_id\tdepends_on\ttraining_run\n' > "$record"
 echo "Submission record: $record"
 for model in "${models[@]}"; do
+  smoke_env="MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=1"
+  if [[ -n "${reusable[$model]:-}" ]]; then smoke_env+=",REUSE_TRAINING_RUN=${reusable[$model]}"; fi
   smoke="$(qsub -N "${model}-sft-dual-smoke" -l walltime=02:00:00 \
-    -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=1" jobs/train_sft_dual_selection_8b.pbs)"
-  printf '%s\tsmoke\t%s\t\t\n' "$model" "$smoke" | tee -a "$record"
+    -v "$smoke_env" jobs/train_sft_dual_selection_8b.pbs)"
+  printf '%s\tsmoke\t%s\t\t%s\n' "$model" "$smoke" "${reusable[$model]:-}" | tee -a "$record"
   full="$(qsub -N "${model}-sft-dual-train" -W "depend=afterok:${smoke}" \
     -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=0" jobs/train_sft_dual_selection_8b.pbs)"
   training_run="${PWD}/outputs/sft_dual_selection_8b/${model}-expansion-sft-${full}"

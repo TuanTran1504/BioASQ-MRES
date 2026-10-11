@@ -96,6 +96,12 @@ def prepare_prompts(tokenizer, prompt, examples, config):
     return prepared
 
 
+def choose_prepared(prepared, limit, longest_first=False):
+    if longest_first:
+        prepared = sorted(prepared, key=lambda row: (-row[2], row[0]["question_id"]))
+    return prepared[:limit]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
@@ -104,9 +110,13 @@ def main():
     parser.add_argument("--limit", type=int, default=160)
     parser.add_argument("--preflight-all", action="store_true",
                         help="Check every input prompt for truncation, even when generation is limited")
+    parser.add_argument("--longest-first", action="store_true",
+                        help="Generate the longest prompts first after checking the complete panel")
     args = parser.parse_args()
     if args.limit <= 0:
         raise ValueError("--limit must be positive")
+    if args.longest_first and not args.preflight_all:
+        raise ValueError("--longest-first requires --preflight-all")
     cache = configure_job_local_compiler_cache()
     config = read_json(args.config)
     options = generation_options(config)
@@ -145,8 +155,13 @@ def main():
         if hasattr(model, "gradient_checkpointing_disable"):
             model.gradient_checkpointing_disable()
         device = next(model.parameters()).device
-        prepared = prepare_prompts(tokenizer, prompt,
-                                   all_examples if args.preflight_all else examples, config)[:args.limit]
+        prepared = choose_prepared(prepare_prompts(tokenizer, prompt,
+                                   all_examples if args.preflight_all else examples, config),
+                                   args.limit, args.longest_first)
+        examples = [row[0] for row in prepared]
+        config["question_selection"] = "longest_prompts" if args.longest_first else "input_order"
+        write_json(output / "config.json", config)
+        write_jsonl(output / "examples.jsonl", examples)
         for example, text, count in prepared:
             qid = example["question_id"]
             encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)

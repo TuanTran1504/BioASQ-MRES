@@ -28,9 +28,11 @@ existing question/draw seed hashing. Native chat templates, the trained expansio
 system prompt and all supplied snippets are used. Qwen thinking is disabled;
 Ministral uses the successful eager execution mode.
 
-Inference retains the established 6,144-token total limit and 512 output tokens.
-Prompt preflight checks all 144 questions during smoke, even though only four
-receive generations. Overflow fails instead of truncating evidence. A response
+Validation inference uses the training-aligned 8,192-token total limit and 512
+output tokens, leaving 7,680 tokens for the full prompt. The earlier 6,144 total
+limit copied from dev inference failed on longer internal-validation questions.
+Prompt preflight checks all 144 questions during smoke; the four longest rendered
+prompts receive generations. Overflow fails instead of truncating evidence. A response
 can contain up to ten unique candidates; ten responses can provide up to 100
 candidate slots before deduplication. The existing parser and draw/within-draw
 ordering are reused.
@@ -64,7 +66,7 @@ It writes immutable preparation files in
 
 The full submission contains nine GPU jobs, three per model:
 
-1. Smoke: short training, all-question prompt preflight, ten responses on four
+1. Smoke: short training, all-question prompt preflight, ten responses on the four longest
    validation questions and official scoring. Two diagnostic smoke exports are
    marked as smoke and are not usable final models.
 2. Full training: three fresh epochs with all snapshots retained, after successful
@@ -78,6 +80,32 @@ it evaluates ten draws per question for each of three checkpoints. Each job uses
 one V100, 12 CPUs and 48 GB host memory. GPU runtime has not been verified locally;
 the Gadi smoke stage exercises the actual CUDA stack and scorer. No paid judge
 requests or new training labels are required.
+
+## Retry smoke coverage after the 11 October context-budget failure
+
+Smoke training jobs 180987381 (Llama), 180987384 (Qwen) and 180987387 (Ministral)
+completed training and saved epoch adapters. Validation prompt preflight then
+failed on question `65f774a4c4010b4d78000029`, exceeding the old 5,632-token prompt
+budget. Their dependent full training and selection jobs did not run.
+
+Reuse their completed smoke training and retry generation/scoring with the corrected
+8,192-token limit. Save the old submission record path before launching a new one:
+
+```bash
+git pull --ff-only
+failed_record=$(ls -t outputs/sft_dual_selection_8b/submission-*/jobs.tsv | head -n 1)
+cat "$failed_record"
+bash scripts/submit_sft_dual_selection_8b.sh --reuse-smoke-record "$failed_record"
+```
+
+Check that this record lists those three failed smoke jobs before running the last
+command. The helper validates every saved smoke run and its checkpoint against the
+new prepared matrix, input hashes and base pins before any qsub. Reuse is restricted
+to smoke training; each full run still starts afresh from the pinned base checkpoint.
+Nine replacement jobs are submitted: three generation/scoring smoke retries, three
+dependent full training jobs and three dependent checkpoint-selection jobs. Existing
+failed outputs are preserved; retries create new selection directories named by
+the retry PBS job ID. The smoke record's `training_run` field records reused runs.
 
 ## Monitor and inspect
 

@@ -155,8 +155,17 @@ def run_selection(directory, submission, output, model, smoke):
             inference = epoch_root / "sampling10"
             subprocess.run([sys.executable, str(ROOT / "scripts/run_single_answer_sampling.py"),
                 "--config", str(config_path), "--model-name", str(adapter), "--output-dir", str(inference),
-                "--limit", "4" if smoke else "144", "--preflight-all"], cwd=ROOT, check=True)
-            expected_ids = [e["question_id"] for e in (examples[:4] if smoke else examples)]
+                "--limit", "4" if smoke else "144", "--preflight-all",
+                *(["--longest-first"] if smoke else [])], cwd=ROOT, check=True)
+            expected_ids = [e["question_id"] for e in examples]
+            if smoke:
+                selected = records(inference / "examples.jsonl")
+                selected_ids = [e["question_id"] for e in selected]
+                by_id = {e["question_id"]: e for e in examples}
+                if (len(selected_ids) != 4 or len(set(selected_ids)) != 4
+                        or any(e != by_id.get(e["question_id"]) for e in selected)):
+                    raise ValueError("Smoke must generate four intact internal-validation questions")
+                expected_ids = selected_ids
             metrics, report = score_generation(inference, expected_ids)
             row = {**{k: str(v) if isinstance(v, Path) else v for k, v in checkpoint.items()},
                    "metrics": metrics, "inference": str(inference), "official_report": str(report),
@@ -195,9 +204,18 @@ def main():
     parser.add_argument("--model", choices=("llama31", "qwen3", "ministral3"), required=True)
     parser.add_argument("--training-run", type=Path, required=True)
     parser.add_argument("--submission-dir", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--validate-only", action="store_true",
+                        help="Verify saved training and epoch snapshots without loading a GPU model")
     args = parser.parse_args()
+    if args.validate_only:
+        validate_run(args.training_run.resolve(), args.submission_dir.resolve(), args.model, args.smoke_test)
+        epoch_checkpoints(args.training_run.resolve(), 1 if args.smoke_test else 3)
+        print(f"Validated reusable {'smoke' if args.smoke_test else 'full'} training: {args.training_run}", flush=True)
+        return
+    if not args.output_dir:
+        parser.error("--output-dir is required unless --validate-only is used")
     run_selection(args.training_run.resolve(), args.submission_dir.resolve(), args.output_dir.resolve(), args.model, args.smoke_test)
 
 

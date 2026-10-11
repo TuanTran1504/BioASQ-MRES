@@ -180,8 +180,9 @@ def test_selection_exports_two_winners_without_retraining(tmp_path, monkeypatch)
         select.run_selection(directory, submission, output, "qwen3", False)
 
 
-@pytest.mark.parametrize("fail_preflight", [False, True])
-def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_preflight):
+@pytest.mark.parametrize("fail_preflight,reuse,stored_path", [(False, False, False), (True, False, False),
+                                                          (False, True, False), (False, True, True)])
+def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_preflight, reuse, stored_path):
     bash = Path("C:/Program Files/Git/bin/bash.exe")
     executable = str(bash) if bash.exists() else shutil.which("bash")
     if not executable:
@@ -197,6 +198,14 @@ def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_prefli
     counter.write_text("0")
     environment = {**os.environ, "TEST_LOG": log.as_posix(), "TEST_COUNTER": counter.as_posix(),
                    "FAIL_PREFLIGHT": "1" if fail_preflight else "0", "TEST_USER": "scheduler-test"}
+    arguments = []
+    if reuse:
+        old_record = tmp_path / "old-jobs.tsv"
+        old_record.write_text("model\tstage\tjob_id\tdepends_on\ttraining_run\n" + "".join(
+            f"{model}\tsmoke\t{job}.gadi-pbs\t\t" + (f"/saved/{model}-original-smoke" if stored_path else "") + "\n"
+            for model, job in (
+                ("llama31", 180987381), ("qwen3", 180987384), ("ministral3", 180987387))))
+        arguments = ["--reuse-smoke-record", old_record.as_posix()]
     stub = r'''
 module() { :; }
 source() { :; }
@@ -221,7 +230,7 @@ task_script="$1"
 shift
 . "$task_script"
 '''
-    process = subprocess.run([executable, "-c", stub, "stub", script.as_posix()],
+    process = subprocess.run([executable, "-c", stub, "stub", script.as_posix(), *arguments],
                              env=environment, text=True, capture_output=True)
     if fail_preflight:
         assert process.returncode != 0
@@ -234,6 +243,10 @@ shift
             assert model in lines[3 * i]
             assert f"depend=afterok:{3 * i + 1}.gadi-pbs" in lines[3 * i + 1]
             assert f"depend=afterok:{3 * i + 2}.gadi-pbs" in lines[3 * i + 2]
+            assert ("REUSE_TRAINING_RUN=" in lines[3 * i]) == reuse
+            if stored_path:
+                assert f"REUSE_TRAINING_RUN=/saved/{model}-original-smoke" in lines[3 * i]
+            assert "REUSE_TRAINING_RUN=" not in lines[3 * i + 1]
         jobs = next(bundle.glob("outputs/sft_dual_selection_8b/submission-*/jobs.tsv"))
         assert len(jobs.read_text().splitlines()) == 10
 
@@ -248,3 +261,58 @@ def test_prompt_preflight_catches_overflow_outside_smoke_subset(monkeypatch):
     assert len(sampling.prepare_prompts(None, "prompt", examples[:4], config)) == 4
     with pytest.raises(ValueError, match="long: all snippets exceed"):
         sampling.prepare_prompts(None, "prompt", examples, config)
+
+
+def test_validation_budget_handles_prompt_that_exceeded_old_dev_limit(monkeypatch):
+    config = json.loads((ROOT / "gadi_sft_8b_starter/configs/sft_dual_selection_8b.json").read_text())["selection"]
+    assert config["max_seq_length"] == 8192 and config["max_new_tokens"] == 512
+    examples = [{"question_id": "long-validation", "question": "x" * 6627}]
+    monkeypatch.setattr(sampling, "render_prompt", lambda t, p, e, k: e["question"])
+    monkeypatch.setattr(sampling, "tokenize_text", lambda t, text, **k: len(text))
+    monkeypatch.setattr(sampling, "input_token_count", lambda value: value)
+    with pytest.raises(ValueError):
+        sampling.prepare_prompts(None, "prompt", examples, {**config, "max_seq_length": 6144})
+    prepared = sampling.prepare_prompts(None, "prompt", examples, config)
+    assert prepared[0][2] == 6627
+    with pytest.raises(ValueError):
+        sampling.prepare_prompts(None, "prompt", [{**examples[0], "question": "x" * 7681}], config)
+
+
+def test_smoke_selects_longest_prompts_after_complete_panel_preflight():
+    rows = [({"question_id": str(i)}, "text", count) for i, count in enumerate((100, 300, 200, 600, 500, 400))]
+    chosen = sampling.choose_prepared(rows, 4, True)
+    assert [r[2] for r in chosen] == [600, 500, 400, 300]
+    assert sampling.choose_prepared(rows, 4) == rows[:4]
+
+
+def test_selection_smoke_accepts_longest_subset_and_preserves_panel(tmp_path, monkeypatch):
+    directory = tmp_path / "training"
+    epoch(directory, 1, 0.3)
+    write(directory / "adapter/tokenizer_config.json", {})
+    write(directory / "status.json", {})
+    submission = tmp_path / "submission"
+    write(submission / "manifest.json", {})
+    examples = [{"question_id": str(i), "question": f"question {i}"} for i in range(8)]
+    selected = examples[4:]
+    prepared = {"configuration": {"selection": {"num_generations": 10, "max_seq_length": 8192}}}
+    saved = {"model_loader": "fast_language_model", "chat_template_kwargs": {},
+             "base_snapshot": "base", "base_revision": "revision"}
+    monkeypatch.setattr(select, "validate_run", lambda *a: (prepared, saved, examples))
+
+    def launch(command, **kwargs):
+        assert "--longest-first" in command and "--preflight-all" in command
+        output = Path(command[command.index("--output-dir") + 1])
+        for name in ("config.json", "generations.jsonl", "candidates.jsonl", "selection_scores.json"):
+            write(output / name, {})
+        (output / "examples.jsonl").write_text("".join(json.dumps(r) + "\n" for r in selected))
+
+    def score(path, ids):
+        assert ids == ["4", "5", "6", "7"]
+        return {"coverage_full_pool": 0.5, "coverage_at10": 0.5, "parse_success_rate": 1}, path / "official"
+
+    monkeypatch.setattr(select.subprocess, "run", launch)
+    monkeypatch.setattr(select, "score_generation", score)
+    output = tmp_path / "retry"
+    select.run_selection(directory, submission, output, "qwen3", True)
+    assert json.loads((output / "manifest.json").read_text())["status"] == "complete"
+    assert len(examples) == 8
