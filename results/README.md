@@ -63,6 +63,14 @@ the same normalized accepted-answer set in the full pool, with different ranks.
 The local checks replay parsing/pooling on all 160 case–arm records. These selected
 cases do not support a population semantic-error rate; raw evidence remains local.
 
+The [full 160-question coverage transition report](expansion_dpo_coverage_transitions_20261011.json)
+separates all-ten-draw full-pool coverage from the first-ten cutoff. Qwen gains three
+full-pool-covered questions and Ministral gains two, with no previously covered
+questions lost; Llama retains the same covered-question set. Each backbone loses
+one question at the first-ten cutoff, while preserving full-pool coverage. These
+small gains are not statistically conclusive. Counts and intervals were supplied
+from the Gadi helper's console output; the combined source JSON remains on Gadi.
+
 ## Single-answer factoid SFT and DPO
 
 All evaluations below use the fixed 160-question development set and the official

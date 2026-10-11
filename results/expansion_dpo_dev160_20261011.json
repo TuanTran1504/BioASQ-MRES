@@ -53,7 +53,19 @@
             0.010416666666666666
           ],
           "sft_coverage_at10_reported": 0.55,
-          "dpo_coverage_at10_reported": 0.5625
+          "dpo_coverage_at10_reported": 0.5625,
+          "full_pool_coverage_transition": {
+            "sft_covered": 88,
+            "dpo_covered": 90,
+            "gained": 2,
+            "lost": 0,
+            "net_questions": 2,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 0.5
+          }
         },
         "sampling10": {
           "sft_mrr_at5_reported": 0.457396,
@@ -64,7 +76,19 @@
             0.005
           ],
           "sft_coverage_at10_reported": 0.6312,
-          "dpo_coverage_at10_reported": 0.6312
+          "dpo_coverage_at10_reported": 0.6312,
+          "full_pool_coverage_transition": {
+            "sft_covered": 108,
+            "dpo_covered": 108,
+            "gained": 0,
+            "lost": 0,
+            "net_questions": 0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          }
         }
       },
       "mrr_changes_reported": {
@@ -109,7 +133,19 @@
             0.0
           ],
           "sft_coverage_at10_reported": 0.5687,
-          "dpo_coverage_at10_reported": 0.5687
+          "dpo_coverage_at10_reported": 0.5687,
+          "full_pool_coverage_transition": {
+            "sft_covered": 91,
+            "dpo_covered": 91,
+            "gained": 0,
+            "lost": 0,
+            "net_questions": 0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          }
         },
         "sampling10": {
           "sft_mrr_at5_reported": 0.469479,
@@ -120,7 +156,19 @@
             0.014166666666666666
           ],
           "sft_coverage_at10_reported": 0.625,
-          "dpo_coverage_at10_reported": 0.6375
+          "dpo_coverage_at10_reported": 0.6375,
+          "full_pool_coverage_transition": {
+            "sft_covered": 109,
+            "dpo_covered": 112,
+            "gained": 3,
+            "lost": 0,
+            "net_questions": 3,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.04375
+            ],
+            "mcnemar_exact_p_reported": 0.25
+          }
         }
       },
       "mrr_changes_reported": {
@@ -165,7 +213,19 @@
             0.0
           ],
           "sft_coverage_at10_reported": 0.575,
-          "dpo_coverage_at10_reported": 0.575
+          "dpo_coverage_at10_reported": 0.575,
+          "full_pool_coverage_transition": {
+            "sft_covered": 92,
+            "dpo_covered": 92,
+            "gained": 0,
+            "lost": 0,
+            "net_questions": 0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          }
         },
         "sampling10": {
           "sft_mrr_at5_reported": 0.483021,
@@ -176,7 +236,19 @@
             0.0171875
           ],
           "sft_coverage_at10_reported": 0.675,
-          "dpo_coverage_at10_reported": 0.6813
+          "dpo_coverage_at10_reported": 0.6813,
+          "full_pool_coverage_transition": {
+            "sft_covered": 111,
+            "dpo_covered": 113,
+            "gained": 2,
+            "lost": 0,
+            "net_questions": 2,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 0.5
+          }
         }
       },
       "mrr_changes_reported": {
@@ -218,9 +290,10 @@
     "One training seed, ten optimiser updates and automatically judged pilot preferences without independent human audit",
     "Reused 160-question development set; no unseen final-test result",
     "Full 160-question source summaries and generation/scoring files remain on Gadi; 40 selected cases and audit summaries were inspected locally",
-    "Full-pool coverage, generation token/time costs and semantic/evidence quality are not supplied in the compact output",
+    "Generation token/time costs and semantic/evidence quality are not supplied in the compact outputs; full-pool transitions are now reported separately",
     "Confidence intervals represent question-sampling uncertainty, not training-seed variation"
   ],
   "selected_case_exports_inspected_locally": true,
-  "case_inspection": "expansion_dpo_case_inspection_20261011.json"
+  "case_inspection": "expansion_dpo_case_inspection_20261011.json",
+  "full_pool_transition_report": "expansion_dpo_coverage_transitions_20261011.json"
 }

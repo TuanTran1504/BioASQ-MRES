@@ -83,7 +83,29 @@ The 40 exported cases were subsequently downloaded and [inspected locally](EXPAN
 
 Ten expansion draws can produce up to 100 candidate slots before conservative deduplication. To test whether DPO generates accepted answers for more questions while preserving previously covered questions, compare `coverage_full_pool` across all 160 questions. Report DPO-only questions (gained), SFT-only questions (lost), both covered and neither covered. Net coverage changes alone hide regressions. Coverage@10 remains a separate fixed candidate-budget comparison; MRR@5 remains submission performance.
 
-For example, Llama's sampled incidence case moves its first accepted answer from rank 7 to 11, and Qwen's sampled polycystic kidney disease case moves from rank 10 to 11. Both lose coverage@10 while retaining full-pool coverage. Selected case exports cannot supply complete full-pool gain/loss counts, because they do not contain every unchanged-MRR question. Full-pool transition counts are pending the following report from the complete Gadi scores.
+For example, Llama's sampled incidence case moves its first accepted answer from rank 7 to 11, and Qwen's sampled polycystic kidney disease case moves from rank 10 to 11. Both lose coverage@10 while retaining full-pool coverage. Selected case exports cannot supply complete full-pool gain/loss counts, because they do not contain every unchanged-MRR question.
+
+The user subsequently ran the full report on Gadi and supplied the following complete 160-question counts. These measure all unique candidates from ten complete expansion draws.
+
+| Backbone | SFT full-pool covered | DPO full-pool covered | Gained | Lost | Net | Paired 95% coverage-difference CI | McNemar p |
+|---|---:|---:|---:|---:|---:|---|---:|
+| Llama-3.1-8B | 108/160 (67.5%) | 108/160 (67.5%) | 0 | 0 | 0 | [0.00000, 0.00000] | 1.0000 |
+| Qwen3-8B | 109/160 (68.125%) | 112/160 (70%) | 3 | 0 | +3 | [0.00000, 0.04375] | 0.2500 |
+| Ministral-3-8B | 111/160 (69.375%) | 113/160 (70.625%) | 2 | 0 | +2 | [0.00000, 0.03125] | 0.5000 |
+
+On this sampled development evaluation, Qwen and Ministral show gains without losing any question that SFT covered; Llama retains the same covered-question set. This concerns question-level official acceptance somewhere in the pool. It does not imply that every SFT expression is retained, that all generated expressions are scientifically correct, or that those answers reach the submitted first five. Gains of three and two questions are small, and their intervals include zero with McNemar p-values of 0.25 and 0.5. They are not statistically conclusive evidence of general improvement.
+
+At the first-ten cutoff, the changes include regressions:
+
+| Backbone, ten draws | SFT covered@10 | DPO covered@10 | Gained | Lost | Net |
+|---|---:|---:|---:|---:|---:|
+| Llama-3.1-8B | 101 | 101 | 1 | 1 | 0 |
+| Qwen3-8B | 100 | 102 | 3 | 1 | +2 |
+| Ministral-3-8B | 108 | 109 | 2 | 1 | +1 |
+
+Since no backbone loses full-pool coverage, each first-ten loss still has an accepted expression somewhere in its DPO pool. The coverage@10 regressions therefore concern expression position at the cutoff. The [saved transition aggregate](../results/expansion_dpo_coverage_transitions_20261011.json) also records all intervals and p-values for these comparisons and the separate MRR@5 results.
+
+For greedy expansion, Llama improves from 88 to 90 full-pool-covered questions (two gains, no losses; CI [0, 0.03125], p = 0.5). Qwen remains at 91 and Ministral at 92, each with zero gains and losses. The small greedy Ministral MRR decline occurs despite unchanged coverage, reflecting rank rather than coverage.
 
 From `gadi_sft_8b_starter`, run:
 
@@ -111,4 +133,4 @@ All smoke and full evaluation jobs exited with status zero. Full jobs were 18093
 
 The [saved aggregate](../results/expansion_dpo_dev160_20261011.json) records the user-pasted scores, intervals, per-question diagnostic counts, protocol, job identifiers and limits. Full Gadi summaries and complete raw generation/scoring files have not been downloaded or independently inspected locally; selected case exports and their audit summaries have. The full summaries' expected locations are `outputs/expansion_dpo_evaluation/<model>-dpo-evaluation-<job>.gadi-pbs/comparison_summary.json` and `comparison_per_question.json`.
 
-This is a small, single-seed pilot on a development set already used to inform the design. There is no independent human label audit or unseen final-test result. Scientific correctness and evidence support cannot be inferred from exact scores or parser validity. The compact output does not supply full-pool coverage, token/time costs per condition or candidate-quality diagnostics. Confirmatory claims would additionally need matched optimisation controls, a predeclared validation protocol, seed repeats and unseen evaluation.
+This is a small, single-seed pilot on a development set already used to inform the design. There is no independent human label audit or unseen final-test result. Scientific correctness and evidence support cannot be inferred from exact scores or parser validity. The subsequent console report supplies full-pool transitions; the combined source JSON with gained/lost question IDs has not been downloaded locally. The compact outputs do not supply token/time costs per condition or population candidate-quality diagnostics. Confirmatory claims would additionally need matched optimisation controls, a predeclared validation protocol, seed repeats and unseen evaluation.

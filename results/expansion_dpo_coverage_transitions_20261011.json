@@ -1,0 +1,308 @@
+{
+  "date": "2026-10-11",
+  "evidence_source": "User-pasted complete console output from summarize_expansion_dpo_coverage.py run on Gadi",
+  "source_combined_json_inspected_locally": false,
+  "question_count": 160,
+  "coverage_definition": "Officially accepted answer anywhere in all ten expansion responses; at most 100 candidate slots before deduplication",
+  "precision": "Counts and confidence intervals copied verbatim; rates derived from counts; displayed McNemar p-values copied at four-decimal precision",
+  "bootstrap": {
+    "resamples": 10000,
+    "seed": 3407
+  },
+  "models": {
+    "llama31": {
+      "comparisons": {
+        "sampling10": {
+          "coverage_full_pool": {
+            "sft_covered": 108,
+            "dpo_covered": 108,
+            "gained": 0,
+            "lost": 0,
+            "both_covered_derived": 108,
+            "neither_covered_derived": 52,
+            "net_questions": 0,
+            "sft_rate_derived": 0.675,
+            "dpo_rate_derived": 0.675,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "coverage_at10": {
+            "sft_covered": 101,
+            "dpo_covered": 101,
+            "gained": 1,
+            "lost": 1,
+            "both_covered_derived": 100,
+            "neither_covered_derived": 58,
+            "net_questions": 0,
+            "sft_rate_derived": 0.63125,
+            "dpo_rate_derived": 0.63125,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              -0.01875,
+              0.01875
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.457396,
+            "dpo_mrr_at5_reported": 0.455521,
+            "dpo_minus_sft_mrr_at5_reported": -0.001875,
+            "paired_bootstrap_95ci": [
+              -0.01,
+              0.005
+            ]
+          }
+        },
+        "greedy": {
+          "coverage_full_pool": {
+            "sft_covered": 88,
+            "dpo_covered": 90,
+            "gained": 2,
+            "lost": 0,
+            "both_covered_derived": 88,
+            "neither_covered_derived": 70,
+            "net_questions": 2,
+            "sft_rate_derived": 0.55,
+            "dpo_rate_derived": 0.5625,
+            "dpo_minus_sft_derived": 0.0125,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 0.5
+          },
+          "coverage_at10": {
+            "sft_covered": 88,
+            "dpo_covered": 90,
+            "gained": 2,
+            "lost": 0,
+            "both_covered_derived": 88,
+            "neither_covered_derived": 70,
+            "net_questions": 2,
+            "sft_rate_derived": 0.55,
+            "dpo_rate_derived": 0.5625,
+            "dpo_minus_sft_derived": 0.0125,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 0.5
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.501042,
+            "dpo_mrr_at5_reported": 0.505208,
+            "dpo_minus_sft_mrr_at5_reported": 0.004167,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.010416666666666666
+            ]
+          }
+        }
+      }
+    },
+    "qwen3": {
+      "comparisons": {
+        "sampling10": {
+          "coverage_full_pool": {
+            "sft_covered": 109,
+            "dpo_covered": 112,
+            "gained": 3,
+            "lost": 0,
+            "both_covered_derived": 109,
+            "neither_covered_derived": 48,
+            "net_questions": 3,
+            "sft_rate_derived": 0.68125,
+            "dpo_rate_derived": 0.7,
+            "dpo_minus_sft_derived": 0.01875,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.04375
+            ],
+            "mcnemar_exact_p_reported": 0.25
+          },
+          "coverage_at10": {
+            "sft_covered": 100,
+            "dpo_covered": 102,
+            "gained": 3,
+            "lost": 1,
+            "both_covered_derived": 99,
+            "neither_covered_derived": 57,
+            "net_questions": 2,
+            "sft_rate_derived": 0.625,
+            "dpo_rate_derived": 0.6375,
+            "dpo_minus_sft_derived": 0.0125,
+            "paired_bootstrap_95ci": [
+              -0.0125,
+              0.0375
+            ],
+            "mcnemar_exact_p_reported": 0.625
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.469479,
+            "dpo_mrr_at5_reported": 0.474688,
+            "dpo_minus_sft_mrr_at5_reported": 0.005208,
+            "paired_bootstrap_95ci": [
+              -0.001979166666666667,
+              0.014166666666666666
+            ]
+          }
+        },
+        "greedy": {
+          "coverage_full_pool": {
+            "sft_covered": 91,
+            "dpo_covered": 91,
+            "gained": 0,
+            "lost": 0,
+            "both_covered_derived": 91,
+            "neither_covered_derived": 69,
+            "net_questions": 0,
+            "sft_rate_derived": 0.56875,
+            "dpo_rate_derived": 0.56875,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "coverage_at10": {
+            "sft_covered": 91,
+            "dpo_covered": 91,
+            "gained": 0,
+            "lost": 0,
+            "both_covered_derived": 91,
+            "neither_covered_derived": 69,
+            "net_questions": 0,
+            "sft_rate_derived": 0.56875,
+            "dpo_rate_derived": 0.56875,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.526042,
+            "dpo_mrr_at5_reported": 0.526042,
+            "dpo_minus_sft_mrr_at5_reported": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    },
+    "ministral3": {
+      "comparisons": {
+        "sampling10": {
+          "coverage_full_pool": {
+            "sft_covered": 111,
+            "dpo_covered": 113,
+            "gained": 2,
+            "lost": 0,
+            "both_covered_derived": 111,
+            "neither_covered_derived": 47,
+            "net_questions": 2,
+            "sft_rate_derived": 0.69375,
+            "dpo_rate_derived": 0.70625,
+            "dpo_minus_sft_derived": 0.0125,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 0.5
+          },
+          "coverage_at10": {
+            "sft_covered": 108,
+            "dpo_covered": 109,
+            "gained": 2,
+            "lost": 1,
+            "both_covered_derived": 107,
+            "neither_covered_derived": 50,
+            "net_questions": 1,
+            "sft_rate_derived": 0.675,
+            "dpo_rate_derived": 0.68125,
+            "dpo_minus_sft_derived": 0.00625,
+            "paired_bootstrap_95ci": [
+              -0.0125,
+              0.03125
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.483021,
+            "dpo_mrr_at5_reported": 0.485,
+            "dpo_minus_sft_mrr_at5_reported": 0.001979,
+            "paired_bootstrap_95ci": [
+              -0.008333333333333333,
+              0.0171875
+            ]
+          }
+        },
+        "greedy": {
+          "coverage_full_pool": {
+            "sft_covered": 92,
+            "dpo_covered": 92,
+            "gained": 0,
+            "lost": 0,
+            "both_covered_derived": 92,
+            "neither_covered_derived": 68,
+            "net_questions": 0,
+            "sft_rate_derived": 0.575,
+            "dpo_rate_derived": 0.575,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "coverage_at10": {
+            "sft_covered": 92,
+            "dpo_covered": 92,
+            "gained": 0,
+            "lost": 0,
+            "both_covered_derived": 92,
+            "neither_covered_derived": 68,
+            "net_questions": 0,
+            "sft_rate_derived": 0.575,
+            "dpo_rate_derived": 0.575,
+            "dpo_minus_sft_derived": 0.0,
+            "paired_bootstrap_95ci": [
+              0.0,
+              0.0
+            ],
+            "mcnemar_exact_p_reported": 1.0
+          },
+          "mrr_at5": {
+            "sft_mrr_at5_reported": 0.534375,
+            "dpo_mrr_at5_reported": 0.533854,
+            "dpo_minus_sft_mrr_at5_reported": -0.000521,
+            "paired_bootstrap_95ci": [
+              -0.0015624999999999997,
+              0.0
+            ]
+          }
+        }
+      }
+    }
+  },
+  "interpretation": [
+    "At ten draws, Qwen gains three and Ministral gains two full-pool-covered questions without losing any SFT-covered question; Llama retains exactly the same covered-question set",
+    "At ten draws, each backbone loses one first-ten-covered question; because none loses full-pool coverage, these are cutoff losses with an accepted answer still somewhere in the pool",
+    "Greedy Llama gains two full-pool-covered questions with no losses; greedy Qwen and Ministral retain the same covered-question sets",
+    "All full-pool confidence intervals include zero; the observed gains are small and not statistically conclusive",
+    "No observed question-level coverage losses does not imply all accepted strings are retained or that semantic/evidence quality improves"
+  ],
+  "limitations": [
+    "Single-seed reused development set; exploratory unadjusted p-values",
+    "Only exact acceptance coverage measured, not audited scientific correctness",
+    "Gained/lost question IDs and source hashes are in the combined Gadi JSON, which has not been downloaded locally"
+  ]
+}

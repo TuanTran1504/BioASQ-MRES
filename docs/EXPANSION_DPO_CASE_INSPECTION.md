@@ -24,6 +24,8 @@ Ministral's sampled MRR gain is explained by magnitudes: the zinc case gains 1.0
 
 These examples support an answer-expression and ordering explanation for the changed official scores. They do not show a consistent improvement in biomedical reasoning, semantic precision or evidence support. Textual response changes on other questions were counted by the full Gadi export, but most unchanged-MRR questions were not included for local inspection.
 
+The subsequent [complete coverage transition report](EXPANSION_DPO_RESULTS.md#full-pool-gains-and-losses) resolves an important distinction: across all ten draws, Qwen gains three covered questions and Ministral gains two with no losses; Llama retains the same covered-question set. All three backbones lose one question at the first-ten cutoff, but those questions retain an accepted expression somewhere in the full DPO pool. Those cutoff losses therefore do not establish that DPO lost generation coverage. The small full-pool gains are not statistically conclusive.
+
 ## Why selection misses persist
 
 Examples show both strict answer-form failures and substantive candidate problems:
