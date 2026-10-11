@@ -208,8 +208,11 @@ def parse_extractive_response(
 
 def parse_equivalent_response(
     text: str,
+    max_candidates: int = 10,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], bool]:
     """Recover and deduplicate equivalent-expression candidates without using gold."""
+    if max_candidates not in (5, 10):
+        raise ValueError("Equivalent candidate limit must be five or ten")
     value = next((obj for obj in json_objects(text) if isinstance(obj.get("answers"), list)), None)
     issues: list[str] = []
     if value is None:
@@ -222,7 +225,7 @@ def parse_equivalent_response(
         if set(value) != {"answers"}:
             issues.append("unexpected_top_level_fields")
         raw_answers = value["answers"]
-        if not 1 <= len(raw_answers) <= 10:
+        if not 1 <= len(raw_answers) <= max_candidates:
             issues.append("answer_count_out_of_range")
 
     accepted: list[dict[str, Any]] = []
@@ -264,7 +267,7 @@ def parse_equivalent_response(
             })
             continue
         seen.add(key)
-        if len(accepted) >= 10:
+        if len(accepted) >= max_candidates:
             rejected.append({
                 **row,
                 "raw_position": raw_position,
@@ -570,7 +573,8 @@ def main() -> None:
                         raw, example["snippets"]
                     )
                 else:
-                    accepted, rejected, issues, schema_compliant = parse_equivalent_response(raw)
+                    accepted, rejected, issues, schema_compliant = parse_equivalent_response(
+                        raw, max_candidates=int(config_template.get("max_candidates", 10)))
             except ValueError as exc:
                 accepted, rejected, issues, schema_compliant = [], [], [], False
                 parse_error = f"{type(exc).__name__}: {exc}"
