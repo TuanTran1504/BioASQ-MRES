@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Official paired before/after original SFT scoring with one identical prompt."""
 import argparse
+import json
 from pathlib import Path
 import sys
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -12,6 +14,32 @@ from run_single_answer_sampling import parse_single_answer, unique_candidates, s
 from scripts.analyze_matched_qwen_expansion import validate_pair, ranking_metrics, paired_contrast
 from scripts.analyze_original_qwen25_inference import efficiency
 from scripts.summarize_expansion_dpo_coverage import coverage_transitions
+from single_answer_format_recovery import recover_single_answer, VERSION as RECOVERY_VERSION
+
+
+def score_format_recovered(run, jar):
+    from src.notebook_workflows.local_expansion import official_candidate_matches
+    examples = records(run / "examples.jsonl")
+    generations = records(run / "generations.jsonl")
+    report = run / f"format-recovery-{uuid.uuid4().hex[:8]}"
+    report.mkdir()
+    candidates, decisions = [], []
+    for row in generations:
+        answer, method = recover_single_answer(row["samples"][0]["raw_response"])
+        decisions.append({"question_id": row["question_id"], "answer": answer, "recovery_method": method})
+        if answer:
+            candidates.append({"question_id": row["question_id"], "answer": answer, "position": 1})
+    (report / "candidates.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in candidates), encoding="utf-8")
+    matches = official_candidate_matches(examples, candidates, report, jar_path=jar) if candidates else {}
+    rows = [{"question_id": row["question_id"], "answers": [row["answer"]] if row["answer"] else [],
+        "matching_answers": [row["answer"]] if matches.get((row["question_id"], row["answer"]), False) else []}
+        for row in decisions]
+    metrics, scored = ranking_metrics(rows)
+    write(report / "decisions.json", decisions)
+    return {"metrics": metrics, "official_report": str(report), "recovery_version": RECOVERY_VERSION,
+        "strict_parse_count": sum(r["recovery_method"] == "strict_tagged" for r in decisions),
+        "format_recovered_count": sum(r["recovery_method"] == "single_answer_line" for r in decisions),
+        "unrecoverable_count": sum(r["answer"] is None for r in decisions)}, scored
 
 
 def validate_experiment(directory, allow_smoke=False):
@@ -90,12 +118,23 @@ def analyze(directory, jar, allow_smoke=False):
     result["paired_contrasts"] = paired_contrast(scored["base"], scored["sft"])
     transitions = coverage_transitions(scored["base"], scored["sft"], "coverage_at1")
     result["coverage_transitions"] = {key.replace("sft", "base").replace("dpo", "sft"): value for key, value in transitions.items()}
+    recovered_scores = {}
+    result["format_recovered_conditions"] = {}
+    for name, run in runs.items():
+        result["format_recovered_conditions"][name], recovered_scores[name] = score_format_recovered(run, jar)
+    result["format_recovered_paired_contrasts"] = paired_contrast(recovered_scores["base"], recovered_scores["sft"])
+    result["format_recovery_interpretation"] = (
+        "Secondary post-hoc diagnostic: identical gold-blind recovery for both arms. Accept one Answer: line with missing boundary tags; "
+        "keep all remaining expression text. Strict tagged scores remain primary. Answer acceptance uses the official matcher; recovery alone does not establish semantic correctness.")
     write(directory / "comparison_summary.json", result)
-    write(directory / "comparison_per_question.json", scored)
+    write(directory / "comparison_per_question.json", {**scored, **{f"format_recovered_{k}": v for k, v in recovered_scores.items()}})
     a, b = [result["conditions"][name]["metrics"]["mrr_at5"] for name in ("base", "sft")]
     contrast = result["paired_contrasts"]["mrr_at5"]
     print(f"{manifest['model_key']}{' SMOKE ONLY' if manifest['smoke_test'] else ''}: base MRR={a:.6f}, SFT MRR={b:.6f}, "
           f"delta={contrast['sft_minus_base']:+.6f}, 95% CI={contrast['paired_bootstrap_95ci']}")
+    a, b = [result["format_recovered_conditions"][name]["metrics"]["mrr_at5"] for name in ("base", "sft")]
+    print(f"Format-recovered diagnostic: base MRR={a:.6f}, SFT MRR={b:.6f}, "
+          f"delta={result['format_recovered_paired_contrasts']['mrr_at5']['sft_minus_base']:+.6f}")
     print(f"Saved: {directory / 'comparison_summary.json'}", flush=True)
     return result
 

@@ -14,6 +14,7 @@ import run_base_original_prompt as runner
 import run_single_answer_sampling as sampling
 from prepare_matched_8b_sft import write, digest
 from scripts import analyze_base_original_prompt as analysis
+from single_answer_format_recovery import recover_single_answer
 
 
 class Tokenizer:
@@ -107,6 +108,87 @@ assert Path(training_execution.__file__).resolve().is_relative_to(code_root)
     result = subprocess.run([sys.executable, "-c", code, str(tmp_path / "inference_code")],
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("Answer: 15", "15"),
+    ("Answer: Experimental autoimmune encephalomyelitis (EAE)", "Experimental autoimmune encephalomyelitis (EAE)"),
+    ("Answer: Autosomal dominant polycystic kidney disease (ADPKD) [EE]", "Autosomal dominant polycystic kidney disease (ADPKD)"),
+    ("Answer: galactosylceramide beta-galactosidase", "galactosylceramide beta-galactosidase"),
+    ("Answer: [BE]15", "15"),
+    ("Answer: [BE]15[EE]", "15"),
+    ("Answer: 15. Explanation follows.", "15. Explanation follows."),
+    ("15", None),
+    ("Answer: 15\nExplanation follows", None),
+    ("Answer: [BE]15[EE] [BE]16[EE]", None),
+    ("Answer: Answer: 15", None),
+    ("Answer: [EE]", None),
+])
+def test_format_recovery_keeps_whole_expression_and_rejects_ambiguous_structure(raw, expected):
+    answer, method = recover_single_answer(raw)
+    assert answer == expected
+    if expected is None:
+        assert method == "unrecoverable"
+
+
+def test_zero_parse_smoke_is_measured_as_format_failure_not_blocked(tmp_path, monkeypatch):
+    src = source(tmp_path)
+    examples = [example(str(i), 10) for i in range(4)]
+    plan = runner.full_input_plan(src, examples, 512, lambda _: Tokenizer())
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    write(submission / "manifest.json", {})
+    evaluation = {"input": "dev.jsonl", "max_seq_length": 6144, "max_new_tokens": 512, "seed": 3407, "input_sha256": "data"}
+    monkeypatch.setattr(runner, "validate_submission", lambda *a: ({}, evaluation, {"provenance": src, "input_plan": plan}))
+    monkeypatch.setattr(runner, "inference_worker", lambda *a: Path("frozen-worker.py"))
+    calls = []
+    def launch(command, **kwargs):
+        calls.append(command)
+        if "--output-dir" not in command:
+            assert "--allow-smoke" in command
+            return
+        directory = Path(command[command.index("--output-dir")+1])
+        directory.mkdir()
+        write(directory / "config.json", {})
+        write(directory / "status.json", {"status": "complete"})
+        json_rows = [{"question_id": str(i), "samples": [{"raw_response": "Answer: 15", "answer": None}]} for i in range(4)]
+        (directory / "generations.jsonl").write_text("".join(json.dumps(r) + "\n" for r in json_rows))
+        (directory / "examples.jsonl").write_text("".join(json.dumps(r) + "\n" for r in examples))
+        (directory / "candidates.jsonl").write_text("")
+    monkeypatch.setattr(runner.subprocess, "run", launch)
+    output = tmp_path / "smoke"
+    runner.run(submission, "llama31", output, True)
+    state = json.loads((output / "manifest.json").read_text())
+    assert state["status"] == "complete" and len(calls) == 3
+    assert state["smoke_parse_counts"] == {"base": 0, "sft": 0}
+    assert set(state["runs"]) == {"base", "sft"}
+
+
+def test_recovered_score_is_separate_and_does_not_rewrite_strict_outputs(tmp_path, monkeypatch):
+    archive(tmp_path)
+    path = tmp_path / "base/generations.jsonl"
+    generations = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in generations:
+        row["samples"][0]["raw_response"] = "Answer: 15"
+        row["samples"][0]["answer"] = None
+        row["parse_error"] = "failed"
+    path.write_text("".join(json.dumps(r) + "\n" for r in generations))
+    (tmp_path / "base/candidates.jsonl").write_text("")
+    state = json.loads((tmp_path / "manifest.json").read_text())
+    for name in ("generations.jsonl", "candidates.jsonl"):
+        state["arm_hashes"]["base"][name] = digest(tmp_path / "base" / name)
+    write(tmp_path / "manifest.json", state)
+    before = {name: digest(tmp_path / "base" / name) for name in ("generations.jsonl", "candidates.jsonl")}
+    from src.notebook_workflows import local_expansion
+    monkeypatch.setattr(local_expansion, "official_candidate_matches", lambda examples, candidates, *a, **k:
+        {(r["question_id"], r["answer"]): r["answer"] == "15" for r in candidates})
+    result = analysis.analyze(tmp_path, Path("unused.jar"))
+    assert result["conditions"]["base"]["metrics"]["mrr_at5"] == 0
+    assert result["format_recovered_conditions"]["base"]["metrics"]["mrr_at5"] == 1
+    assert result["format_recovered_conditions"]["base"]["format_recovered_count"] == 160
+    assert result["paired_contrasts"]["mrr_at5"]["sft_minus_base"] == .75
+    assert result["format_recovered_paired_contrasts"]["mrr_at5"]["sft_minus_base"] == -.25
+    assert before == {name: digest(tmp_path / "base" / name) for name in before}
 
 
 def archive(tmp_path):

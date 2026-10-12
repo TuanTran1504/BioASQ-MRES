@@ -50,6 +50,39 @@ generation because a later update changed the live worker's hash. Their full
 jobs never started. Pull this fix and submit a fresh batch with the command
 above; do not edit old manifests or their recorded hashes.
 
+The replacement Llama smoke 181046667 generated four responses such as
+`Answer: 15` without the required `[BE]`/`[EE]` tags. This was a model-format
+outcome, not a model-loading failure. Smoke now warns about zero parsed answers
+and proceeds when generation completed, so full evaluation can measure that
+outcome. Generation, input integrity and official-scoring failures still fail
+the smoke job. Full evaluation retains every question in the denominator.
+
+Strict tagged metrics remain under `conditions`. A separate
+`format_recovered_conditions` section applies one identical gold-blind recovery
+rule to both base and SFT: accept a single `Answer:` line, optionally removing a
+sole opening or closing boundary tag. Keep the entire remaining expression;
+never split aliases or trim explanations. Unrecoverable/multiple-tag responses
+remain failures. Both views use the official matcher and paired intervals.
+Recovery is a post-hoc diagnostic motivated by observed format errors, not a
+replacement primary result or evidence of semantic correctness by itself.
+Raw generations, strict candidates and their archived hashes are preserved.
+
+Only Llama needs a fresh GPU batch for this format-gate failure:
+
+```bash
+git pull --ff-only
+bash scripts/submit_base_original_prompt.sh llama31
+```
+
+Completed Qwen and Ministral generations can receive the additional diagnostic
+by CPU reanalysis without new generation:
+
+```bash
+python ../scripts/analyze_base_original_prompt.py \
+  outputs/base_original_prompt/qwen3-base-original-181046670.gadi-pbs \
+  outputs/base_original_prompt/ministral3-base-original-181046672.gadi-pbs
+```
+
 ## Monitor and read results
 
 ```bash

@@ -162,7 +162,8 @@ def run(submission, model, output, smoke):
         "input_sha256": evaluation["input_sha256"], "prompt_sha256": digest(prompt),
         "prepared_manifest_sha256": digest(submission / "manifest.json"),
         "inference_code": prepared.get("code_snapshot"),
-        "runs": {}, "arm_hashes": {}, "evaluation": "Exploratory paired base/original SFT dev comparison; full evidence"}
+        "runs": {}, "arm_hashes": {}, "smoke_parse_counts": {},
+        "evaluation": "Exploratory paired base/original SFT dev comparison; full evidence"}
     write(output / "manifest.json", state)
     try:
         for name, target in (("base", source["base_snapshot"]), ("sft", source["adapter"])):
@@ -175,8 +176,13 @@ def run(submission, model, output, smoke):
             rows = records(directory / "generations.jsonl")
             if read(directory / "status.json")["status"] != "complete" or len(rows) != count:
                 raise ValueError("Incomplete generation")
-            if smoke and not any(row["samples"][0]["answer"] for row in rows):
-                raise ValueError(f"{name}: no parseable tagged answers in smoke; inspect raw responses")
+            if smoke:
+                parsed = sum(bool(row["samples"][0]["answer"]) for row in rows)
+                state["smoke_parse_counts"][name] = parsed
+                if not parsed:
+                    # Format compliance is an outcome of the before/after SFT
+                    # comparison, not a prerequisite for measuring the base.
+                    print(f"WARNING: {name}: 0/{count} tagged responses; retain strict failures and report format recovery separately", flush=True)
             state["runs"][name] = name
             state["arm_hashes"][name] = {n: digest(directory / n) for n in (
                 "config.json", "examples.jsonl", "generations.jsonl", "candidates.jsonl", "status.json")}
