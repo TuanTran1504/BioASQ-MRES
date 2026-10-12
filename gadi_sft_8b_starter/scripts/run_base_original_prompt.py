@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -65,6 +66,47 @@ def load_text_tokenizer(path):
     return tokenizer
 
 
+def snapshot_inference_code(destination):
+    """Keep the worker and its bundled Python helpers independent of git pulls."""
+    code = destination / "inference_code"
+    files = [ROOT / "scripts" / name for name in (
+        "run_single_answer_sampling.py", "run_extractive_expansion_8b.py")]
+    files.extend(sorted((ROOT / "src").rglob("*.py")))
+    hashes = {}
+    for source in files:
+        relative = source.relative_to(ROOT)
+        target = code / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        hashes[relative.as_posix()] = digest(target)
+    return {"directory": "inference_code", "files_sha256": hashes}
+
+
+def inference_worker(submission, prepared):
+    snapshot = prepared.get("code_snapshot")
+    if snapshot is None:
+        # Legacy submissions retain their original guard; never silently
+        # overwrite their recorded code hash to revive a stale experiment.
+        worker = ROOT / "scripts/run_single_answer_sampling.py"
+        if digest(worker) != prepared["worker_sha256"]:
+            raise ValueError("Inference worker changed since preparation; create a new submission")
+        return worker
+    code = (submission / snapshot["directory"]).resolve()
+    if not code.is_relative_to(submission.resolve()):
+        raise ValueError("Frozen inference code escaped submission directory")
+    actual_files = {p.relative_to(code).as_posix() for p in code.rglob("*.py")}
+    if actual_files != set(snapshot["files_sha256"]):
+        raise ValueError("Frozen inference code file membership changed")
+    for relative, expected in snapshot["files_sha256"].items():
+        path = (code / relative).resolve()
+        if not path.is_relative_to(code) or digest(path) != expected:
+            raise ValueError("Frozen inference code changed since preparation")
+    worker = code / "scripts/run_single_answer_sampling.py"
+    if digest(worker) != prepared["worker_sha256"]:
+        raise ValueError("Frozen worker differs from prepared worker hash")
+    return worker
+
+
 def prepare(config_path, destination, models):
     if not models or len(set(models)) != len(models):
         raise ValueError("Specify unique model keys")
@@ -81,17 +123,18 @@ def prepare(config_path, destination, models):
     subprocess.run([*_conda_executable("java"), "-version"], check=True)
     _official_adapter_classes(ROOT.parent / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar")
     destination.mkdir(parents=True, exist_ok=False)
+    snapshot = snapshot_inference_code(destination)
     write(destination / "manifest.json", {"ready": True, "config": str(config_path.resolve()),
         "config_sha256": digest(config_path), "sources": sources,
-        "worker_sha256": digest(ROOT / "scripts/run_single_answer_sampling.py")})
+        "code_snapshot": snapshot,
+        "worker_sha256": snapshot["files_sha256"]["scripts/run_single_answer_sampling.py"]})
 
 
 def validate_submission(submission, model):
     prepared = read(submission / "manifest.json")
     if not prepared["ready"] or digest(Path(prepared["config"])) != prepared["config_sha256"]:
         raise ValueError("Evaluation configuration changed since preparation")
-    if digest(ROOT / "scripts/run_single_answer_sampling.py") != prepared["worker_sha256"]:
-        raise ValueError("Inference worker changed since preparation")
+    inference_worker(submission, prepared)
     config = read(Path(prepared["config"]))
     saved = prepared["sources"][model]
     current = validate_training_pair(config, model)["original"]
@@ -102,10 +145,14 @@ def validate_submission(submission, model):
 def run(submission, model, output, smoke):
     prepared, evaluation, saved = validate_submission(submission, model)
     source, plan = saved["provenance"], saved["input_plan"]
+    worker = inference_worker(submission, prepared)
     output.mkdir(parents=True, exist_ok=False)
     prompt = output / "original_prompt.txt"
     prompt.write_bytes(source["system_prompt"].encode("utf-8"))
     settings = arm_config(evaluation, {"original": source}, "original_greedy", prompt)
+    # The frozen worker has its own bundle root; evidence remains in the
+    # original data directory, pinned by its hash and always addressed exactly.
+    settings["input"] = str((ROOT / evaluation["input"]).resolve())
     settings.update(max_seq_length=plan["max_seq_length"], expected_prompt_tokens=plan["expected_prompt_tokens"],
                     expected_prompt_ids_sha256=plan["expected_prompt_ids_sha256"],
                     input_token_policy="complete_evidence_auto_size")
@@ -114,6 +161,7 @@ def run(submission, model, output, smoke):
         "provenance": source, "input_plan": plan, "settings": settings,
         "input_sha256": evaluation["input_sha256"], "prompt_sha256": digest(prompt),
         "prepared_manifest_sha256": digest(submission / "manifest.json"),
+        "inference_code": prepared.get("code_snapshot"),
         "runs": {}, "arm_hashes": {}, "evaluation": "Exploratory paired base/original SFT dev comparison; full evidence"}
     write(output / "manifest.json", state)
     try:
@@ -121,7 +169,7 @@ def run(submission, model, output, smoke):
             path = output / f"{name}_config.json"
             write(path, settings)
             directory = output / name
-            subprocess.run([sys.executable, str(ROOT / "scripts/run_single_answer_sampling.py"),
+            subprocess.run([sys.executable, str(worker),
                 "--config", str(path), "--model-name", target, "--output-dir", str(directory),
                 "--limit", str(count), "--preflight-all"], check=True, cwd=ROOT)
             rows = records(directory / "generations.jsonl")

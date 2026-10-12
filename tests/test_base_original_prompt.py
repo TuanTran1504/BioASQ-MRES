@@ -59,6 +59,56 @@ def test_input_plan_rejects_template_or_native_context_mismatch(tmp_path):
         runner.full_input_plan(src, [example()], 512, lambda path: Tokenizer(int(path == "adapter")))
 
 
+def test_submission_uses_frozen_worker_after_live_code_changes(tmp_path, monkeypatch):
+    bundle = tmp_path / "bundle"
+    for relative in ("scripts/run_single_answer_sampling.py", "scripts/run_extractive_expansion_8b.py", "src/utility/helper.py"):
+        path = bundle / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# prepared version\n")
+    monkeypatch.setattr(runner, "ROOT", bundle)
+    submission = tmp_path / "submission"
+    snapshot = runner.snapshot_inference_code(submission)
+    worker = submission / "inference_code/scripts/run_single_answer_sampling.py"
+    config = tmp_path / "config.json"
+    write(config, {})
+    provenance = {"base_snapshot": "unchanged"}
+    prepared = {"ready": True, "config": str(config), "config_sha256": digest(config),
+        "code_snapshot": snapshot, "worker_sha256": digest(worker),
+        "sources": {"qwen3": {"provenance": provenance}}}
+    write(submission / "manifest.json", prepared)
+    monkeypatch.setattr(runner, "validate_training_pair", lambda *a: {"original": provenance})
+    (bundle / "scripts/run_single_answer_sampling.py").write_text("# later Git pull\n")
+    (bundle / "src/utility/helper.py").write_text("# later helper update\n")
+    assert runner.validate_submission(submission, "qwen3")[0] == prepared
+    assert runner.inference_worker(submission, prepared) == worker
+    assert worker.read_text() == "# prepared version\n"
+    (submission / "inference_code/src/utility/helper.py").write_text("# altered frozen helper\n")
+    with pytest.raises(ValueError, match="Frozen inference code changed"):
+        runner.validate_submission(submission, "qwen3")
+
+
+def test_frozen_code_imports_helpers_from_saved_bundle_in_fresh_process(tmp_path):
+    snapshot = runner.snapshot_inference_code(tmp_path)
+    worker = tmp_path / "inference_code/scripts/run_single_answer_sampling.py"
+    prepared = {"code_snapshot": snapshot, "worker_sha256": digest(worker)}
+    runner.inference_worker(tmp_path, prepared)
+    code = r'''
+import sys
+from pathlib import Path
+code_root = Path(sys.argv[1])
+sys.path.insert(0, str(code_root / "scripts"))
+import run_single_answer_sampling as worker
+import run_extractive_expansion_8b as generation
+from src.utility import training_execution
+assert worker.ROOT == code_root
+assert generation.ROOT == code_root
+assert Path(training_execution.__file__).resolve().is_relative_to(code_root)
+'''
+    result = subprocess.run([sys.executable, "-c", code, str(tmp_path / "inference_code")],
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 def archive(tmp_path):
     src = source(tmp_path)
     examples = [example(str(i), 10) for i in range(160)]

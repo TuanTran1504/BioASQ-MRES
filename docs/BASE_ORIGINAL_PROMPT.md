@@ -38,6 +38,18 @@ training manifests, matched input data, and Java JDK/scorer are validated before
 any submission. No additional dataset transfer is needed. Actual GPU loading
 and generation are verified by the smoke jobs on Gadi.
 
+Each new submission stores a hash-checked copy of the inference worker and its
+bundled Python helpers under `submission-*/inference_code`. Both base and SFT
+use that same saved code. Later Git pulls changing the live inference worker
+therefore do not invalidate queued jobs. Inputs, prompts, adapters and evaluation
+configuration remain separately checked; changing those still requires a new
+submission. The installed Python/CUDA libraries are not copied.
+
+The initial smoke jobs 181035641, 181035646 and 181035649 stopped before
+generation because a later update changed the live worker's hash. Their full
+jobs never started. Pull this fix and submit a fresh batch with the command
+above; do not edit old manifests or their recorded hashes.
+
 ## Monitor and read results
 
 ```bash
