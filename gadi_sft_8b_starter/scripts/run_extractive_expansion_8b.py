@@ -211,8 +211,8 @@ def parse_equivalent_response(
     max_candidates: int = 10,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str], bool]:
     """Recover and deduplicate equivalent-expression candidates without using gold."""
-    if max_candidates not in (5, 10):
-        raise ValueError("Equivalent candidate limit must be five or ten")
+    if max_candidates not in (1, 5, 10):
+        raise ValueError("Equivalent candidate limit must be one, five or ten")
     value = next((obj for obj in json_objects(text) if isinstance(obj.get("answers"), list)), None)
     issues: list[str] = []
     if value is None:

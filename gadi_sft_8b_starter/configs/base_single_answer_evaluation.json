@@ -1,0 +1,8 @@
+{
+  "description": "Base greedy one-answer evaluation paired with completed five/ten prompt runs.",
+  "baselines": {
+    "llama31": "outputs/base_candidate_budget/llama31-base-budget-180988387.gadi-pbs",
+    "qwen3": "outputs/base_candidate_budget/qwen3-base-budget-180988389.gadi-pbs",
+    "ministral3": "outputs/base_candidate_budget/ministral3-base-budget-180988391.gadi-pbs"
+  }
+}
