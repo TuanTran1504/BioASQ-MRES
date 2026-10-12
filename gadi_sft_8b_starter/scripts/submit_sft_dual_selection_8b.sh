@@ -37,6 +37,9 @@ if [[ "$submission" == *','* || "$submission" == *$'\n'* ]]; then
 fi
 # Verify data, historical backbone pins, scorer and all models before any qsub.
 python scripts/prepare_sft_dual_selection.py --config "$configuration" --submission-dir "$submission" --models "${models[@]}"
+if [[ "${DUAL_EVALUATE_DEV:-0}" == 1 ]]; then
+  python scripts/run_selected_sft_evaluation.py --mode validate-protocol --submission-dir "$submission" --models "${models[@]}"
+fi
 declare -A reusable=()
 if [[ -n "$reuse_record" ]]; then
   if [[ ! -f "$reuse_record" ]]; then echo 'Smoke submission record not found' >&2; exit 2; fi
@@ -67,5 +70,12 @@ for model in "${models[@]}"; do
   select="$(qsub -N "${model}-sft-dual-select" -W "depend=afterok:${full}" \
     -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},TRAINING_RUN=${training_run}" jobs/select_sft_dual_selection_8b.pbs)"
   printf '%s\tselect\t%s\t%s\t%s\n' "$model" "$select" "$full" "$training_run" | tee -a "$record"
+  if [[ "${DUAL_EVALUATE_DEV:-0}" == 1 ]]; then
+    evaluation="$(qsub -N "${model}-sft-dev160" -W "depend=afterok:${select}" \
+      -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},TRAINING_RUN=${training_run},SELECTION_RUN=${training_run}/selection-${select}" \
+      jobs/evaluate_selected_sft_8b.pbs)"
+    printf '%s\tevaluate\t%s\t%s\t%s\n' "$model" "$evaluation" "$select" "$training_run" | tee -a "$record"
+  fi
 done
 echo 'Submitted fresh expansion SFT and dual checkpoint selection. Smoke -> training -> validation selection.'
+if [[ "${DUAL_EVALUATE_DEV:-0}" == 1 ]]; then echo 'Dev160 evaluation follows successful checkpoint selection.'; fi

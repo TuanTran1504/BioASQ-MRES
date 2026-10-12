@@ -27,7 +27,7 @@ validation questions/snippets are retained; smoke checks all prompt lengths and
 generates the four longest. Official BioASQ matching supplies coverage labels,
 with failed parses retained in denominators. Candidate-cap violations are archived.
 
-These selection scores are not development/test results. For a later comparison
+These selection scores are not development/test results. For a comparison
 of training formulations, evaluate both the ten-answer SFT and five-answer SFT
 checkpoints with the same five-answer prompt, candidate budget and selection rule.
 Full-pool comparisons of ten versus five candidates per draw have unequal budgets.
@@ -41,14 +41,57 @@ bash scripts/submit_sft_max5_8b.sh
 ```
 
 This builds the derived dataset on Gadi, validates all selected historical base
-pins and the Java scorer, then submits nine jobs: smoke, full training and
-checkpoint selection per model. Full stages depend on preceding success. To
+pins and the Java scorer, then submits twelve jobs: smoke, full training,
+checkpoint selection and dev160 evaluation per model. Each stage depends on
+preceding success. To
 restrict backbones append `llama31`, `qwen3` or `ministral3`. Fresh five-answer
 smoke training is required; previous ten-answer smoke adapters are incompatible.
 Full training requests 12 hours and selection 24 hours, one V100 per job. Local
 tests cover data, provenance and dependencies; actual CUDA execution is checked
 by the Gadi smoke jobs. No jobs were submitted from the local machine because
 Gadi rejected its noninteractive SSH authentication.
+
+## Automatic dev160 evaluation
+
+Each model's evaluation waits for successful internal-validation selection.
+Both `best_coverage` and `best_eval_loss` adapters are frozen before development
+scoring. Each is evaluated with greedy generation and ten sampled expansion
+responses (temperature 0.8, top-p 0.95), using the trained maximum-five prompt,
+the same 160 question/snippet inputs and 512 output tokens. Input allocation is
+sized to the longest complete prompt; evidence is never truncated. Identical
+selected weights/tokenizers reuse their exact generations rather than repeat
+GPU work. Official scoring reports MRR@5, strict/lenient accuracy, coverage@5/10,
+full-pool coverage, parsing and cost. Paired differences compare the two frozen
+selection criteria. Dev scores never change checkpoint selection.
+
+If a batch was already submitted before automatic evaluation was added, attach
+the three evaluation jobs without restarting training:
+
+```bash
+git pull --ff-only
+bash scripts/submit_sft_selected_evaluation.sh
+```
+
+This uses the latest max-five submission record. Pass a particular `jobs.tsv`
+path as the argument to select another batch. Existing `evaluate` entries are
+skipped, so repeating the command does not duplicate recorded jobs. Attach to
+the corrected training batch, not the failed smoke batch from 181021908 onward.
+Evaluation requests 12 GPU hours per model and writes under:
+
+```text
+outputs/sft_max5_8b/MODEL-expansion-sft-TRAIN_JOB_ID.gadi-pbs/
+  dev-evaluation-EVAL_JOB_ID.gadi-pbs/
+    manifest.json
+    comparison_summary.json
+    comparison_per_question.json
+```
+
+Exit status zero and a comparison summary confirm generation and official
+scoring. To retry scoring without GPU generation:
+
+```bash
+python ../scripts/analyze_selected_sft_evaluation.py PATH_TO_DEV_EVALUATION
+```
 
 ## Monitor
 

@@ -64,9 +64,9 @@ def expansion_candidates(samples):
 
 
 def generation_options(config):
-    if config.get("response_mode") == "single_answer_greedy":
+    if config.get("response_mode") in {"single_answer_greedy", "equivalent_greedy"}:
         if config["num_generations"] != 1 or config["temperature"] != 0:
-            raise ValueError("Expected one greedy single-answer generation")
+            raise ValueError("Expected one greedy generation")
         return {"max_new_tokens": config["max_new_tokens"], "do_sample": False,
                 "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
     if config["num_generations"] != 10 or config["temperature"] <= 0:
@@ -129,7 +129,7 @@ def main():
     cache = configure_job_local_compiler_cache()
     config = read_json(args.config)
     options = generation_options(config)
-    expansion = config.get("response_mode") == "equivalent_sampling"
+    expansion = config.get("response_mode") in {"equivalent_sampling", "equivalent_greedy"}
     all_examples = read_jsonl(ROOT / config["input"])
     examples = all_examples[:args.limit]
     prompt_path = ROOT / config["prompt"]

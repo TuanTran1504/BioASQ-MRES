@@ -45,7 +45,7 @@ def test_sampling_parser_rejects_multiple_answers_and_preserves_failed_draw_budg
     assert sampler.sample_seed("q", 2) != sampler.sample_seed("q", 3)
 
 
-@pytest.mark.parametrize("draw_count,temperature,mark_snippets,expansion", [(10, 0.8, True, False), (10, 0.8, False, False), (1, 0, False, False), (10, 0.8, False, True)])
+@pytest.mark.parametrize("draw_count,temperature,mark_snippets,expansion", [(10, 0.8, True, False), (10, 0.8, False, False), (1, 0, False, False), (10, 0.8, False, True), (1, 0, False, True)])
 @pytest.mark.parametrize("execution_mode", ["default", "eager"])
 def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkeypatch, draw_count, temperature, mark_snippets, expansion, execution_mode):
     sampler = load_script("run_single_answer_sampling")
@@ -103,7 +103,7 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
               "max_new_tokens": 512, "mark_snippets": mark_snippets,
               "response_mode": "single_answer_greedy" if draw_count == 1 else "single_answer_sampling"}
     if expansion:
-        config["response_mode"] = "equivalent_sampling"
+        config["response_mode"] = "equivalent_greedy" if draw_count == 1 else "equivalent_sampling"
     config["execution_mode"] = execution_mode
     if execution_mode == "eager":
         config["model_loader"] = "fast_model"
@@ -129,8 +129,9 @@ def test_sampler_actually_makes_seeded_calls_and_saves_failures(tmp_path, monkey
     assert [json.loads(line)["answer"] for line in (output / "candidates.jsonl").read_text().splitlines()] == (["Alpha", "Beta"] if draw_count == 10 else ["Alpha"])
     if expansion:
         candidates = [json.loads(line) for line in (output / "candidates.jsonl").read_text().splitlines()]
-        assert [(c["position"], c["draw"], c["within_draw_position"]) for c in candidates] == [(1, 1, 1), (2, 10, 2)]
-        assert generation["samples"][1]["answers"] == []
+        assert [(c["position"], c["draw"], c["within_draw_position"]) for c in candidates] == ([(1, 1, 1), (2, 10, 2)] if draw_count == 10 else [(1, 1, 1)])
+        if draw_count == 10:
+            assert generation["samples"][1]["answers"] == []
         assert (output / "invalid_candidates.jsonl").is_file()
 
 

@@ -5,4 +5,5 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export DUAL_TRAINING_MATRIX=configs/matched_8b_sft_max5.json
 export DUAL_SELECTION_CONFIG=configs/sft_max5_selection_8b.json
 export DUAL_OUTPUT_ROOT=outputs/sft_max5_8b
+export DUAL_EVALUATE_DEV=1
 exec bash scripts/submit_sft_dual_selection_8b.sh "$@"

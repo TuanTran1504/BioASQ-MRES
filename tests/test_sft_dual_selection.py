@@ -201,7 +201,10 @@ def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_prefli
                    "FAIL_PREFLIGHT": "1" if fail_preflight else "0", "TEST_USER": "scheduler-test"}
     if max5:
         environment.update(DUAL_TRAINING_MATRIX="configs/matched_8b_sft_max5.json",
-                           DUAL_SELECTION_CONFIG="configs/sft_max5_selection_8b.json", DUAL_OUTPUT_ROOT="outputs/sft_max5_8b")
+                           DUAL_SELECTION_CONFIG="configs/sft_max5_selection_8b.json", DUAL_OUTPUT_ROOT="outputs/sft_max5_8b",
+                           DUAL_EVALUATE_DEV="1")
+    else:
+        environment["DUAL_EVALUATE_DEV"] = "0"
     arguments = []
     if reuse:
         old_record = tmp_path / "old-jobs.tsv"
@@ -242,20 +245,25 @@ shift
     else:
         assert process.returncode == 0, process.stderr
         lines = log.read_text().splitlines()
-        assert len(lines) == 9
+        stride = 4 if max5 else 3
+        assert len(lines) == 3 * stride
         for i, model in enumerate(("llama31", "qwen3", "ministral3")):
-            assert model in lines[3 * i]
-            assert f"depend=afterok:{3 * i + 1}.gadi-pbs" in lines[3 * i + 1]
-            assert f"depend=afterok:{3 * i + 2}.gadi-pbs" in lines[3 * i + 2]
-            assert ("REUSE_TRAINING_RUN=" in lines[3 * i]) == reuse
+            assert model in lines[stride * i]
+            assert f"depend=afterok:{stride * i + 1}.gadi-pbs" in lines[stride * i + 1]
+            assert f"depend=afterok:{stride * i + 2}.gadi-pbs" in lines[stride * i + 2]
+            assert ("REUSE_TRAINING_RUN=" in lines[stride * i]) == reuse
             if stored_path:
-                assert f"REUSE_TRAINING_RUN=/saved/{model}-original-smoke" in lines[3 * i]
-            assert "REUSE_TRAINING_RUN=" not in lines[3 * i + 1]
+                assert f"REUSE_TRAINING_RUN=/saved/{model}-original-smoke" in lines[stride * i]
+            assert "REUSE_TRAINING_RUN=" not in lines[stride * i + 1]
             expected_root = "outputs/sft_max5_8b" if max5 else "outputs/sft_dual_selection_8b"
-            assert f"TRAIN_OUTPUT_ROOT={expected_root}" in lines[3 * i + 1]
-            assert expected_root in lines[3 * i + 2]
+            assert f"TRAIN_OUTPUT_ROOT={expected_root}" in lines[stride * i + 1]
+            assert expected_root in lines[stride * i + 2]
+            if max5:
+                assert f"depend=afterok:{stride * i + 3}.gadi-pbs" in lines[stride * i + 3]
+                assert f"selection-{stride * i + 3}.gadi-pbs" in lines[stride * i + 3]
+                assert "evaluate_selected_sft_8b.pbs" in lines[stride * i + 3]
         jobs = next(bundle.glob(f"{expected_root}/submission-*/jobs.tsv"))
-        assert len(jobs.read_text().splitlines()) == 10
+        assert len(jobs.read_text().splitlines()) == 3 * stride + 1
 
 
 def test_prompt_preflight_catches_overflow_outside_smoke_subset(monkeypatch):
