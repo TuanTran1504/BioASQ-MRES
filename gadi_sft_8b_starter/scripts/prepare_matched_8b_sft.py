@@ -47,7 +47,7 @@ def expansion_rows(rows, matrix):
         raise ValueError("SFT expansion budget must be five or ten")
     if limit == 10:
         return rows
-    from run_base_candidate_budget import five_prompt
+    from expansion_prompt_budget import five_prompt
     result = []
     for row in rows:
         messages = row["messages"]

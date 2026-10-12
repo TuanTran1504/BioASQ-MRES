@@ -250,8 +250,9 @@ def train(args: argparse.Namespace, config: dict[str, Any], train_rows: list[dic
     os.environ.setdefault("UNSLOTH_DISABLE_STATISTICS", "1")
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-    if str(BUNDLE_ROOT) not in sys.path:
-        sys.path.insert(0, str(BUNDLE_ROOT))
+    # The repository has a different `src` package. Presence later in sys.path
+    # is insufficient: this GPU worker must resolve its own bundled helpers.
+    sys.path[:] = [str(BUNDLE_ROOT), *(path for path in sys.path if path != str(BUNDLE_ROOT))]
 
     # Import the CUDA/Unsloth stack only for an actual training invocation.
     from src.utility.training_execution import prepare_execution, activate_execution

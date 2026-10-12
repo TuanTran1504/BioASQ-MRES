@@ -1,7 +1,9 @@
 """Check capped SFT preserves evidence, accepted primary labels and experiment controls."""
 import copy
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 
 import pytest
@@ -71,3 +73,46 @@ def test_actual_derived_dataset_keeps_all_questions_and_gold_primary():
             answers = json.loads(after["messages"][-1]["content"])["answers"]
             assert 1 <= len(answers) <= 5
             assert answers[0]["answer"] in audit[after["question_id"]]["gold_aliases"]
+
+
+@pytest.mark.parametrize("root_first", [False, True])
+def test_max5_training_startup_resolves_bundle_helpers_in_fresh_process(root_first):
+    # A fresh process catches sys.path changes that a shared pytest module cache
+    # can hide. Stop just before the expensive CUDA stack is imported.
+    code = r'''
+import builtins, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+bundle = root / "gadi_sft_8b_starter"
+paths = [str(root), str(bundle), str(bundle / "scripts")] if sys.argv[2] == "1" else [str(bundle / "scripts"), str(bundle), str(root)]
+sys.path[:0] = paths
+from prepare_matched_8b_sft import expansion_rows
+prompt = (bundle / "prompts/equivalent_expansion_v1.txt").read_text()
+row = {"question_id": "q", "messages": [
+    {"role": "system", "content": prompt},
+    {"role": "user", "content": '{"question":"Which?","snippets":[]}'},
+    {"role": "assistant", "content": '{"answers":[{"answer":"A","relation_type":"original"}]}'}]}
+before = sys.path[:]
+expansion_rows([row], {"expansion_candidate_limit": 5})
+assert sys.path == before, "Max-five data transformation changed the Python import path"
+from run_expansion_sft_qwen3 import train
+original_import = builtins.__import__
+class ReachedCUDAImport(Exception): pass
+def guarded_import(name, *args, **kwargs):
+    if name == "unsloth":
+        raise ReachedCUDAImport()
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = guarded_import
+try:
+    train(None, {"execution_mode": "default"}, [], [], {})
+except ReachedCUDAImport:
+    from src.utility import training_execution
+    assert Path(training_execution.__file__).resolve() == bundle / "src/utility/training_execution.py"
+    print("Bundled startup helper resolved; CUDA not loaded")
+else:
+    raise AssertionError("Expected to reach CUDA import")
+'''
+    env = {**os.environ, "UNSLOTH_COMPILE_DISABLE": "0"}
+    result = subprocess.run([sys.executable, "-c", code, str(ROOT), str(int(root_first))],
+                            capture_output=True, text=True, cwd=ROOT, env=env)
+    assert result.returncode == 0, result.stderr

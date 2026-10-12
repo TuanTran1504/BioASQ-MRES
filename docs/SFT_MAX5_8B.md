@@ -52,6 +52,16 @@ Gadi rejected its noninteractive SSH authentication.
 
 ## Monitor
 
+The first max-five submission's smoke jobs 181021908, 181021911 and 181021914
+failed before model loading with `No module named src.utility.training_execution`.
+The max-five data converter imported an evaluation launcher that put the
+repository root ahead of the portable bundle in Python's search path. The
+repository's different `src` package then hid the bundled GPU helpers. Prompt
+conversion now imports a pure helper, and training explicitly prioritises the
+bundle root. Targets and training settings are unchanged. The dependent train
+and selection jobs never started. After pulling the fix, resubmit with
+`bash scripts/submit_sft_max5_8b.sh` to obtain fresh smoke/train/select jobs.
+
 ```bash
 record=$(ls -t outputs/sft_max5_8b/submission-*/jobs.tsv | head -n 1)
 cat "$record"

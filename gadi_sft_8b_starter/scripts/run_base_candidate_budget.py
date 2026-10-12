@@ -10,15 +10,9 @@ import sys
 from prepare_matched_8b_sft import ROOT, digest, read, records, write
 from run_matched_8b_evaluation import DEFAULT_CONFIG, validate_training_pair
 from run_extractive_expansion_8b import parse_equivalent_response
+from expansion_prompt_budget import five_prompt
 
 sys.path.insert(0, str(ROOT.parent))
-
-
-def five_prompt(ten):
-    if ten.count("up to TEN\nanswers TOTAL") != 1 or ten.count("Do not pad to ten:") != 1:
-        raise ValueError("Expected the established ten-candidate equivalent expansion prompt")
-    return ten.replace("up to TEN\nanswers TOTAL", "up to FIVE\nanswers TOTAL").replace(
-        "Do not pad to ten:", "Do not pad to five:")
 
 
 def prepare(destination, models):
