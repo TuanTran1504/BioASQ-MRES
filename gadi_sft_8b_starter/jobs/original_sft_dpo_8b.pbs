@@ -1,0 +1,27 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N original-sft-dpo
+
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache"
+export HF_HUB_CACHE="${HF_HOME}/hub"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+options=(--config "${DPO_CONFIG:?}" --mode "${DPO_MODE:?}" --model "${MODEL_KEY:?}" --full-dataset
+  --pair-strategy "${PAIR_STRATEGY:?}" --run-name "${MODEL_KEY}-${PAIR_STRATEGY}-${DPO_MODE}-${PBS_JOBID}")
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then options+=(--smoke-test); fi
+if [[ -n "${PREFERENCES:-}" ]]; then options+=(--preferences "$PREFERENCES"); fi
+python scripts/run_expansion_dpo_8b.py "${options[@]}"

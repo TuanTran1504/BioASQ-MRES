@@ -160,8 +160,11 @@ def validate_decisions(value, job):
 
 
 class BudgetClient:
-    def __init__(self, directory, maximum, api_key_file):
+    def __init__(self, directory, maximum, api_key_file, *, input_rate=None, output_rate=None, validator=None):
         self.directory, self.maximum, self.api_key_file = directory, maximum, api_key_file
+        self.input_rate = INPUT_RATE if input_rate is None else input_rate
+        self.output_rate = OUTPUT_RATE if output_rate is None else output_rate
+        self.validate = validate_decisions if validator is None else validator
         self.lock = threading.Lock()
         self.reserved = 0.0
         self.ledger = read(directory / 'spend-ledger.json') if (directory / 'spend-ledger.json').exists() else {'attempts': []}
@@ -176,7 +179,7 @@ class BudgetClient:
             envelope = read(cached)
             if envelope['payload'] != job['payload']:
                 raise ValueError('Cached payload differs')
-            return validate_decisions(envelope['decisions'], job)
+            return self.validate(envelope['decisions'], job)
         reserve = job['maximum_cost_reserve_usd']
         with self.lock:
             if self.blocked_reason:
@@ -216,14 +219,14 @@ class BudgetClient:
             usage = envelope.get('usage', {})
             if 'prompt_tokens' not in usage or 'completion_tokens' not in usage:
                 raise RuntimeError('Missing usage: reserve retained')
-            charge = usage['prompt_tokens'] * INPUT_RATE + usage['completion_tokens'] * OUTPUT_RATE
+            charge = usage['prompt_tokens'] * self.input_rate + usage['completion_tokens'] * self.output_rate
             if charge > reserve:
                 raise RuntimeError('Unexpected cost beyond conservative reserve')
             choice = envelope['choices'][0]
             if choice['finish_reason'] != 'stop' or choice['message'].get('refusal'):
                 raise RuntimeError('Incomplete or refused judgment')
             value = json.loads(choice['message']['content'])
-            result = validate_decisions(value, job)
+            result = self.validate(value, job)
             save(cached, {'payload': job['payload'], 'response': envelope, 'decisions': value})
             attempt.update(status='complete', usage=usage)
             return result

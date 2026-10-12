@@ -22,7 +22,18 @@ from run_single_answer_sampling import sample_seed
 
 def source_for(config, model):
     evaluation = read(ROOT / config["evaluation_config"])
-    return validate_training_pair(evaluation, model)["expansion"]
+    return validate_training_pair(evaluation, model)[config.get("formulation", "expansion")]
+
+
+def training_schedule(config, pair_count, smoke=False):
+    accumulation = 1 if smoke else config["gradient_accumulation_steps"]
+    steps = 2 if smoke else math.ceil(pair_count / accumulation) * int(config["num_train_epochs"])
+    if not smoke and steps < config.get("minimum_optimizer_steps", 1):
+        raise ValueError(f"Only {steps} planned updates; not enough reliable pairs for this protocol")
+    warmup = 0 if smoke else (math.ceil(steps * config["warmup_ratio"]) if "warmup_ratio" in config else 10)
+    if not smoke and warmup >= steps and "warmup_ratio" in config:
+        raise ValueError("Warm-up must finish before training ends")
+    return steps, warmup
 
 
 def render_preference(tokenizer, row, kwargs, maximum):
@@ -148,23 +159,34 @@ def generate(args, config, source, output, state):
                 if row["split"] != split:
                     continue
                 try:
-                    strict_answers(row["raw_response"])
+                    if config.get("formulation") == "original":
+                        from run_single_answer_sampling import parse_single_answer
+                        parse_single_answer(row["raw_response"])
+                    else:
+                        strict_answers(row["raw_response"])
                     valid += 1
                 except (ValueError, TypeError):
                     pass
             if not valid:
-                raise ValueError(f"No complete valid {split} expansion response in generation smoke")
+                raise ValueError(f"No complete valid {split} {config.get('formulation', 'expansion')} response in generation smoke")
 
 
 def train(args, config, source, output, state):
     preferences = Path(args.preferences).resolve()
-    manifest, splits = validate_pairs(preferences, config)
+    formulation = config.get("formulation", "expansion")
+    if formulation == "original":
+        from single_answer_dpo_data import validate_pairs as validate_single_pairs
+        manifest, splits = validate_single_pairs(preferences, config, args.pair_strategy)
+    else:
+        manifest, splits = validate_pairs(preferences, config)
     from matched_8b_provenance import validate_provenance
     recorded = manifest["banks"][args.model]["manifest"]["source"]
-    validate_provenance({"expansion": recorded}, {"expansion": source})
+    validate_provenance({formulation: recorded}, {formulation: source})
+    planned_steps, warmup = training_schedule(config, len(splits["train"]), args.smoke_test)
     state.update(preferences_manifest_sha256=digest(preferences / "manifest.json"),
                  preference_pair_counts=manifest["pair_counts"],
-                 reference="precomputed initial expansion SFT completion log probabilities",
+                 reference=f"precomputed initial {formulation} SFT completion log probabilities",
+                 planned_optimizer_steps=planned_steps, warmup_steps=warmup,
                  checkpoint_selection=config["checkpoint_selection"])
     write(output / "manifest.json", state)
     sys.path.insert(0, str(ROOT))
@@ -188,7 +210,7 @@ def train(args, config, source, output, state):
     model, tokenizer = loader.from_pretrained(**load_options)
     tokenizer = text_only_tokenizer(tokenizer)
     if set(getattr(model, "peft_config", {})) != {"default"}:
-        raise ValueError("Expected the existing expansion SFT adapter named default")
+        raise ValueError(f"Expected the existing {formulation} SFT adapter named default")
     loader.for_training(model, use_gradient_checkpointing="unsloth")
     model.set_adapter("default")
     trainable = []
@@ -253,7 +275,7 @@ def train(args, config, source, output, state):
         per_device_train_batch_size=1, per_device_eval_batch_size=1,
         gradient_accumulation_steps=1 if args.smoke_test else config["gradient_accumulation_steps"],
         num_train_epochs=config["num_train_epochs"], max_steps=2 if args.smoke_test else -1,
-        learning_rate=config["learning_rate"], warmup_steps=0 if args.smoke_test else 10,
+        learning_rate=config["learning_rate"], warmup_steps=warmup,
         weight_decay=0.01, fp16=True, bf16=False, gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False}, optim="adamw_8bit",
         eval_strategy="epoch", save_strategy="epoch", save_total_limit=2,
@@ -281,18 +303,26 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("validate", "generate", "train"), required=True)
     parser.add_argument("--model", choices=MODELS, required=True)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--pair-strategy", choices=("concept", "form", "mixed"), default="mixed")
     parser.add_argument("--preferences", type=Path)
     parser.add_argument("--full-dataset", action="store_true")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--run-name")
     args = parser.parse_args()
-    config = read(DEFAULT_CONFIG)
+    config = read(args.config)
     source = source_for(config, args.model)
     split_rows(config, args.full_dataset)
     if args.preferences:
-        manifest, _ = validate_pairs(args.preferences.resolve(), config)
+        if config.get("formulation") == "original":
+            from single_answer_dpo_data import validate_pairs as validate_single_pairs
+            manifest, pairs = validate_single_pairs(args.preferences.resolve(), config, args.pair_strategy)
+            training_schedule(config, len(pairs["train"]), args.smoke_test)
+        else:
+            manifest, _ = validate_pairs(args.preferences.resolve(), config)
         from matched_8b_provenance import validate_provenance
-        validate_provenance({"expansion": manifest["banks"][args.model]["manifest"]["source"]}, {"expansion": source})
+        formulation = config.get("formulation", "expansion")
+        validate_provenance({formulation: manifest["banks"][args.model]["manifest"]["source"]}, {formulation: source})
     if args.mode == "validate":
         return
     if args.mode == "train" and not args.preferences:
@@ -304,7 +334,8 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     state = {"status": "running", "phase": args.mode, "model_key": args.model,
              "source": source, "full_dataset": args.full_dataset, "smoke_test": args.smoke_test,
-             "dpo_config_sha256": digest(DEFAULT_CONFIG), "gold_blind_generation": True,
+             "dpo_config_sha256": digest(args.config), "gold_blind_generation": True,
+             "configuration": config, "formulation": config.get("formulation", "expansion"), "pair_strategy": args.pair_strategy,
              "package_versions": {n: version(n) for n in ("torch", "transformers", "peft", "unsloth")}}
     write(output / "manifest.json", state)
     configure_job_local_compiler_cache()

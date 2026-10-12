@@ -52,7 +52,7 @@ def split_rows(config, full=False):
     evaluation = read(ROOT / config["evaluation_config"])
     matrix = read(ROOT / evaluation["training_matrix"])
     validate(matrix)
-    source = ROOT / matrix["output_dataset"] / "expansion"
+    source = ROOT / matrix["output_dataset"] / config.get("formulation", "expansion")
     result = {}
     for split in ("train", "validation"):
         rows = sorted(records(source / (split + ".jsonl")), key=lambda r: r["question_id"])
