@@ -27,20 +27,23 @@ export HF_HOME="/scratch/nl78/${USER}/hf_cache"
 export HF_HUB_CACHE="${HF_HOME}/hub"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
-python scripts/prepare_matched_8b_sft.py --mode build
-submission="${PWD}/outputs/sft_dual_selection_8b/submission-$(date -u +%Y%m%d-%H%M%S)-$$"
+matrix="${DUAL_TRAINING_MATRIX:-configs/matched_8b_sft.json}"
+configuration="${DUAL_SELECTION_CONFIG:-configs/sft_dual_selection_8b.json}"
+output_root="${DUAL_OUTPUT_ROOT:-outputs/sft_dual_selection_8b}"
+python scripts/prepare_matched_8b_sft.py --mode build --config "$matrix"
+submission="${PWD}/${output_root}/submission-$(date -u +%Y%m%d-%H%M%S)-$$"
 if [[ "$submission" == *','* || "$submission" == *$'\n'* ]]; then
   echo 'Submission path cannot contain a comma or newline' >&2; exit 2
 fi
 # Verify data, historical backbone pins, scorer and all models before any qsub.
-python scripts/prepare_sft_dual_selection.py --submission-dir "$submission" --models "${models[@]}"
+python scripts/prepare_sft_dual_selection.py --config "$configuration" --submission-dir "$submission" --models "${models[@]}"
 declare -A reusable=()
 if [[ -n "$reuse_record" ]]; then
   if [[ ! -f "$reuse_record" ]]; then echo 'Smoke submission record not found' >&2; exit 2; fi
   for model in "${models[@]}"; do
     job=$(awk -F '\t' -v model="$model" 'NR>1 && $1==model && $2=="smoke" {print $3}' "$reuse_record")
     if [[ ! "$job" =~ ^[0-9]+\.gadi-pbs$ ]]; then echo "Expected one smoke job for $model" >&2; exit 2; fi
-    training_run="${PWD}/outputs/sft_dual_selection_8b/${model}-expansion-sft-${job}-smoke"
+    training_run="${PWD}/${output_root}/${model}-expansion-sft-${job}-smoke"
     stored_run=$(awk -F '\t' -v model="$model" 'NR>1 && $1==model && $2=="smoke" {print $5}' "$reuse_record")
     if [[ -n "$stored_run" ]]; then training_run="$stored_run"; fi
     python scripts/select_sft_epoch_checkpoints.py --model "$model" \
@@ -52,14 +55,14 @@ record="${submission}/jobs.tsv"
 printf 'model\tstage\tjob_id\tdepends_on\ttraining_run\n' > "$record"
 echo "Submission record: $record"
 for model in "${models[@]}"; do
-  smoke_env="MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=1"
+  smoke_env="MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=1,TRAIN_OUTPUT_ROOT=${output_root}"
   if [[ -n "${reusable[$model]:-}" ]]; then smoke_env+=",REUSE_TRAINING_RUN=${reusable[$model]}"; fi
   smoke="$(qsub -N "${model}-sft-dual-smoke" -l walltime=02:00:00 \
     -v "$smoke_env" jobs/train_sft_dual_selection_8b.pbs)"
   printf '%s\tsmoke\t%s\t\t%s\n' "$model" "$smoke" "${reusable[$model]:-}" | tee -a "$record"
   full="$(qsub -N "${model}-sft-dual-train" -W "depend=afterok:${smoke}" \
-    -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=0" jobs/train_sft_dual_selection_8b.pbs)"
-  training_run="${PWD}/outputs/sft_dual_selection_8b/${model}-expansion-sft-${full}"
+    -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},SMOKE_TEST=0,TRAIN_OUTPUT_ROOT=${output_root}" jobs/train_sft_dual_selection_8b.pbs)"
+  training_run="${PWD}/${output_root}/${model}-expansion-sft-${full}"
   printf '%s\ttrain\t%s\t%s\t%s\n' "$model" "$full" "$smoke" "$training_run" | tee -a "$record"
   select="$(qsub -N "${model}-sft-dual-select" -W "depend=afterok:${full}" \
     -v "MODEL_KEY=${model},SUBMISSION_DIR=${submission},TRAINING_RUN=${training_run}" jobs/select_sft_dual_selection_8b.pbs)"

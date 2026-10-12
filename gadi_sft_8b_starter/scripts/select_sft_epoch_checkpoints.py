@@ -117,6 +117,8 @@ def validate_run(directory, submission, model, smoke):
         raise ValueError("Full run must use all fitting and validation questions")
     if saved.get("execution_mode", "default") != ("eager" if model == "ministral3" else "default"):
         raise ValueError("Unexpected model execution mode")
+    if saved.get("max_candidates", 10) != prepared["configuration"]["selection"].get("max_candidates", 10):
+        raise ValueError("Generation candidate budget differs from the trained prompt/targets")
     if state["dataset_validation"]["validation_sha256"] != digest(ROOT / saved["eval_input"]):
         raise ValueError("Teacher validation targets changed after training")
     examples = records(submission / "validation_examples.jsonl")

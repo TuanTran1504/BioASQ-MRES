@@ -40,6 +40,27 @@ def original_rows(rows, prompt):
     return result
 
 
+def expansion_rows(rows, matrix):
+    """Derive a capped prompt/target variant while retaining question order and evidence."""
+    limit = matrix.get("expansion_candidate_limit", 10)
+    if limit not in (5, 10):
+        raise ValueError("SFT expansion budget must be five or ten")
+    if limit == 10:
+        return rows
+    from run_base_candidate_budget import five_prompt
+    result = []
+    for row in rows:
+        messages = row["messages"]
+        target = json.loads(messages[-1]["content"])
+        assistant = dict(messages[-1])
+        if len(target["answers"]) > limit:
+            assistant["content"] = json.dumps({"answers": target["answers"][:limit]}, ensure_ascii=False)
+        result.append({**row, "messages": [
+            {"role": "system", "content": five_prompt(messages[0]["content"])},
+            dict(messages[1]), assistant]})
+    return result
+
+
 def load_source(matrix):
     source = (ROOT / matrix["source_dataset"]).resolve()
     if digest(source / "manifest.json") != matrix["source_manifest_sha256"]:
@@ -71,6 +92,7 @@ def load_source(matrix):
 
 def build(matrix):
     source, expanded, dev_path = load_source(matrix)
+    expanded = {split: expansion_rows(rows, matrix) for split, rows in expanded.items()}
     destination = (ROOT / matrix["output_dataset"]).resolve()
     prompt_path = ROOT / matrix["single_answer_prompt"]
     prompt = prompt_path.read_text(encoding="utf-8").strip()
@@ -94,13 +116,16 @@ def build(matrix):
             "internal_train_questions": 1296, "internal_validation_questions": 144,
             "outer_dev_questions": 160, "official_test_overlap": 0, "train_dev_overlap": 0,
             "output_sha256": hashes,
-            "target_policy": "one first official alias" if formulation == "original" else "unchanged validated expansion targets",
+            "target_policy": "one first official alias" if formulation == "original" else (
+                "first five validated expressions, primary retained" if matrix.get("expansion_candidate_limit") == 5
+                else "unchanged validated expansion targets"),
             "input_policy": "identical question/snippet JSON; formulation-specific system instructions"})
     validate(matrix)
 
 
 def validate(matrix):
     source, expected, dev_path = load_source(matrix)
+    expected = {split: expansion_rows(rows, matrix) for split, rows in expected.items()}
     destination = (ROOT / matrix["output_dataset"]).resolve()
     prompt_path = ROOT / matrix["single_answer_prompt"]
     expected_original = {split: original_rows(rows, prompt_path.read_text(encoding="utf-8").strip())
@@ -127,7 +152,9 @@ def validate(matrix):
 
 def resolved_config(matrix, model_key, formulation):
     dataset = str(Path(matrix["output_dataset"]) / formulation)
-    return {**matrix["common"], **matrix["models"][model_key], "formulation": formulation,
+    budget = {"max_candidates": matrix["expansion_candidate_limit"]} if (
+        formulation == "expansion" and "expansion_candidate_limit" in matrix) else {}
+    return {**matrix["common"], **matrix["models"][model_key], **budget, "formulation": formulation,
             "train_input": dataset + "/train.jsonl", "eval_input": dataset + "/validation.jsonl",
             "dataset_manifest": dataset + "/manifest.json"}
 

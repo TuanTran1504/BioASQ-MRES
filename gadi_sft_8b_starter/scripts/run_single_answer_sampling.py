@@ -182,7 +182,8 @@ def main():
                 answer, error, details = None, None, {}
                 try:
                     if expansion:
-                        answers, rejected, issues, compliant = parse_equivalent_response(raw)
+                        answers, rejected, issues, compliant = parse_equivalent_response(
+                            raw, max_candidates=int(config.get("max_candidates", 10)))
                         details = {"answers": answers, "candidate_limit_applied": any(
                             r.get("reason") == "unique_candidate_limit_exceeded" for r in rejected),
                                    "schema_compliant": compliant,

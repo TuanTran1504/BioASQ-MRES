@@ -30,7 +30,8 @@ if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
   run_name="${run_name}-smoke"
   options+=(--smoke-test)
 fi
-training_run="outputs/sft_dual_selection_8b/${run_name}"
+output_root="${TRAIN_OUTPUT_ROOT:-outputs/sft_dual_selection_8b}"
+training_run="${output_root}/${run_name}"
 if [[ -n "${REUSE_TRAINING_RUN:-}" ]]; then
   if [[ "${SMOKE_TEST:-0}" != 1 ]]; then echo 'Reuse is restricted to smoke training' >&2; exit 2; fi
   training_run="$REUSE_TRAINING_RUN"
@@ -38,7 +39,7 @@ else
   python scripts/run_matched_8b_sft.py \
     --model "$MODEL_KEY" --formulation expansion --execution-mode "$mode" \
     --config "${SUBMISSION_DIR}/training_matrix.json" --pins "${SUBMISSION_DIR}/base_pins.json" \
-    --output-root outputs/sft_dual_selection_8b --run-name "$run_name" "${options[@]}"
+    --output-root "$output_root" --run-name "$run_name" "${options[@]}"
 fi
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
   python scripts/select_sft_epoch_checkpoints.py \

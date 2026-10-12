@@ -1,0 +1,24 @@
+{
+  "description": "Fresh max-five expansion SFT with separate coverage/loss selections.",
+  "training_matrix": "configs/matched_8b_sft_max5.json",
+  "historical_training_matrix": "configs/matched_8b_sft.json",
+  "baseline_evaluation_config": "configs/matched_8b_evaluation.json",
+  "output_root": "outputs/sft_max5_8b",
+  "models": ["llama31", "qwen3", "ministral3"],
+  "selection": {
+    "partition": "all 144 internal-validation questions, never outer dev or test",
+    "primary": "coverage_full_pool",
+    "coverage_tie_break": "coverage_at10, then earliest epoch",
+    "loss_tie_break": "earliest epoch",
+    "max_candidates": 5,
+    "max_seq_length": 8192,
+    "max_new_tokens": 512,
+    "num_generations": 10,
+    "temperature": 0.8,
+    "top_p": 0.95,
+    "top_k": 0,
+    "seed": 3407,
+    "require_all_snippets": true,
+    "mark_snippets": false
+  }
+}

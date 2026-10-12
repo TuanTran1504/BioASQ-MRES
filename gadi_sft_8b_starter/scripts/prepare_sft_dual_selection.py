@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from prepare_matched_8b_sft import ROOT, digest, load_source, read, records, write
+from prepare_matched_8b_sft import ROOT, digest, expansion_rows, load_source, read, records, write
 from run_matched_8b_evaluation import validate_training_pair
 
 DEFAULT_CONFIG = ROOT / "configs/sft_dual_selection_8b.json"
@@ -48,6 +48,8 @@ def prepare(config_path, destination, models):
         raise FileExistsError(destination)
     matrix_path = ROOT / config["training_matrix"]
     matrix = read(matrix_path)
+    if matrix.get("expansion_candidate_limit", 10) != config["selection"].get("max_candidates", 10):
+        raise ValueError("Training targets and validation generation must use the same candidate budget")
     source, splits, _ = load_source(matrix)
     audit_path = source / "audit.jsonl"
     if digest(audit_path) != read(source / "manifest.json")["output_sha256"]["audit.jsonl"]:
@@ -55,6 +57,11 @@ def prepare(config_path, destination, models):
     audit = records(audit_path)
     if {r["question_id"] for r in audit} != {r["question_id"] for rows in splits.values() for r in rows}:
         raise ValueError("Audit question membership differs from the fitting/validation split")
+    aliases = {r["question_id"]: r["gold_aliases"] for r in audit}
+    splits = {split: expansion_rows(rows, matrix) for split, rows in splits.items()}
+    if any(json.loads(r["messages"][-1]["content"])["answers"][0]["answer"] not in aliases[r["question_id"]]
+           for rows in splits.values() for r in rows):
+        raise ValueError("Every fitting/validation target must retain its first official alias")
     examples = validation_examples(splits["validation"], audit)
     if len(examples) != 144:
         raise ValueError("Expected all 144 internal-validation questions")
@@ -65,8 +72,13 @@ def prepare(config_path, destination, models):
     if epochs != 3 or matrix["common"]["save_strategy"] != "epoch" or matrix["common"]["early_stopping_patience"] != 0:
         raise ValueError("This protocol requires three complete epochs and no early stopping")
     baseline = read(ROOT / config["baseline_evaluation_config"])
-    if baseline["training_matrix"] != config["training_matrix"]:
+    historical_path = config.get("historical_training_matrix", config["training_matrix"])
+    if baseline["training_matrix"] != historical_path:
         raise ValueError("Historical base pins refer to a different training matrix")
+    historical = read(ROOT / historical_path)
+    for field in ("source_dataset", "source_manifest_sha256", "outer_dev", "single_answer_prompt", "common", "models"):
+        if matrix[field] != historical[field]:
+            raise ValueError(f"Budget experiment changes historical training settings: {field}")
     provenance = {model: validate_training_pair(baseline, model)["expansion"] for model in models}
     from src.utility.bioasq_official import _conda_executable, _official_adapter_classes
     subprocess.run([*_conda_executable("java"), "-version"], check=True)
@@ -87,6 +99,7 @@ def prepare(config_path, destination, models):
     write(destination / "manifest.json", {"status": "ready", "models": models,
         "configuration": config, "configuration_sha256": digest(config_path),
         "training_matrix_sha256": digest(matrix_output), "source_matrix_sha256": digest(matrix_path),
+        "historical_matrix_sha256": digest(ROOT / historical_path),
         "base_pins_sha256": digest(destination / "base_pins.json"),
         "validation_examples_sha256": digest(destination / "validation_examples.jsonl"),
         "expansion_prompt_sha256": digest(destination / "expansion_prompt.txt"),

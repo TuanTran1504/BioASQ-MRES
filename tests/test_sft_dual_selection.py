@@ -182,7 +182,8 @@ def test_selection_exports_two_winners_without_retraining(tmp_path, monkeypatch)
 
 @pytest.mark.parametrize("fail_preflight,reuse,stored_path", [(False, False, False), (True, False, False),
                                                           (False, True, False), (False, True, True)])
-def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_preflight, reuse, stored_path):
+@pytest.mark.parametrize("max5", [False, True])
+def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_preflight, reuse, stored_path, max5):
     bash = Path("C:/Program Files/Git/bin/bash.exe")
     executable = str(bash) if bash.exists() else shutil.which("bash")
     if not executable:
@@ -198,6 +199,9 @@ def test_submission_dependencies_and_preflight_fail_closed(tmp_path, fail_prefli
     counter.write_text("0")
     environment = {**os.environ, "TEST_LOG": log.as_posix(), "TEST_COUNTER": counter.as_posix(),
                    "FAIL_PREFLIGHT": "1" if fail_preflight else "0", "TEST_USER": "scheduler-test"}
+    if max5:
+        environment.update(DUAL_TRAINING_MATRIX="configs/matched_8b_sft_max5.json",
+                           DUAL_SELECTION_CONFIG="configs/sft_max5_selection_8b.json", DUAL_OUTPUT_ROOT="outputs/sft_max5_8b")
     arguments = []
     if reuse:
         old_record = tmp_path / "old-jobs.tsv"
@@ -247,7 +251,10 @@ shift
             if stored_path:
                 assert f"REUSE_TRAINING_RUN=/saved/{model}-original-smoke" in lines[3 * i]
             assert "REUSE_TRAINING_RUN=" not in lines[3 * i + 1]
-        jobs = next(bundle.glob("outputs/sft_dual_selection_8b/submission-*/jobs.tsv"))
+            expected_root = "outputs/sft_max5_8b" if max5 else "outputs/sft_dual_selection_8b"
+            assert f"TRAIN_OUTPUT_ROOT={expected_root}" in lines[3 * i + 1]
+            assert expected_root in lines[3 * i + 2]
+        jobs = next(bundle.glob(f"{expected_root}/submission-*/jobs.tsv"))
         assert len(jobs.read_text().splitlines()) == 10
 
 
