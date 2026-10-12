@@ -6,6 +6,9 @@ from completed base-budget jobs 180988387, 180988389 and 180988391 respectively.
 The new prompt retains their grounding instructions and JSON answer schema, then
 requests exactly one concise expression marked `original`, without alternatives.
 It does not use the historical tagged-answer SFT prompt or load trained adapters.
+For a same-prompt before/after original SFT comparison, use the separate
+[base/original SFT workflow](BASE_ORIGINAL_PROMPT.md). The JSON one-answer scores
+here should not be used as that comparison's base baseline.
 
 Use the same 6,144 total / 512 output token limits, greedy decoding, disabled Qwen
 thinking and Ministral eager backend. Keeping the output token allowance fixed

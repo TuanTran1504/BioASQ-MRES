@@ -14,6 +14,13 @@ compares greedy single-answer SFT, ten sampled single answers and greedy expansi
 SFT on the same 160 dev questions, with official scores and paired comparisons.
 Select `ministral3` explicitly for its completed eager recovery adapters.
 
+For a matched before/after original SFT comparison, use the
+[base versus original SFT evaluation](../docs/BASE_ORIGINAL_PROMPT.md):
+`bash scripts/submit_base_original_prompt.sh`. It evaluates all three base
+checkpoints and original SFT adapters with the exact tagged-answer prompt,
+identical greedy settings and complete snippets. Input allocation is sized to
+the actual full prompts, with no fixed input cap or truncation.
+
 The [ten-sample expansion SFT evaluation](docs/EXPANSION_SAMPLING_8B.md) adds ten
 stochastic expansion responses per question for those completed adapters. It
 reuses the baseline runs and reports fixed top-ten and full-pool coverage separately.

@@ -4,6 +4,7 @@
 import argparse
 import gc
 import hashlib
+import json
 import re
 import time
 from pathlib import Path
@@ -89,7 +90,15 @@ def prepare_prompts(tokenizer, prompt, examples, config):
         # Historical adapters used markers; fresh matched 8B SFT did not.
         marked = prompt_example(example, config)
         text = render_prompt(tokenizer, prompt, marked, config.get("chat_template_kwargs", {}))
-        count = input_token_count(tokenize_text(tokenizer, text, add_special_tokens=True))
+        encoded = tokenize_text(tokenizer, text, add_special_tokens=True)
+        count = input_token_count(encoded)
+        expected = config.get("expected_prompt_tokens", {}).get(example["question_id"])
+        if expected is not None and count != expected:
+            raise ValueError(f"{example['question_id']}: runtime tokenizer differs from full-input preflight")
+        expected_hash = config.get("expected_prompt_ids_sha256", {}).get(example["question_id"])
+        if expected_hash is not None and hashlib.sha256(json.dumps(
+                encoded["input_ids"], separators=(",", ":")).encode()).hexdigest() != expected_hash:
+            raise ValueError(f"{example['question_id']}: runtime input tokens differ from full-input preflight")
         if count > budget:
             raise ValueError(f"{example['question_id']}: all snippets exceed {budget} prompt tokens")
         prepared.append((example, text, count))
