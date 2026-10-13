@@ -183,6 +183,11 @@ def train(args, config, source, output, state):
     recorded = manifest["banks"][args.model]["manifest"]["source"]
     validate_provenance({formulation: recorded}, {formulation: source})
     planned_steps, warmup = training_schedule(config, len(splits["train"]), args.smoke_test)
+    epoch_mrr = bool(config.get("epoch_validation_mrr", False))
+    if epoch_mrr and formulation != "original":
+        raise ValueError("Epoch MRR selection currently requires original single-answer DPO")
+    if epoch_mrr and args.smoke_test:
+        planned_steps = 4  # Two complete tiny epochs exercise generation and return to training.
     state.update(preferences_manifest_sha256=digest(preferences / "manifest.json"),
                  preference_pair_counts=manifest["pair_counts"],
                  reference=f"precomputed initial {formulation} SFT completion log probabilities",
@@ -234,7 +239,7 @@ def train(args, config, source, output, state):
     if args.smoke_test:
         # Exercise the longest selected pairs to catch GPU memory failures early.
         tokenized = {s: sorted(rows, key=lambda r: max(len(r[k + "_input_ids"]) for k in ("chosen", "rejected")),
-                               reverse=True)[:4] for s, rows in tokenized.items()}
+                               reverse=True)[:2 if epoch_mrr else 4] for s, rows in tokenized.items()}
     collator = lambda rows: collate_pairs(rows, tokenizer.pad_token_id, torch)
     device = next(model.parameters()).device
     reference_rows = []
@@ -256,9 +261,27 @@ def train(args, config, source, output, state):
     write_jsonl(output / "reference_logps.jsonl", reference_rows)
     state["reference_logps_sha256"] = digest(output / "reference_logps.jsonl")
     state["phase"] = "train"
+    tracker = None
+    if epoch_mrr:
+        from original_dpo_checkpoint_selection import EpochMRRTracker
+        tracker = EpochMRRTracker(config, source, output, args.smoke_test,
+                                 restore_for_training=lambda: loader.for_training(model, use_gradient_checkpointing="unsloth"))
+        state["mrr_validation_panel_question_ids"] = [r["question_id"] for r in tracker.examples]
+        state["mrr_validation_question_count"] = 4 if args.smoke_test else 144
     write(output / "manifest.json", state)
 
     class ExpansionDPOTrainer(Trainer):
+        def evaluate(self, *evaluation_args, **evaluation_kwargs):
+            metrics = super().evaluate(*evaluation_args, **evaluation_kwargs)
+            if tracker is not None:
+                value = tracker.evaluate(self.model, tokenizer, float(self.state.epoch),
+                                         self.state.global_step, float(metrics["eval_loss"]), torch)
+                metrics["eval_validation_mrr"] = value
+                self.log({"eval_validation_mrr": value})
+                print(f"Epoch {self.state.epoch}: validation preference loss={metrics['eval_loss']:.6f}, "
+                      f"official validation MRR={value:.6f}", flush=True)
+            return metrics
+
         def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
             values = {}
             for side in ("chosen", "rejected"):
@@ -274,11 +297,11 @@ def train(args, config, source, output, state):
     arguments = TrainingArguments(output_dir=str(output / "trainer_output"),
         per_device_train_batch_size=1, per_device_eval_batch_size=1,
         gradient_accumulation_steps=1 if args.smoke_test else config["gradient_accumulation_steps"],
-        num_train_epochs=config["num_train_epochs"], max_steps=2 if args.smoke_test else -1,
+        num_train_epochs=config["num_train_epochs"], max_steps=planned_steps if args.smoke_test else -1,
         learning_rate=config["learning_rate"], warmup_steps=warmup,
         weight_decay=0.01, fp16=True, bf16=False, gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False}, optim="adamw_8bit",
-        eval_strategy="epoch", save_strategy="epoch", save_total_limit=2,
+        eval_strategy="epoch", save_strategy="epoch", save_total_limit=int(config["num_train_epochs"]) if epoch_mrr else 2,
         load_best_model_at_end=True, metric_for_best_model="eval_loss", greater_is_better=False,
         remove_unused_columns=False, report_to="none", logging_steps=1, seed=config["seed"],
         prediction_loss_only=True, label_names=["chosen_labels", "rejected_labels"])
@@ -296,6 +319,11 @@ def train(args, config, source, output, state):
                  global_steps=trainer.state.global_step,
                  trained_pair_counts={s: len(v) for s, v in tokenized.items()},
                  adapter_files_sha256={p.name: digest(p) for p in (output / "adapter").iterdir() if p.is_file()})
+    if tracker is not None:
+        from original_dpo_checkpoint_selection import export_selected_adapters
+        state["selected_adapters"] = export_selected_adapters(output, tracker.rows, int(config["num_train_epochs"]))
+        state["mrr_validation_question_ids"] = [r[0]["question_id"] for r in tracker.prepared]
+        state["epoch_selection_scores_sha256"] = digest(output / "epoch_selection_scores.json")
     write(output / "training_log.json", trainer.state.log_history)
 
 
@@ -324,6 +352,10 @@ def main():
         formulation = config.get("formulation", "expansion")
         validate_provenance({formulation: manifest["banks"][args.model]["manifest"]["source"]}, {formulation: source})
     if args.mode == "validate":
+        if config.get("epoch_validation_mrr"):
+            from original_dpo_checkpoint_selection import validation_examples, check_scoring_runtime
+            validation_examples(config)
+            check_scoring_runtime()
         return
     if args.mode == "train" and not args.preferences:
         parser.error("Training requires --preferences with reviewed, validated pairs")
@@ -335,6 +367,7 @@ def main():
     state = {"status": "running", "phase": args.mode, "model_key": args.model,
              "source": source, "full_dataset": args.full_dataset, "smoke_test": args.smoke_test,
              "dpo_config_sha256": digest(args.config), "gold_blind_generation": True,
+             "dpo_config_path": str(args.config.resolve()),
              "configuration": config, "formulation": config.get("formulation", "expansion"), "pair_strategy": args.pair_strategy,
              "package_versions": {n: version(n) for n in ("torch", "transformers", "peft", "unsloth")}}
     write(output / "manifest.json", state)

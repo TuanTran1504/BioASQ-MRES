@@ -362,3 +362,20 @@ smoke run is used only to validate execution and is not used to estimate accurac
 The cross-validation result is exploratory because the candidate pool and its
 formatting branches were selected using this development set. Do not report a model
 trained on all 160 questions as independently evaluated on the same questions.
+
+## Original single-answer DPO with epoch MRR selection
+
+The [original SFT DPO guide](../docs/ORIGINAL_SFT_DPO_8B.md) describes the validated
+preference package, which is transferred separately from Git. Train C3 > C1 and
+C3 > C2 independently for Llama, Qwen3 and Ministral with:
+
+```bash
+bash scripts/submit_original_sft_dpo_8b.sh train \
+  outputs/original_sft_dpo_8b/preferences-mini-v1 separate --select-mrr
+```
+
+Each epoch receives official greedy MRR on the same 144 internal-validation
+questions. Both the best-MRR and best-loss adapters are exported and subsequently
+compared with SFT on dev160. This submits six independent conditions and 18 jobs
+including smoke and dependent evaluations; training outputs use
+`outputs/original_sft_dpo_selection_8b`.

@@ -1,0 +1,32 @@
+{
+  "formulation": "original",
+  "evaluation_config": "configs/matched_8b_evaluation.json",
+  "output_root": "outputs/original_sft_dpo_selection_8b",
+  "seed": 3407,
+  "pilot_questions": {
+    "train": 100,
+    "validation": 32
+  },
+  "sampled_responses": 4,
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "max_seq_length": 8704,
+  "max_new_tokens": 128,
+  "max_pairs_per_question": 2,
+  "beta": 0.1,
+  "learning_rate": 5e-06,
+  "num_train_epochs": 2,
+  "gradient_accumulation_steps": 16,
+  "warmup_ratio": 0.05,
+  "minimum_optimizer_steps": 10,
+  "checkpoint_selection": "Independent best internal-validation preference loss and best greedy official MRR over all 144 internal-validation questions; earliest epoch wins ties",
+  "judge": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "max_usd": 10,
+    "input_per_million_usd": 0.4,
+    "output_per_million_usd": 1.6,
+    "pricing_source": "https://developers.openai.com/api/docs/models/gpt-4.1-mini"
+  },
+  "evaluation_output_root": "outputs/original_sft_dpo_selection_evaluation",
+  "epoch_validation_mrr": true
+}

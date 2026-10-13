@@ -6,10 +6,11 @@ import subprocess
 import pytest
 
 
-@pytest.mark.parametrize("mode,strategy,fail,expected", [("generate", "mixed", False, 6),
-    ("generate", "mixed", True, 0), ("train", "mixed", False, 9), ("train", "all", False, 27),
-    ("train", "all", True, 0)])
-def test_original_dpo_dependencies_and_preflight(tmp_path, mode, strategy, fail, expected):
+@pytest.mark.parametrize("mode,strategy,fail,expected,select_mrr", [("generate", "mixed", False, 6, False),
+    ("generate", "mixed", True, 0, False), ("train", "mixed", False, 9, False), ("train", "all", False, 27, False),
+    ("train", "all", True, 0, False), ("train", "separate", False, 18, True),
+    ("train", "separate", True, 0, True)])
+def test_original_dpo_dependencies_and_preflight(tmp_path, mode, strategy, fail, expected, select_mrr):
     root = Path(__file__).resolve().parents[1]
     path = Path("C:/Program Files/Git/bin/bash.exe")
     bash = str(path) if path.exists() else shutil.which("bash")
@@ -37,6 +38,8 @@ qsub() {
     preferences = tmp_path / "preferences"
     preferences.mkdir()
     arguments = [mode, *([preferences.as_posix(), strategy] if mode == "train" else [])]
+    if select_mrr:
+        arguments.append('--select-mrr')
     result = subprocess.run([bash, script.as_posix(), *arguments], text=True, capture_output=True,
         env={**os.environ, "TEST_USER": "test", "TEST_FAIL": str(int(fail)),
              "TEST_LOG": log.as_posix(), "TEST_COUNT": count.as_posix()})
@@ -46,7 +49,7 @@ qsub() {
     if not fail:
         assert result.returncode == 0, result.stderr
         first = next(i for i, row in enumerate(lines) if row.startswith("qsub "))
-        assert first == (9 if strategy == "all" else 3)
+        assert first == (9 if strategy == "all" else 6 if strategy == "separate" else 3)
         stride = 3 if mode == "train" else 2
         for i in range(0, len(jobs), stride):
             assert "SMOKE_TEST=1" in jobs[i]
@@ -54,6 +57,13 @@ qsub() {
             if mode == "train":
                 assert f"depend=afterok:{i+2}.gadi-pbs" in jobs[i+2]
                 assert "DPO_TRAINING_RUN=" in jobs[i+2]
-            assert "original_sft_dpo_8b.json" in jobs[i]
+            assert ("original_sft_dpo_selection_8b.json" if select_mrr else "original_sft_dpo_8b.json") in jobs[i]
+            if select_mrr:
+                assert "original_sft_dpo_selection_8b/" in jobs[i+2]
+                assert "DPO_CONFIG=" in jobs[i+2]
+        if strategy == 'separate':
+            assert all('PAIR_STRATEGY=mixed' not in row for row in jobs)
+            assert sum('SMOKE_TEST=1' in row and 'PAIR_STRATEGY=concept' in row for row in jobs) == 3
+            assert sum('SMOKE_TEST=1' in row and 'PAIR_STRATEGY=form' in row for row in jobs) == 3
     else:
         assert result.returncode != 0

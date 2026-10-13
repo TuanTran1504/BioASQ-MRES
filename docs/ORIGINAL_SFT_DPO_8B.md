@@ -230,3 +230,75 @@ bash scripts/submit_original_sft_dpo_8b.sh train \
 (nine jobs total). Use `all` instead only when requesting all nine strategy/model
 conditions (27 jobs). These commands are the next Gadi step; this dataset export
 does not establish that DPO training has run.
+
+## Separate concept/form DPO with epoch MRR selection
+
+The additional configuration `configs/original_sft_dpo_selection_8b.json` keeps
+the learning rate, beta, two epochs and 5% warm-up unchanged. The existing bank
+and preference configuration remain pinned; no regeneration or paid judging
+is required. This configuration uses a separate output root so earlier mixed
+and loss-only runs remain reproducible.
+
+After **every epoch**, each model produces one greedy tagged answer for **all
+144 internal-validation questions**, using the original SFT system prompt,
+native chat template, full evidence, 8,704 total-token budget and 128 output
+tokens. Gold aliases enter only official Java scoring, never generation prompts.
+Parse failures remain in the 144-question denominator. The same selection panel
+is used across models and preference types, including questions without pairs.
+This MRR equals exact accuracy because there is one submitted answer per question.
+
+The trainer retains both epoch checkpoints and exports two independently selected
+adapters: `selected_adapters/best_eval_loss` and
+`selected_adapters/best_validation_mrr`. Minimum validation preference loss and
+maximum official validation MRR choose their respective winners; the earliest
+epoch wins ties. Scores, per-question outputs, matching inputs and hashes are
+saved under `validation_mrr/checkpoint-STEP` and `epoch_selection_scores.json`.
+The main `adapter` remains the loss-selected export for legacy consumers.
+
+Generation restores the native training mode, parameter trainability,
+checkpointing state, cache settings and RNG before subsequent DPO updates.
+The new smoke run exercises **two complete tiny epochs**, including generation
+and scoring, so a return-to-training failure blocks the full job. The bundled
+Java 8-compatible scorer adapter also avoids requiring a JDK compiler when its
+source and evaluator hashes match.
+
+To run **C3 > C1 and C3 > C2 separately** for all three models, reuse the uploaded
+`preferences-mini-v1` package and run on Gadi:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_original_sft_dpo_8b.sh train \
+  outputs/original_sft_dpo_8b/preferences-mini-v1 separate --select-mrr
+```
+
+This creates six independent conditions (three models × two preference types),
+with **18 jobs total**: six smoke, six training, six dependent dev160 evaluations.
+Each condition starts from its own original SFT checkpoint and uses that same
+initial checkpoint as its frozen reference. Concept/form are independent arms,
+not sequential stages. The concept arm uses 200/25 training/validation pairs;
+the form arm uses 965/97. They have respectively 26/122 planned optimizer updates
+and 2/7 warm-up updates. Different pair counts and training budgets qualify
+comparisons between preference types.
+
+Each final dev160 evaluation compares original SFT, loss-selected DPO and
+MRR-selected DPO under identical greedy inference. If both selectors choose
+identical adapters/tokenizers, generation is reused and recorded explicitly.
+The **160 development questions never select checkpoints**. Reports include
+both DPO-minus-SFT contrasts and MRR-selected-minus-loss-selected differences.
+
+Training and submission records live in `outputs/original_sft_dpo_selection_8b`;
+final reports are in `outputs/original_sft_dpo_selection_evaluation`.
+
+```bash
+record=$(ls -t outputs/original_sft_dpo_selection_8b/submission-train-*.tsv | head -n 1)
+cat "$record"
+job_ids=$(awk -F '\t' 'NR>1 {print $4}' "$record")
+qstat -swx $job_ids
+qstat -fx $job_ids | grep -E 'Job Id|job_state|Exit_status|comment'
+```
+
+Local verification includes a two-epoch CPU integration test of the actual DPO
+Trainer override, official Java scoring, failed-answer denominators, native state
+restoration, separate checkpoint weights, three-arm reports and dependency chains.
+CUDA/Unsloth feasibility is checked by the Gadi smoke jobs.

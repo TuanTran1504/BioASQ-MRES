@@ -47,10 +47,10 @@ def validate_pair(run_dirs, expected):
     configs = [json.loads((path / "config.json").read_text()) for path in run_dirs]
     keys = ("input_sha256", "prompt_sha256", "max_seq_length", "max_new_tokens", "temperature",
             "require_all_snippets", "prompt_version", "response_mode", "chat_template_kwargs", "question_count")
-    if any(configs[0].get(k) != configs[1].get(k) for k in keys):
+    if any(configs[0].get(k) != config.get(k) for config in configs[1:] for k in keys):
         raise ValueError("Base and SFT evaluation settings differ")
     examples = [[json.loads(line) for line in (path / "examples.jsonl").read_text().splitlines() if line.strip()] for path in run_dirs]
-    if examples[0] != examples[1] or len(examples[0]) != expected:
+    if any(examples[0] != panel for panel in examples[1:]) or len(examples[0]) != expected:
         raise ValueError("Base and SFT must use identical questions, evidence and gold labels")
     ids = {row["question_id"] for row in examples[0]}
     if len(ids) != expected:

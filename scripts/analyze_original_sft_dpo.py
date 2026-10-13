@@ -23,10 +23,15 @@ def main():
         manifest = read(directory / "manifest.json")
         if manifest["status"] != "complete" or manifest["expected_questions"] != 160 or manifest["smoke_test"]:
             raise ValueError("Expected completed 160-question paired evaluation")
-        runs = {name: (directory / manifest["runs"][name]).resolve() for name in ("sft", "dpo")}
+        names = set(manifest["runs"])
+        dual = names == {"sft", "dpo_best_eval_loss", "dpo_best_validation_mrr"}
+        if names != {"sft", "dpo"} and not dual:
+            raise ValueError("Expected original SFT and either one DPO adapter or both selected DPO adapters")
+        runs = {name: (directory / path).resolve() for name, path in manifest["runs"].items()}
         validate_pair(list(runs.values()), 160)
         result = {"model_key": manifest["model_key"], "pair_strategy": manifest["pair_strategy"], "conditions": {},
-                  "scope": "Exploratory dev160 paired one-answer SFT/DPO comparison", "source_manifest_sha256": digest(directory / "manifest.json")}
+                  "scope": "Exploratory dev160 paired one-answer SFT/DPO comparison", "source_manifest_sha256": digest(directory / "manifest.json"),
+                  "checkpoint_selection": manifest.get("checkpoint_selection"), "selected_adapters": manifest.get("selected_adapters", {})}
         scored = {}
         for name, run in runs.items():
             for filename, value in manifest["arm_hashes"][name].items():
@@ -51,16 +56,31 @@ def main():
             if metrics["mrr_at5"] != metrics["strict_accuracy"]:
                 raise ValueError("Single-answer MRR must equal exact accuracy")
             result["conditions"][name] = {"metrics": metrics, "candidate_diagnostics": diagnostic, "efficiency": efficiency(run), "report": str(report)}
-        result["paired_contrasts"] = {metric: {"dpo_minus_sft": contrast["sft_minus_base"],
-            **{key: value for key, value in contrast.items() if key != "sft_minus_base"}}
-            for metric, contrast in paired_contrast(scored["sft"], scored["dpo"]).items()}
-        result["coverage_transitions"] = coverage_transitions(scored["sft"], scored["dpo"], "coverage_at1")
+        def contrast(a, b, label):
+            return {metric: {label: value["sft_minus_base"],
+                **{key: v for key, v in value.items() if key != "sft_minus_base"}}
+                for metric, value in paired_contrast(scored[a], scored[b]).items()}
+        if dual:
+            result["paired_contrasts"] = {name + "_minus_sft": contrast("sft", name, "dpo_minus_sft")
+                for name in ("dpo_best_eval_loss", "dpo_best_validation_mrr")}
+            result["paired_contrasts"]["mrr_selected_minus_loss_selected"] = contrast(
+                "dpo_best_eval_loss", "dpo_best_validation_mrr", "difference")
+            result["coverage_transitions"] = {name: coverage_transitions(scored["sft"], scored[name], "coverage_at1")
+                for name in ("dpo_best_eval_loss", "dpo_best_validation_mrr")}
+        else:
+            result["paired_contrasts"] = contrast("sft", "dpo", "dpo_minus_sft")
+            result["coverage_transitions"] = coverage_transitions(scored["sft"], scored["dpo"], "coverage_at1")
         write(directory / "comparison_summary.json", result)
         write(directory / "comparison_per_question.json", scored)
-        a, b = [result["conditions"][name]["metrics"]["mrr_at5"] for name in ("sft", "dpo")]
-        contrast = result["paired_contrasts"]["mrr_at5"]
-        print(f"{manifest['model_key']} {manifest['pair_strategy']}: SFT MRR={a:.6f}, DPO MRR={b:.6f}, "
-              f"delta={contrast['dpo_minus_sft']:+.6f}, 95% CI={contrast['paired_bootstrap_95ci']}")
+        a = result["conditions"]["sft"]["metrics"]["mrr_at5"]
+        for name in runs:
+            if name == "sft":
+                continue
+            b = result["conditions"][name]["metrics"]["mrr_at5"]
+            comparison = result["paired_contrasts"][name + "_minus_sft"] if dual else result["paired_contrasts"]
+            metric = comparison["mrr_at5"]
+            print(f"{manifest['model_key']} {manifest['pair_strategy']} {name}: SFT MRR={a:.6f}, DPO MRR={b:.6f}, "
+                  f"delta={metric['dpo_minus_sft']:+.6f}, 95% CI={metric['paired_bootstrap_95ci']}")
 
 
 if __name__ == "__main__":
