@@ -1,0 +1,69 @@
+{
+  "classifier": "answer-form-heuristics-v1",
+  "classification": "Surface heuristics, not human/LLM-validated semantic annotation; full_name includes plain names/expressions",
+  "splits": {
+    "train": {
+      "question_count": 1296,
+      "accepted_alias_count": 1624,
+      "alias_form_counts": {
+        "abbreviation": 188,
+        "full_name": 1169,
+        "combined_form": 58,
+        "numerical_expression": 87,
+        "descriptive_phrase": 122,
+        "other": 0
+      },
+      "questions_with_each_form": {
+        "abbreviation": 178,
+        "full_name": 984,
+        "combined_form": 56,
+        "numerical_expression": 67,
+        "descriptive_phrase": 118,
+        "other": 0
+      },
+      "questions_with_multiple_aliases": 204,
+      "questions_with_multiple_forms": 101,
+      "first_recorded_alias_forms": {
+        "full_name": 959,
+        "abbreviation": 120,
+        "combined_form": 46,
+        "numerical_expression": 60,
+        "descriptive_phrase": 111
+      },
+      "aliases_flagged_for_review": 1238
+    },
+    "validation": {
+      "question_count": 144,
+      "accepted_alias_count": 178,
+      "alias_form_counts": {
+        "abbreviation": 15,
+        "full_name": 140,
+        "combined_form": 4,
+        "numerical_expression": 9,
+        "descriptive_phrase": 10,
+        "other": 0
+      },
+      "questions_with_each_form": {
+        "abbreviation": 15,
+        "full_name": 115,
+        "combined_form": 4,
+        "numerical_expression": 9,
+        "descriptive_phrase": 9,
+        "other": 0
+      },
+      "questions_with_multiple_aliases": 18,
+      "questions_with_multiple_forms": 8,
+      "first_recorded_alias_forms": {
+        "abbreviation": 12,
+        "full_name": 112,
+        "combined_form": 2,
+        "descriptive_phrase": 9,
+        "numerical_expression": 9
+      },
+      "aliases_flagged_for_review": 149
+    }
+  },
+  "source_manifest_sha256": "aa0e9c403f05114ee0f31726af4f311e9935f84424a1d7202f70de2917f435a0",
+  "development_questions_used": 0,
+  "ordering_comparisons": {}
+}
