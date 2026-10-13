@@ -1,0 +1,135 @@
+{
+  "status": "ready",
+  "response_count": 21600,
+  "question_count": 1440,
+  "reliable_response_count": 17361,
+  "class_counts": {
+    "C2": 7595,
+    "C3": 8844,
+    "C1": 922
+  },
+  "exclusions": {
+    "uncertain_or_invalid_judgment": 3770,
+    "incorrectness_based_only_on_absent_support": 191,
+    "official_semantic_conflict": 276,
+    "invalid_single_answer_schema": 2
+  },
+  "by_model": {
+    "llama31": {
+      "reliable": 5709,
+      "classes": {
+        "C2": 2479,
+        "C3": 2903,
+        "C1": 327
+      }
+    },
+    "qwen3": {
+      "reliable": 5839,
+      "classes": {
+        "C2": 2673,
+        "C3": 2848,
+        "C1": 318
+      }
+    },
+    "ministral3": {
+      "reliable": 5813,
+      "classes": {
+        "C2": 2443,
+        "C3": 3093,
+        "C1": 277
+      }
+    }
+  },
+  "strategies": {
+    "concept": {
+      "pair_counts": {
+        "train": 200,
+        "validation": 25
+      },
+      "question_counts": {
+        "train": 144,
+        "validation": 18
+      },
+      "contrast_counts": {
+        "train": {
+          "concept": 200
+        },
+        "validation": {
+          "concept": 25
+        }
+      },
+      "optimizer_steps": 26,
+      "warmup_steps": 2
+    },
+    "form": {
+      "pair_counts": {
+        "train": 965,
+        "validation": 97
+      },
+      "question_counts": {
+        "train": 557,
+        "validation": 57
+      },
+      "contrast_counts": {
+        "train": {
+          "form": 965
+        },
+        "validation": {
+          "form": 97
+        }
+      },
+      "optimizer_steps": 122,
+      "warmup_steps": 7
+    },
+    "mixed": {
+      "pair_counts": {
+        "train": 1021,
+        "validation": 106
+      },
+      "question_counts": {
+        "train": 583,
+        "validation": 61
+      },
+      "contrast_counts": {
+        "train": {
+          "form": 870,
+          "concept": 151
+        },
+        "validation": {
+          "form": 87,
+          "concept": 19
+        }
+      },
+      "optimizer_steps": 128,
+      "warmup_steps": 7
+    }
+  },
+  "judge": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "max_usd": 10.0,
+    "billed_or_reserved_usd": 2.2814128000000005,
+    "judged_units": 8224,
+    "source_review_manifest_sha256": "2e59ed25db625a24d57ee537020947d738579217cce276aed324f624390a2632",
+    "system_sha256": "4fcbfeb3caafaed76f194c1d57d8a8575e92f57f574cee05072c3384204bdbd8",
+    "judge_manifest_sha256": "dffe02c0a81a6f0339577cce34f25b24e78cb08f8f28a659f91b37ead74ffa14",
+    "judge_ledger_sha256": "aa2f92b5ac56d3f8a88c4b236e59981dc6e3f5e3ca8421d55c02714efb1be5f9",
+    "annotation_sha256": "228023ecc72f99b77f4aae4079525d32a6ea780fc4ac2d827bf098b995f63fcd",
+    "label_policy": "High confidence, verified quotes, official conflicts excluded; absence-only incorrectness excluded",
+    "human_audit": false
+  },
+  "date": "2026-10-13",
+  "archive_sha256": "a4b65ef7e2572799b17503fb3637c2d4d2959fee654075be0f0c61a2eba72397",
+  "archive_bytes": 14712603,
+  "source_generation_jobs": {
+    "llama31": "181032357.gadi-pbs",
+    "qwen3": "181032359.gadi-pbs",
+    "ministral3": "181032361.gadi-pbs"
+  },
+  "original_dpo_config_sha256": "3a26ad55e4e9a0a2d18425c98f2358d93f792b8c590579289b3bcaf126acdd98",
+  "source_bank_response_sha256": {
+    "llama31": "9fda665dc61576418f46305599bdf0370525bd626ed224635dee546fb59f9a3f",
+    "qwen3": "9f0beeded0fd0d81e37e6f1f0d8de49bc21b4f56b1dfcf0edcaacfd634571c3f",
+    "ministral3": "9924ca7222d8a2eb5507f828ff40ff59cfb76b9868ea515633b82046c78b0efd"
+  },
+  "interpretation": "Automatically labelled original single-answer SFT preferences, not expansion DPO; no independent human audit. Counts are shared across all three target models. Strategies differ in contributing questions and update budgets."
+}

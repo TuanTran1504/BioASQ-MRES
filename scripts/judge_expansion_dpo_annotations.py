@@ -8,11 +8,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import random
 import re
 import threading
+import time
 import sys
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'gadi_sft_8b_starter/scripts'))
@@ -82,7 +85,41 @@ def sha(value):
 
 def save(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
+    try:
+        temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        for attempt in range(100):
+            try:
+                os.replace(temporary, path)
+                break
+            except PermissionError:
+                if os.name != 'nt' or attempt == 99:
+                    raise
+                # A concurrent Windows reader may briefly deny replacement.
+                time.sleep(0.01)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def is_dns_failure(error):
+    """DNS failures prove the request never reached the remote API."""
+    import socket
+    from urllib3 import exceptions
+    dns_types = (socket.gaierror,)
+    if hasattr(exceptions, 'NameResolutionError'):
+        dns_types += (exceptions.NameResolutionError,)
+    pending, seen = [error], set()
+    while pending:
+        item = pending.pop()
+        if id(item) in seen:
+            continue
+        seen.add(id(item))
+        if isinstance(item, dns_types):
+            return True
+        pending.extend(v for v in (getattr(item, 'reason', None), item.__cause__, item.__context__)
+                       if isinstance(v, BaseException))
+        pending.extend(v for v in item.args if isinstance(v, BaseException))
+    return False
 
 
 def prepare(rows, gold, batch_size=20):
@@ -195,6 +232,7 @@ class BudgetClient:
             attempt_number = len(self.ledger['attempts'])
             save(self.directory / 'spend-ledger.json', self.ledger)
         charge = reserve
+        outcome = {}
         try:
             import requests
             response = requests.post('https://api.openai.com/v1/chat/completions', json=job['payload'],
@@ -228,16 +266,21 @@ class BudgetClient:
             value = json.loads(choice['message']['content'])
             result = self.validate(value, job)
             save(cached, {'payload': job['payload'], 'response': envelope, 'decisions': value})
-            attempt.update(status='complete', usage=usage)
+            outcome.update(status='complete', usage=usage)
             return result
         except Exception as exc:
-            attempt.update(status='error', error_type=type(exc).__name__, reason=str(exc))
+            if is_dns_failure(exc):
+                charge = 0.0
+                with self.lock:
+                    self.blocked_reason = 'network_dns_failure'
+                outcome.update(no_remote_request=True)
+            outcome.update(status='error', error_type=type(exc).__name__, reason=str(exc))
             return {}
         finally:
             with self.lock:
                 self.reserved -= reserve
                 self.spent += charge
-                attempt['charged_or_reserved_usd'] = charge
+                attempt.update(outcome, charged_or_reserved_usd=charge)
                 save(self.directory / 'spend-ledger.json', self.ledger)
 
 

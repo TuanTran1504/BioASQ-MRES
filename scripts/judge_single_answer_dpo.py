@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 import json
 import os
+import re
 from pathlib import Path
 import sys
 
@@ -39,7 +40,7 @@ SCHEMA = object_schema({"decisions": {"type": "array", "items": object_schema({
     "rationale": {"type": "string"}})}})
 
 
-def prepare(rows, aliases):
+def prepare(rows, aliases, output_tokens_per_answer=320):
     units, contexts = {}, {}
     for row in rows:
         if row["excluded_reason"]:
@@ -59,13 +60,55 @@ def prepare(rows, aliases):
             public = {**context, "accepted_training_aliases": aliases[qid],
                 "candidates": [{"index": i, "answer": unit["answer"]} for i, (_, unit) in enumerate(chunk)]}
             payload = {"model": MODEL, "temperature": 0, "top_p": 1, "store": False,
-                "max_tokens": 256 + 160 * len(chunk), "messages": [{"role": "system", "content": SYSTEM},
+                "max_tokens": min(32768, 256 + output_tokens_per_answer * len(chunk)), "messages": [{"role": "system", "content": SYSTEM},
                     {"role": "user", "content": json.dumps(public, ensure_ascii=False)}],
                 "response_format": {"type": "json_schema", "json_schema": {"name": "single_answer_review", "strict": True, "schema": SCHEMA}}}
             reserve = (len(json.dumps(payload, ensure_ascii=False).encode()) + 2048) * INPUT_RATE + payload["max_tokens"] * OUTPUT_RATE
             jobs.append({"request_sha256": sha(payload), "unit_ids": [key for key, _ in chunk],
-                         "payload": payload, "maximum_cost_reserve_usd": reserve})
+                         "payload": payload, "maximum_cost_reserve_usd": reserve,
+                         "output_tokens_per_answer": output_tokens_per_answer})
     return jobs, units
+
+
+def unit_payload(job, index):
+    """Independent answer context, allowing only batch/index/allowance changes."""
+    payload = json.loads(json.dumps(job["payload"]))
+    payload.pop("max_tokens")
+    public = json.loads(payload["messages"][1]["content"])
+    public["candidates"] = [{"index": 0, "answer": public["candidates"][index]["answer"]}]
+    payload["messages"][1]["content"] = json.dumps(public, ensure_ascii=False, sort_keys=True)
+    return payload
+
+
+def reuse_completed_jobs(jobs, directory, split_pending=False):
+    """Reuse exact cached requests; optionally retry missing decisions singly."""
+    plan_path = directory / "plan.json"
+    previous = read(plan_path) if plan_path.exists() else []
+    expected = {uid: unit_payload(job, i) for job in jobs for i, uid in enumerate(job["unit_ids"])}
+    result, claimed, reused = [], set(), 0
+    for old in previous:
+        cached = directory / "cache" / (old["request_sha256"] + ".json")
+        if (cached.exists() and old["request_sha256"] == sha(old["payload"])
+                and all(uid in expected and uid not in claimed and unit_payload(old, i) == expected[uid]
+                        for i, uid in enumerate(old["unit_ids"]))):
+            result.append(old)
+            claimed.update(old["unit_ids"])
+            reused += 1
+    for job in jobs:
+        missing = [(i, uid) for i, uid in enumerate(job["unit_ids"]) if uid not in claimed]
+        if not missing:
+            continue
+        if not split_pending and len(missing) == len(job["unit_ids"]):
+            result.append(job)
+            continue
+        allowance = job.get("output_tokens_per_answer", (job["payload"]["max_tokens"] - 256) // len(job["unit_ids"]))
+        for i, uid in missing:
+            payload = unit_payload(job, i)
+            payload["max_tokens"] = 256 + allowance
+            reserve = (len(json.dumps(payload, ensure_ascii=False).encode()) + 2048) * INPUT_RATE + payload["max_tokens"] * OUTPUT_RATE
+            result.append({"request_sha256": sha(payload), "unit_ids": [uid], "payload": payload,
+                           "maximum_cost_reserve_usd": reserve})
+    return result, reused
 
 
 def validate_decisions(value, job):
@@ -125,10 +168,14 @@ def run_paid(jobs, directory, args):
                 pending.append(job)
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             futures = [pool.submit(client.call, job) for job in pending[:args.max_new_calls]]
+            successful = 0
             for number, future in enumerate(as_completed(futures), 1):
-                decisions.update(future.result())
+                result = future.result()
+                decisions.update(result)
+                successful += bool(result)
                 if number % 20 == 0:
-                    print(f"Finished {number}/{len(futures)}; spend/reserve US${client.spent + client.reserved:.4f}", flush=True)
+                    print(f"Processed {number}/{len(futures)}; successful requests={successful}; "
+                          f"spend/reserve US${client.spent + client.reserved:.4f}", flush=True)
         return decisions, client
 
 
@@ -140,6 +187,8 @@ def apply_labels(rows, decisions):
             output.append(row)
             continue
         decision = decisions.get(sha({"question_id": row["question_id"], "answer": row["answer"]}))
+        if decision is not None:
+            row["judge_decision"] = decision
         if decision is None:
             row["excluded_reason"] = "pending_or_failed_judgment"
         elif (decision["confidence"] != "high" or decision["validation_issues"] or
@@ -147,6 +196,12 @@ def apply_labels(rows, decisions):
             row["excluded_reason"] = "uncertain_or_invalid_judgment"
         elif row["official_accepted"] and decision["correctness"] != "correct":
             row["excluded_reason"] = "official_semantic_conflict"
+        elif (decision["correctness"] == "incorrect" and decision["support"] == "unsupported"
+              and not decision["evidence"] and re.search(
+                  r"no snippets?\b|no evidence\b|not (?:mentioned|found|supported)\b|"
+                  r"(?:snippets?|evidence) (?:do(?:es)? not|don't|doesn't|fail(?:s)? to) (?:support|mention|establish)",
+                  decision["rationale"], re.IGNORECASE)):
+            row["excluded_reason"] = "incorrectness_based_only_on_absent_support"
         else:
             row.update(reviewer="LLM:" + MODEL, confidence="high", evidence=decision["evidence"],
                        supported=decision["support"] == "supported", review_notes=decision["rationale"], judge_decision=decision,
@@ -165,12 +220,17 @@ def main():
     parser.add_argument("--max-usd", type=float, default=0)
     parser.add_argument("--max-new-calls", type=int, default=0)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--output-tokens-per-answer", type=int, default=320)
+    parser.add_argument("--retry-singletons", action="store_true",
+                        help="Retry uncached decisions individually without repeating completed judgments")
     parser.add_argument("--api-key-file", type=Path, default=ROOT / "open_ai_api.txt")
     args = parser.parse_args()
     if args.run and (not 0 < args.max_usd <= 10 or args.max_new_calls <= 0):
         parser.error("Paid run requires an explicit US$10-or-less cap and positive call limit")
-    if not 1 <= args.workers <= 4:
-        parser.error("Use one to four workers")
+    if not 1 <= args.workers <= 8:
+        parser.error("Use one to eight workers")
+    if not 160 <= args.output_tokens_per_answer <= 8192:
+        parser.error("Use 160 to 8192 output tokens per answer")
     config = read(DEFAULT_CONFIG)
     manifest = read(args.review_dir / "manifest.json")
     if manifest["status"] != "review" or manifest["dpo_config_sha256"] != digest(DEFAULT_CONFIG):
@@ -193,7 +253,7 @@ def main():
             raise ValueError("Review changed parsing")
         if row["answer"] and type(row["official_accepted"]) is not bool:
             raise ValueError("Official scoring is required before semantic judging")
-    jobs, units = prepare(rows, audit_aliases(config))
+    jobs, units = prepare(rows, audit_aliases(config), args.output_tokens_per_answer)
     state = {"status": "prepared", "model": MODEL, "review_manifest_sha256": digest(args.review_dir / "manifest.json"),
         "system_sha256": sha(SYSTEM), "planned_requests": len(jobs), "unit_count": len(units),
         "max_usd": args.max_usd, "pricing": config["judge"],
@@ -202,9 +262,16 @@ def main():
     directory = args.output_dir.resolve()
     if (directory / "manifest.json").exists():
         previous = read(directory / "manifest.json")
-        for key in ("model", "review_manifest_sha256", "system_sha256", "planned_requests", "unit_count"):
+        for key in ("model", "review_manifest_sha256", "system_sha256", "unit_count"):
             if previous[key] != state[key]:
                 raise ValueError("Cannot resume a changed judgment plan")
+    jobs, reused = reuse_completed_jobs(jobs, directory, args.retry_singletons)
+    state["planned_requests"] = len(jobs)
+    state.update(output_tokens_per_answer=args.output_tokens_per_answer, reused_completed_requests=reused,
+                 full_plan_maximum_reserve_usd=sum(j["maximum_cost_reserve_usd"] for j in jobs),
+                 remaining_maximum_reserve_usd=sum(j["maximum_cost_reserve_usd"] for j in jobs
+                     if not (directory / "cache" / (j["request_sha256"] + ".json")).exists()),
+                 label_policy="High confidence, verified quotes, official conflicts excluded; absence-only incorrectness excluded")
     save(directory / "plan.json", jobs)
     save(directory / "manifest.json", state)
     if not args.run:
@@ -217,7 +284,9 @@ def main():
     state.update(status="complete" if len(decisions) == len(units) else "partial", judged_units=len(decisions),
         reviewed_sha256=digest(path), resolved_responses=sum(not r["excluded_reason"] for r in annotated),
         exclusions=dict(Counter(r["excluded_reason"] for r in annotated if r["excluded_reason"])),
-        billed_or_reserved_usd=client.spent, blocking_reason=client.blocked_reason)
+        billed_or_reserved_usd=client.spent, blocking_reason=client.blocked_reason,
+        remaining_maximum_reserve_usd=sum(j["maximum_cost_reserve_usd"] for j in jobs
+            if not (directory / "cache" / (j["request_sha256"] + ".json")).exists()))
     save(directory / "manifest.json", state)
     print(json.dumps(state, indent=2))
 

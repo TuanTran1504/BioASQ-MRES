@@ -90,6 +90,15 @@ McNemar p = 0.5; this small development-set gain is not statistically conclusive
 
 ## Single-answer factoid SFT and DPO
 
+The 13 October 2026 original 8B SFT preference package is recorded in
+[`original_sft_dpo_preferences_mini_20261013.json`](original_sft_dpo_preferences_mini_20261013.json).
+GPT-4.1 mini judged all 8,224 unique question/answer units from 21,600 generated
+responses. Filtering retains 17,361 responses. Concept, form and mixed strategies
+have respectively 200/25, 965/97 and 1,021/106 train/validation pairs, shared across
+Llama, Qwen3 and Ministral. Conservative cost is US$2.28 under the US$10 cap.
+These are automatically labelled training data without a human audit, not new
+DPO evaluation results. See the [dataset and Gadi instructions](../docs/ORIGINAL_SFT_DPO_8B.md).
+
 All evaluations below use the fixed 160-question development set and the official
 BioASQ matcher. With one submitted answer, MRR equals exact accuracy.
 

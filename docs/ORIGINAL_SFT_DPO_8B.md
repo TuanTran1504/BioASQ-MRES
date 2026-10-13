@@ -67,6 +67,9 @@ The cap includes conservative reserves for failed/unknown-usage requests, uses
 full input pricing without assuming cache discounts, and is shared across all
 three banks. Concurrent paid processes in the same output folder are refused.
 Reuse the same judge folder on resume; do not create multiple US$10 runs.
+Ledger writes are atomic and serialized, with retries for brief Windows reader
+locks. DNS failures stop queued requests and are unbilled because no connection
+reached the API; other unknown-usage failures retain their conservative reserves.
 
 From the full repository root, prepare a no-cost plan first. The example assumes
 the package remains in the starter folder; use its actual local path if downloaded:
@@ -90,6 +93,14 @@ Use the configured local API key file or provide `--api-key-file` explicitly.
 Do not place credentials in Git or job variables. Partial judgments stay excluded;
 the cap is not a promise that every answer will be judged. A subsequent human
 sample audit is needed for publication-quality label claims.
+
+Incomplete batches can be resumed with `--retry-singletons --output-tokens-per-answer 640`.
+This retains exact cached requests and retries only missing answers individually,
+checking that question, evidence, aliases, model and judging instructions match.
+Up to eight workers share the same cap. Unsupported negative judgments with no
+quotes whose rationale only cites missing evidence are excluded: absent support
+does not establish scientific incorrectness. Excluded decisions remain available
+for audit alongside their unchanged raw answers.
 
 ## Pair construction
 
@@ -151,6 +162,71 @@ not an unseen confirmatory test. Reports live under
 Training records are `submission-train-*.tsv`; monitor them with column four as
 above. If generation finished but Java scoring failed in an evaluation, rerun
 `python ../scripts/analyze_original_sft_dpo.py ACTUAL_EVALUATION_DIRECTORY`.
-No generation, paid judging or training has been executed locally for this bank.
-Gadi submission requires the user's authenticated session; local SSH access is
-unavailable. Existing expansion DPO configurations and outputs remain intact.
+The three full banks completed on Gadi as jobs `181032357`, `181032359` and
+`181032361`. Their officially scored review package was downloaded locally on
+13 October 2026 for the authorized mini judging and preference construction.
+Gadi training submission requires the user's authenticated session; local SSH
+access is unavailable.
+
+## Completed mini-labelled dataset — 13 October 2026
+
+All **8,224 unique question/answer units** were judged. The 21,600 generated
+responses retain their raw text; **17,361** pass the training-label filters:
+8,844 C3, 7,595 C2 and 922 C1. Exclusions comprise 3,770 uncertain/invalid judgments,
+276 official/semantic conflicts, 191 absence-only incorrectness judgments and
+two invalid single-answer formats. No judgments remain pending.
+
+The shared ledger totals **US$2.2814128 billed or conservatively reserved**, below
+the authorized US$10 cap; this is an upper estimate at full input rates, including
+unknown-usage reserves, rather than a billing receipt. Failed DNS attempts never
+reached the API and are documented as unbilled. Completed requests are cached;
+remaining batch omissions and truncations were retried individually.
+
+| Strategy | Train pairs | Train questions | Validation pairs | Validation questions | Updates / warm-up |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Concept: C3 > C1 | 200 | 144 | 25 | 18 | 26 / 2 |
+| Form: C3 > C2 | 965 | 557 | 97 | 57 | 122 / 7 |
+| Mixed | 1,021 | 583 | 106 | 61 | 128 / 7 |
+
+Mixed training contains 151 concept and 870 form contrasts, rather than equal
+numbers of each. These packages are shared across all three target models.
+All three strategies passed hash, raw-response, question-partition, pair
+reconstruction and training-schedule validation. The concept arm has only 18
+validation questions, and strategy datasets/update budgets differ. These are
+exploratory automatically labelled preferences without an independent human audit.
+
+Aggregate counts and provenance are saved in
+[`results/original_sft_dpo_preferences_mini_20261013.json`](../results/original_sft_dpo_preferences_mini_20261013.json).
+The local portable archive is `Artifacts/original-sft-dpo-preferences-mini-v1.tar.gz`
+(14,712,603 bytes; SHA256
+`a4b65ef7e2572799b17503fb3637c2d4d2959fee654075be0f0c61a2eba72397`).
+It embeds the banks, reviewed annotations and all six pair files; all embedded
+content hashes were verified after compression. Raw data and API caches stay
+outside Git.
+
+Upload from Windows PowerShell at the repository root:
+
+```powershell
+scp .\Artifacts\original-sft-dpo-preferences-mini-v1.tar.gz dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/
+```
+
+Then in the authenticated Gadi session:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+module load python3/3.12.13
+source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
+mkdir -p outputs/original_sft_dpo_8b/preferences-mini-v1
+tar -xzf /scratch/nl78/$USER/original-sft-dpo-preferences-mini-v1.tar.gz \
+  -C outputs/original_sft_dpo_8b/preferences-mini-v1
+python scripts/single_answer_dpo_data.py --mode validate \
+  --output outputs/original_sft_dpo_8b/preferences-mini-v1 --strategy mixed
+bash scripts/submit_original_sft_dpo_8b.sh train \
+  outputs/original_sft_dpo_8b/preferences-mini-v1 mixed
+```
+
+`mixed` submits all three models with smoke → training → dev160 evaluation
+(nine jobs total). Use `all` instead only when requesting all nine strategy/model
+conditions (27 jobs). These commands are the next Gadi step; this dataset export
+does not establish that DPO training has run.
