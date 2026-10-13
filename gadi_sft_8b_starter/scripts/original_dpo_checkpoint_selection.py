@@ -145,6 +145,12 @@ class EpochMRRTracker:
             "system_prompt_sha256": hashlib.sha256(self.source["system_prompt"].encode()).hexdigest()})
         generated = []
         device = next(model.parameters()).device
+        if self.source.get("model_loader") == "fast_model":
+            # Training loads the adapter directly, bypassing load_model()'s
+            # Ministral generation setup. Reuse the proven inference backend:
+            # FastModel's forced static cache can mix Float and Half values.
+            from src.utility.ministral_generation import configure_ministral_generation
+            configure_ministral_generation(model)
         with generation_mode(model, torch, self.restore_for_training):
             for example, text, count in self.prepared:
                 encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)

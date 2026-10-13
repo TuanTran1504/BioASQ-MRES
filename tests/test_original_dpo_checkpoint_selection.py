@@ -165,6 +165,13 @@ def test_real_trainer_scores_each_epoch_and_resumes_dpo_updates(tmp_path,monkeyp
                'gold_aliases':['other']}]
     monkeypatch.setattr(select,'validation_examples',lambda c:(examples,'Single'))
     rendered=[]
+    configured=[]
+    def configure_generation(model):
+        model.validation_generation_ready=True
+        configured.append(model)
+        return model
+    monkeypatch.setitem(sys.modules,'src.utility.ministral_generation',
+                        SimpleNamespace(configure_ministral_generation=configure_generation))
     class Tokenizer:
         pad_token_id=0
         eos_token_id=9
@@ -188,6 +195,7 @@ def test_real_trainer_scores_each_epoch_and_resumes_dpo_updates(tmp_path,monkeyp
         def forward(self,input_ids,attention_mask=None,use_cache=False):
             return SimpleNamespace(logits=self.head(self.embed(input_ids)))
         def generate(self,input_ids,**kwargs):
+            assert self.validation_generation_ready, 'Ministral inference backend not configured'
             self._flag_for_generation=True
             for p in self.parameters():p.requires_grad_(False)
             torch.rand(3)
@@ -196,8 +204,10 @@ def test_real_trainer_scores_each_epoch_and_resumes_dpo_updates(tmp_path,monkeyp
     model=Model();tokenizer=Tokenizer()
     def restore():
         if hasattr(model,'_flag_for_generation'):del model._flag_for_generation
+        model.validation_generation_ready=False
     config={'max_seq_length':32,'max_new_tokens':4,'seed':3407}
-    tracker=select.EpochMRRTracker(config,{'system_prompt':'Single','chat_template_kwargs':{}},tmp_path,
+    tracker=select.EpochMRRTracker(config,{'system_prompt':'Single','chat_template_kwargs':{},
+                                         'model_loader':'fast_model'},tmp_path,
                                   restore_for_training=restore)
     cls=next(n for n in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(runner.train))))
              if isinstance(n,ast.ClassDef) and n.name=='ExpansionDPOTrainer')
@@ -225,6 +235,7 @@ def test_real_trainer_scores_each_epoch_and_resumes_dpo_updates(tmp_path,monkeyp
         eval_dataset=Dataset.from_list(rows),data_collator=lambda r:runner.collate_pairs(r,0,torch))
     trainer.train()
     assert [r['epoch'] for r in tracker.rows]==[1.0,2.0]
+    assert len(configured)==2 and all(m is model for m in configured)
     assert all(r['validation_mrr']==.5 for r in tracker.rows)
     assert trainer.state.global_step==4 and not torch.equal(initial,model.head.weight)
     assert all(p.requires_grad for p in model.parameters()) and not hasattr(model,'_flag_for_generation')
@@ -232,6 +243,10 @@ def test_real_trainer_scores_each_epoch_and_resumes_dpo_updates(tmp_path,monkeyp
 
 
 def test_dual_selected_dev_report_has_both_dpo_contrasts(tmp_path,monkeypatch):
+    # Earlier scorer tests can load the portable bundle's src package. Allow
+    # this root-only report test to find notebook workflows in either order.
+    import src
+    monkeypatch.setattr(src, '__path__', [*src.__path__, str(ROOT/'src')])
     from scripts import analyze_original_sft_dpo as analyze
     import src.notebook_workflows.local_expansion as local
     from run_single_answer_sampling import unique_candidates

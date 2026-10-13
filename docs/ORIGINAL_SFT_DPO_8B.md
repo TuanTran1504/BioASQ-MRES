@@ -302,3 +302,30 @@ Local verification includes a two-epoch CPU integration test of the actual DPO
 Trainer override, official Java scoring, failed-answer denominators, native state
 restoration, separate checkpoint weights, three-arm reports and dependency chains.
 CUDA/Unsloth feasibility is checked by the Gadi smoke jobs.
+
+## Ministral epoch-validation generation retry (14 October 2026)
+
+Smoke job `181107819` failed after two of four updates, while generating answers
+for first-epoch MRR validation: `index_copy_()` received Float cache storage and
+Half attention values. Dependent training `181107820` and evaluation `181107822`
+did not start. This failure is separate from preference-loss computation.
+
+The training loader bypassed the existing Ministral inference setup. Epoch MRR
+generation now applies the same `configure_ministral_generation` helper as the
+standalone evaluations: original Transformers generation, dynamic cache, FP16
+autocast and disabled decode compilation, retaining outer PEFT adapter hooks.
+The existing native return-to-training transition and trainable parameter masks
+remain in place. Llama and Qwen3 retain their generation backend.
+
+Retry only Ministral, preserving completed Llama/Qwen3 runs:
+
+```bash
+git pull --ff-only
+bash scripts/submit_original_sft_dpo_8b.sh train \
+  outputs/original_sft_dpo_8b/preferences-mini-v1 concept --select-mrr ministral3
+```
+
+This submits three new dependent jobs: smoke, training and dev160 evaluation.
+Local tests cover PEFT hook preservation, dynamic-cache/FP16 arguments and two
+complete DPO epochs with validation generation followed by further training.
+Actual Ministral GPU execution still requires the new Gadi smoke test.
