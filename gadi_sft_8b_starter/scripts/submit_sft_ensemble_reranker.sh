@@ -16,4 +16,4 @@ job=$(qsub "${options[@]}" -v "RERANKER_SUBMISSION=${submission}" jobs/train_sft
 printf 'stage\tjob_id\tdepends_on\ntrain\t%s\t%s\n' "$job" "$dependency" > "$submission/jobs.tsv"
 echo "Submission record: $submission/jobs.tsv"
 cat "$submission/jobs.tsv"
-echo 'One CPU reranker training job. No GPU generation, paid API calls, or test evaluation.'
+echo 'One CPU job trains three rerankers: original-only, max-five-only, and shared. No GPU generation, paid API calls, or test evaluation.'

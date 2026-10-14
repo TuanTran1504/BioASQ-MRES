@@ -121,6 +121,70 @@ def test_ranking_cannot_change_full_pool_coverage(monkeypatch):
     assert {m["coverage_full_pool"] for m in metrics.values()} == {0.5}
 
 
+def test_three_selectors_fit_separate_vocabularies_and_save_models(tmp_path):
+    examples = {"train": {f"q{i}": {"question": "Shared question", "snippets": []} for i in range(5)},
+                "validation": {"v": {"question": "validationonlytoken", "snippets": []},
+                               "empty": {"question": "Empty question", "snippets": []}}}
+    pools = {split: {f"{a}_{m}": [] for a in rr.ARMS for m in rr.MODES} for split in examples}
+    for arm in rr.ARMS:
+        for mode in rr.MODES:
+            for q in examples["train"]:
+                pools["train"][f"{arm}_{mode}"].extend([
+                    candidate(q, f"{arm}onlytoken correct", 1), candidate(q, "incorrect wrong", 0)])
+            pools["validation"][f"{arm}_{mode}"].extend([
+                candidate("v", "incorrect wrong", 0), candidate("v", f"{arm}onlytoken correct", 1)])
+    fitted, metrics, questions, rankings = rr.fit_three_selectors(pools, examples, [0.1, 1.0])
+    assert set(fitted) == {"original", "max5", "shared"}
+    for name, arms in rr.SELECTORS.items():
+        result = fitted[name]
+        vocabulary = result["components"]["word"].vocabulary_
+        assert "validationonlytoken" not in vocabulary
+        for arm in rr.ARMS:
+            assert (f"{arm}onlytoken" in vocabulary) == (arm in arms)
+        assert result["selected_C"] == 0.1
+        assert len(result["trials"][0]["metrics"]) == 4 * len(arms) * len(rr.MODES)
+        assert result["selection_conditions"] == [f"{a}_{m}" for a in arms for m in rr.MODES]
+    assert len(metrics) == 24  # Four pools, three baselines and three rerankers.
+    for pool in pools["validation"]:
+        assert {m["coverage_full_pool"] for n, m in metrics.items() if n.startswith(pool + "_")} == {0.5}
+    assert all(len(rows) == 2 for rows in questions.values())
+    assert {r["condition"].rsplit("_", 2)[1] for r in rankings} == set(fitted)
+    summaries = rr.save_selectors(tmp_path, fitted)
+    for name, result in fitted.items():
+        path = tmp_path / name / "reranker.joblib"
+        loaded = rr.joblib.load(path)
+        assert loaded["selector"] == name
+        assert loaded["training_arms"] == list(rr.SELECTORS[name])
+        rows = rr.feature_rows(pools["validation"]["max5_greedy"])
+        np.testing.assert_array_equal(
+            rr.score_components(loaded["components"], rows, examples["validation"]),
+            rr.score_components(result["components"], rows, examples["validation"]))
+        assert summaries[name]["model_sha256"] == rr.digest(path)
+    assert rr.digest(tmp_path / "reranker.joblib") == rr.digest(tmp_path / "shared/reranker.joblib")
+
+
+def test_selector_regularisation_ignores_other_formulation_validation(monkeypatch):
+    examples = {"train": {"q": {}}, "validation": {"v": {}}}
+    pools = {s: {f"{a}_{m}": [candidate("q" if s == "train" else "v", "correct", 1),
+                              candidate("q" if s == "train" else "v", "wrong", 0)]
+                 for a in rr.ARMS for m in rr.MODES} for s in examples}
+    monkeypatch.setattr(rr, "fit_components", lambda *args, C, **kwargs: {"C": C})
+    seen = []
+    def score(components, validation, contexts):
+        seen.append(set(validation))
+        # Opposite C preferences in the two validation arms.
+        metrics = {name + "_logistic": {"mrr_at5":
+                   float(components["C"] == (0.1 if name.startswith("original_") else 1.0))}
+                   for name in validation}
+        return metrics, {}, []
+    monkeypatch.setattr(rr, "rank_conditions", score)
+    original, _ = rr.fit_selector(pools, examples, [0.1, 1.0], ("original",))
+    max5, _ = rr.fit_selector(pools, examples, [0.1, 1.0], ("max5",))
+    assert original[1] == 0.1 and max5[1] == 1.0
+    assert seen[:2] == [{"original_greedy", "original_sampling4"}] * 2
+    assert seen[2:] == [{"max5_greedy", "max5_sampling4"}] * 2
+
+
 def test_latest_records_preserve_other_models_on_single_model_retry(tmp_path):
     root = tmp_path / "outputs/max5_dpo_banks_8b"
     root.mkdir(parents=True)

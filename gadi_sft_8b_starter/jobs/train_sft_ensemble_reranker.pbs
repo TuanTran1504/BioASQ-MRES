@@ -1,4 +1,5 @@
 #!/bin/bash
+# Train the three logistic selectors sequentially in one CPU job.
 #PBS -P nl78
 #PBS -q normal
 #PBS -l ncpus=1

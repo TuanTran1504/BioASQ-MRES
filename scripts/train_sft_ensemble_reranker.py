@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fit one frozen logistic selector on original/max-five fitting pools only."""
+"""Fit original-only, max-five-only and shared frozen logistic selectors."""
 from __future__ import annotations
 
 import argparse
@@ -31,6 +31,7 @@ from src.notebook_workflows.coverage_comparison import official_candidate_matche
 
 ARMS = ("original", "max5")
 MODES = ("greedy", "sampling4")
+SELECTORS = {"original": ("original",), "max5": ("max5",), "shared": ARMS}
 ORIGINAL_JOBS = dict(zip(MODELS, ("181032357", "181032359", "181032361")))
 
 
@@ -131,6 +132,7 @@ def prepare(repository, submission):
         "config_hashes": {name: digest(starter / "configs" / name) for name in
                           ("original_sft_dpo_8b.json", "max5_dpo_banks_8b.json")},
         "C_grid": [0.1, 1.0, 10.0], "seed": 3407,
+        "selectors": SELECTORS,
         "scope": "1296 fitting / 144 validation; no dev160 or test labels",
     }
     write_json(submission / "prepared.json", state)
@@ -252,9 +254,14 @@ def rank_conditions(components, pools, examples):
     return result, per_question, rankings
 
 
-def fit_selector(pools, examples, C_grid):
+def fit_selector(pools, examples, C_grid, training_arms=ARMS):
+    if not training_arms or not set(training_arms) <= set(ARMS):
+        raise ValueError("Unknown or empty reranker training arms")
+    selected_names = {f"{a}_{m}" for a in training_arms for m in MODES}
     train_rows, strata = [], []
     for name, rows in pools["train"].items():
+        if name not in selected_names:
+            continue
         train_rows.extend(rows)
         strata.extend([name] * len(rows))
     labels = np.asarray([r["label"] for r in train_rows], dtype=np.int64)
@@ -266,12 +273,56 @@ def fit_selector(pools, examples, C_grid):
         print(f"Fitting logistic C={C} on {len(train_rows)} candidates", flush=True)
         components = fit_components(feature_rows(train_rows), examples["train"], labels,
                                     sample_weight=weights, C=C)
-        metrics, questions, rankings = rank_conditions(components, pools["validation"], examples["validation"])
+        validation = {name: rows for name, rows in pools["validation"].items() if name in selected_names}
+        metrics, questions, rankings = rank_conditions(components, validation, examples["validation"])
         score = float(np.mean([v["mrr_at5"] for k, v in metrics.items() if k.endswith("_logistic")]))
         trials.append({"C": C, "mean_validation_mrr_at5": score, "metrics": metrics})
         if best is None or score > best[0]:
             best = (score, C, components, metrics, questions, rankings)
     return best, trials
+
+
+def fit_three_selectors(pools, examples, C_grid):
+    """Select each model on its declared validation arms, then compare all pools."""
+    fitted, metrics, questions, rankings = {}, {}, {}, []
+    for selector, arms in SELECTORS.items():
+        print(f"Training {selector} reranker from {', '.join(arms)} pools", flush=True)
+        best, trials = fit_selector(pools, examples, C_grid, training_arms=arms)
+        score, C, components, _, _, _ = best
+        all_metrics, all_questions, all_rankings = rank_conditions(
+            components, pools["validation"], examples["validation"])
+        fitted[selector] = {"components": components, "selected_C": C,
+                            "mean_validation_mrr_at5": score, "trials": trials,
+                            "training_arms": list(arms),
+                            "selection_conditions": [f"{a}_{m}" for a in arms for m in MODES]}
+        for condition, values in all_metrics.items():
+            name = (condition.removesuffix("_logistic") + f"_{selector}_reranker"
+                    if condition.endswith("_logistic") else condition)
+            metrics[name] = values
+            questions[name] = all_questions[condition]
+        rankings.extend({**r, "condition": r["condition"].removesuffix("_logistic") + f"_{selector}_reranker"}
+                        for r in all_rankings)
+    return fitted, metrics, questions, rankings
+
+
+def save_selectors(output, fitted):
+    summaries = {}
+    for name, result in fitted.items():
+        directory = output / name
+        directory.mkdir()
+        payload = {"components": result["components"], "schema": "sft-ensemble-logistic-v1",
+                   "models": MODELS, "sample_frequency": "unique draw support / requested draws per model",
+                   "selector": name, "training_arms": result["training_arms"],
+                   "selection_conditions": result["selection_conditions"], "selected_C": result["selected_C"]}
+        model_file = directory / "reranker.joblib"
+        joblib.dump(payload, model_file)
+        summary = {k: v for k, v in result.items() if k != "components"}
+        write_json(directory / "validation_selection.json", summary)
+        summaries[name] = {**summary, "model_path": f"{name}/reranker.joblib",
+                           "model_sha256": digest(model_file)}
+    # Preserve the original shared-selector path for existing consumers.
+    shutil.copy2(output / "shared/reranker.joblib", output / "reranker.joblib")
+    return summaries
 
 
 def run(submission, output):
@@ -306,29 +357,35 @@ def run(submission, output):
         pools, diagnostics = build_pools(rows, examples)
         label_pools(pools, examples, aliases, output,
                     repository / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar")
-        best, trials = fit_selector(pools, examples, prepared["C_grid"])
-        score, C, components, metrics, questions, rankings = best
+        fitted, metrics, questions, rankings = fit_three_selectors(pools, examples, prepared["C_grid"])
+        summaries = save_selectors(output, fitted)
+        shared = fitted["shared"]
         model_file = output / "reranker.joblib"
-        joblib.dump({"components": components, "schema": "sft-ensemble-logistic-v1", "models": MODELS,
-                     "sample_frequency": "unique draw support / requested draws per model",
-                     "selected_C": C}, model_file)
-        write_json(output / "validation_summary.json", {"question_count": 144, "selected_C": C,
-                    "mean_validation_mrr_at5": score, "trials": trials, "metrics": metrics})
+        write_json(output / "validation_summary.json", {"question_count": 144, "selected_C": shared["selected_C"],
+                    "mean_validation_mrr_at5": shared["mean_validation_mrr_at5"],
+                    "trials": shared["trials"], "selectors": summaries, "metrics": metrics,
+                    "interpretation": "Validation diagnostics used for C selection; not independent test results"})
         write_json(output / "validation_per_question.json", questions)
         write_jsonl(output / "validation_rankings.jsonl", rankings)
         for split in examples:
             write_jsonl(output / f"{split}_examples.jsonl", examples[split].values())
             for name, rr in pools[split].items():
                 write_jsonl(output / f"{split}_{name}_candidates.jsonl", rr)
-        state.update(status="complete", selected_C=C, question_counts={s: len(e) for s, e in examples.items()},
+        state.update(status="complete", selected_C={name: r["selected_C"] for name, r in fitted.items()},
+                     selectors={name: {"training_arms": r["training_arms"], "model_path": r["model_path"],
+                                       "model_sha256": r["model_sha256"]} for name, r in summaries.items()},
+                     question_counts={s: len(e) for s, e in examples.items()},
                      training_scope="Fitting only; validation selects C; neither dev160 nor test used",
                      labels="Official acceptance only; unmatched answers may be semantically correct",
                      sampling="one greedy and four sampled draws; not ten-sample generation",
                      generator_cross_fitting=False, model_sha256=digest(model_file),
                      diagnostics=diagnostics, sklearn_version=sklearn.__version__,
                      max5_bank_hashes={m: b["manifest"]["responses_sha256"] for m, b in banks.items()},
-                     artifacts_sha256={p.name: digest(p) for p in output.iterdir() if p.is_file() and p.name != "manifest.json"})
-        print(f"Frozen reranker: {model_file}; selected C={C}; validation mean MRR={score:.6f}", flush=True)
+                     artifacts_sha256={p.relative_to(output).as_posix(): digest(p) for p in output.rglob("*")
+                                       if p.is_file() and p != output / "manifest.json"})
+        for name, result in summaries.items():
+            print(f"Frozen {name} reranker: {output / result['model_path']}; selected C={result['selected_C']}; "
+                  f"validation selection MRR={result['mean_validation_mrr_at5']:.6f}", flush=True)
     except BaseException as exc:
         state.update(status="failed", error=f"{type(exc).__name__}: {exc}")
         raise

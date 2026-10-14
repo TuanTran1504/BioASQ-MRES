@@ -395,9 +395,9 @@ compared with SFT on dev160. This submits six independent conditions and 18 jobs
 including smoke and dependent evaluations; training outputs use
 `outputs/original_sft_dpo_selection_8b`.
 
-## Shared logistic reranker for original and max-five SFT
+## Three logistic rerankers for original and max-five SFT
 
-Train a frozen selector using the existing original and max-five fitting banks:
+Train original-only, max-five-only and shared frozen selectors using the existing fitting banks:
 
 ```bash
 bash scripts/submit_sft_ensemble_reranker.sh
@@ -406,7 +406,10 @@ bash scripts/submit_sft_ensemble_reranker.sh
 This submits one CPU job, waiting for outstanding max-five bank jobs. It fits
 on 1296 questions and chooses logistic regularisation using 144 validation
 questions. No dev160/test labels, paid judging, or GPU generation are used.
-The shared selector is saved as
-`outputs/sft_ensemble_reranker/train-JOB_ID.gadi-pbs/reranker.joblib`.
+The three selectors are saved under
+`outputs/sft_ensemble_reranker/train-JOB_ID.gadi-pbs/{original,max5,shared}/reranker.joblib`.
+Each selects regularisation independently on its declared validation pools;
+all three are compared on identical pools. The root `reranker.joblib` remains a copy
+of the shared selector for compatibility. One CPU job trains all three sequentially.
 The [reranker guide](../docs/SFT_ENSEMBLE_LOGISTIC_RERANKER.md) explains validation
 baselines, normalised model/sample agreement, and the four-sample bank limit.

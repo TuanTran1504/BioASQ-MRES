@@ -1,7 +1,7 @@
-# Shared logistic reranker for original and max-five SFT
+# Three logistic rerankers for original and max-five SFT
 
-Train a single candidate selector on three-model fitting pools, freeze it, and
-use it for both SFT formulations. This step trains only the reranker; it does
+Train three candidate selectors on three-model fitting pools and freeze each.
+This step trains only the rerankers; it does
 not generate new responses, train DPO, judge with an API, or score the test set.
 
 ## Data and labels
@@ -36,13 +36,29 @@ Sample support is normalised by the requested draws per model, so four repeated
 answers from one model still count as one model agreeing. Source rank is first
 unique occurrence in draw order, then within-response order.
 
-Every vectorizer and logistic classifier is fitted on fitting questions only.
+Each selector has its own vectorizers and classifier, fitted on fitting questions only.
 Candidate weights give equal total weight to each nonempty question/formulation/
-decoding stratum. Select C from `[0.1, 1, 10]` by the equal-weight mean MRR@5 over
-the four validation conditions. Exact ties retain the first (smallest) C.
-Do not refit on validation after selection. The selected model is shared across
-all conditions. These validation results are selection diagnostics, not final
-held-out performance.
+decoding stratum. Select C independently from `[0.1, 1, 10]`:
+
+| Selector | Fitting pools | Validation pools used to select C |
+| --- | --- | --- |
+| Original-only | Original SFT, greedy and sampling-four | Two original-SFT conditions |
+| Max-five-only | Max-five SFT, greedy and sampling-four | Two max-five-SFT conditions |
+| Shared | Both formulations, greedy and sampling-four kept as separate pools | All four conditions |
+
+Use equal-weight mean validation MRR@5 over the declared conditions. Exact ties
+retain the first (smallest) C. Do not refit on validation after selection.
+After selecting C, evaluate each frozen selector on all four validation pools,
+including the opposite formulation. These cross-formulation scores do not influence
+the specialised selectors' C selection. Validation results are selection diagnostics,
+not independent held-out performance.
+
+On the later test panel, compare the original-only reranker on original pools with
+the max-five-only reranker on max-five pools as a complete-system comparison.
+Use the shared reranker on both pools to hold selection constant. Applying all
+three rerankers to each identical pool also isolates reranker training differences.
+The shared reranker sees more candidate rows, although all three use the same fitting
+question IDs; this is a difference in available training data, not an equal-data ablation.
 
 Validation also reports round-robin, distinct-model voting, reciprocal-source-rank
 voting, and logistic selection on identical pools. Reranking cannot change full-pool
@@ -59,7 +75,8 @@ git pull --ff-only
 bash scripts/submit_sft_ensemble_reranker.sh
 ```
 
-One normal-queue CPU job (1 CPU, 16 GB, two hours) waits with `afterok` dependencies
+One normal-queue CPU job (1 CPU, 16 GB, two hours) trains all three selectors sequentially
+and waits with `afterok` dependencies
 on outstanding max-five bank jobs. Already completed banks need no dependency.
 Missing, failed or unverifiable jobs stop preparation before submission. Python
 3.12 and the existing venv are used. Code and the Java adapter are frozen under
@@ -74,13 +91,22 @@ qstat -fx JOB_ID | grep -E 'Job Id|job_state|Exit_status|comment'
 
 Outputs appear under `outputs/sft_ensemble_reranker/train-JOB_ID.gadi-pbs`:
 
-- `reranker.joblib`: selected, frozen feature transformers and classifier;
+- `original/reranker.joblib`: original-only frozen selector;
+- `max5/reranker.joblib`: max-five-only frozen selector;
+- `shared/reranker.joblib`: shared frozen selector;
+- `reranker.joblib`: identical copy of the shared selector for existing consumers;
+- each selector's `validation_selection.json`: fitting arms, selection conditions and C trials;
 - `manifest.json`: provenance, completion status, source hashes and diagnostics;
-- `validation_summary.json`: C selection and all validation comparisons;
+- `validation_summary.json`: all three selectors' C selection and 24 validation conditions
+  (four candidate pools, each with three baselines and three rerankers);
 - `validation_per_question.json`, `validation_rankings.jsonl`: diagnostic outcomes;
 - fitting/validation candidate files and official matcher reports.
 
-Final evaluation on 95 official factoids must load this frozen artifact without
+If a job was already submitted using the earlier shared-only workflow, its frozen
+code still trains only that selector. Submit the updated launcher once for the three-model
+workflow; avoid resubmitting if a current three-selector job is already queued.
+
+Final evaluation on 95 official factoids must load these frozen artifacts without
 fitting or tuning it on test labels. Existing greedy outputs can be reused; new
 ten-sample test generation is a separate GPU experiment. No jobs are submitted
 from the local machine by preparing these files.
