@@ -242,6 +242,9 @@ def candidate_features(row: dict[str, Any], example: dict[str, Any]) -> dict[str
         features[f"relation={relation}"] = 1
     for operation in row["surface_operations"]:
         features[f"surface_operation={operation}"] = 1
+    # A model counts as one source, regardless of its number of sampled draws.
+    for source, fraction in row.get("sample_frequencies", {}).items():
+        features[f"draw_support={source}"] = float(fraction)
     return features
 
 
@@ -249,7 +252,7 @@ def make_text(row: dict[str, Any], example: dict[str, Any]) -> str:
     return f"question {example['question']} candidate {row['answer']}"
 
 
-def fit_components(train_rows, examples, labels, sample_weight=None):
+def fit_components(train_rows, examples, labels, sample_weight=None, C=1.0):
     word = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_features=20_000, sublinear_tf=True)
     char = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), min_df=2, max_features=30_000, sublinear_tf=True)
     meta = DictVectorizer(sparse=True)
@@ -258,7 +261,7 @@ def fit_components(train_rows, examples, labels, sample_weight=None):
     dicts = [candidate_features(row, examples[row["question_id"]]) for row in train_rows]
     matrix = hstack((word.fit_transform(texts), char.fit_transform(answers), meta.fit_transform(dicts)), format="csr")
     model = LogisticRegression(
-        C=1.0,
+        C=C,
         class_weight="balanced",
         max_iter=2_000,
         solver="liblinear",

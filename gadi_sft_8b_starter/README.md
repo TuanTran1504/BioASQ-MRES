@@ -394,3 +394,19 @@ questions. Both the best-MRR and best-loss adapters are exported and subsequentl
 compared with SFT on dev160. This submits six independent conditions and 18 jobs
 including smoke and dependent evaluations; training outputs use
 `outputs/original_sft_dpo_selection_8b`.
+
+## Shared logistic reranker for original and max-five SFT
+
+Train a frozen selector using the existing original and max-five fitting banks:
+
+```bash
+bash scripts/submit_sft_ensemble_reranker.sh
+```
+
+This submits one CPU job, waiting for outstanding max-five bank jobs. It fits
+on 1296 questions and chooses logistic regularisation using 144 validation
+questions. No dev160/test labels, paid judging, or GPU generation are used.
+The shared selector is saved as
+`outputs/sft_ensemble_reranker/train-JOB_ID.gadi-pbs/reranker.joblib`.
+The [reranker guide](../docs/SFT_ENSEMBLE_LOGISTIC_RERANKER.md) explains validation
+baselines, normalised model/sample agreement, and the four-sample bank limit.

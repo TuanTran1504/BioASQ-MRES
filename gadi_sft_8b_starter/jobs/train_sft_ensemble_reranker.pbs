@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=2GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N sft-pool-reranker
+
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+python "${RERANKER_SUBMISSION}/code/scripts/train_sft_ensemble_reranker.py" \
+  --mode train --submission "$RERANKER_SUBMISSION" \
+  --output "${PWD}/outputs/sft_ensemble_reranker/train-${PBS_JOBID}"
