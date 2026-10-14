@@ -413,3 +413,17 @@ all three are compared on identical pools. The root `reranker.joblib` remains a 
 of the shared selector for compatibility. One CPU job trains all three sequentially.
 The [reranker guide](../docs/SFT_ENSEMBLE_LOGISTIC_RERANKER.md) explains validation
 baselines, normalised model/sample agreement, and the four-sample bank limit.
+
+## Original/max-five test ensembles with ten samples and fixed voting
+
+```bash
+bash scripts/submit_sft_ensemble_test.sh
+```
+
+Reuse completed greedy test evaluations and generate ten responses per model
+using each formulation's native prompt. Three smoke jobs gate three full GPU jobs;
+one CPU job then evaluates round-robin, distinct-model voting and reciprocal-rank
+voting for both formulations and decoding modes. These 12 ensemble conditions
+use 95 official test factoids, with no learned reranker or fitting-bank dependency.
+The [ensemble test guide](../docs/SFT_ENSEMBLE_TEST_EVALUATION.md) explains source
+validation, monitoring, per-batch results, candidate budgets and cost reporting.
