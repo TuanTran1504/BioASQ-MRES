@@ -1,5 +1,12 @@
 # BioASQ 8B Experiments for Gadi
 
+To evaluate the **six original/max-five SFT checkpoints on the 95 official
+factoid test questions**, use
+[official test evaluation](../docs/SFT_OFFICIAL_TEST_EVALUATION.md) and
+`bash scripts/submit_sft_test_evaluation.sh`. This uses greedy inference,
+complete evidence and frozen loss-selected checkpoints. Dev160 is excluded;
+technical smoke checks use the separate internal-validation panel.
+
 For separate **max-five initial-answer and expansion-error DPO datasets**, use
 the [max-five bank and labeling workflow](../docs/MAX5_DPO_DATASETS.md).
 `bash scripts/submit_max5_dpo_banks.sh` submits six smoke/full **generation-only**
