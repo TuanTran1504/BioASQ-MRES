@@ -1,5 +1,13 @@
 # BioASQ 8B Experiments for Gadi
 
+For separate **max-five initial-answer and expansion-error DPO datasets**, use
+the [max-five bank and labeling workflow](../docs/MAX5_DPO_DATASETS.md).
+`bash scripts/submit_max5_dpo_banks.sh` submits six smoke/full **generation-only**
+jobs from the loss-selected max-five SFT adapters, on 1,296 fitting and 144
+validation questions. Official matching, GPT-4.1-mini labeling under the new
+US$10 cap, and independent preference construction follow after generation.
+Dev160 questions are excluded from bank generation and training pairs.
+
 The completed Llama, Qwen3 and Ministral expansion SFT checkpoints now have a staged [expansion DPO workflow](../docs/EXPANSION_DPO_8B.md). From this directory, `bash scripts/submit_expansion_dpo_8b.sh generate` submits a shared-question pilot response bank for all three models. Biomedical review and validated whole-response preference pairs are required before the separate DPO training stage; development evaluation responses are excluded.
 
 This is a small, portable package for Gadi. It supports the original SFT jobs plus gold-blind exact-span and equivalent-expression expansion experiments. It deliberately excludes prior adapters, DPO data, candidate banks, notebooks, test evaluations, and historical artifacts.

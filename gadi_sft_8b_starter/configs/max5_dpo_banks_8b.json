@@ -1,0 +1,19 @@
+{
+  "training_matrix": "configs/matched_8b_sft_max5.json",
+  "output_root": "outputs/max5_dpo_banks_8b",
+  "seed": 3407,
+  "sampled_responses": 4,
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "max_seq_length": 8704,
+  "max_new_tokens": 512,
+  "max_candidates": 5,
+  "max_pairs_per_question_per_model": 2,
+  "checkpoint_selection": "best_eval_loss; frozen internal-validation selection",
+  "judge": {"model": "gpt-4.1-mini-2025-04-14", "max_usd": 10},
+  "models": {
+    "llama31": "outputs/sft_max5_8b/llama31-expansion-sft-181038912.gadi-pbs/dev-evaluation-181038914.gadi-pbs",
+    "qwen3": "outputs/sft_max5_8b/qwen3-expansion-sft-181038916.gadi-pbs/dev-evaluation-181038918.gadi-pbs",
+    "ministral3": "outputs/sft_max5_8b/ministral3-expansion-sft-181038920.gadi-pbs/dev-evaluation-181038923.gadi-pbs"
+  }
+}
