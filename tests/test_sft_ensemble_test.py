@@ -12,6 +12,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "gadi_sft_8b_starter/scripts"))
 from scripts import analyze_sft_ensemble_test as scorer
+from scripts import rescore_sft_ensemble_frequency as frequency
 import run_sft_ensemble_test as worker
 from run_single_answer_sampling import parse_single_answer, unique_candidates, expansion_candidates, sample_seed
 from run_extractive_expansion_8b import parse_equivalent_response
@@ -102,13 +103,47 @@ def test_repeated_draws_are_not_model_votes_and_unique_source_rank():
 
 
 def test_rank_vote_uses_reciprocal_unique_source_ranks_and_never_gold():
-    rows = [{"answer": "many_votes", "sources": list(scorer.MODELS), "source_ranks": dict.fromkeys(scorer.MODELS, 20), "label": 1},
-            {"answer": "early", "sources": ["llama31", "qwen3"], "source_ranks": {"llama31": 1, "qwen3": 1}, "label": 0}]
+    rows = [{"answer": "many_votes", "sources": list(scorer.MODELS), "source_ranks": dict.fromkeys(scorer.MODELS, 20),
+             "sample_frequencies": dict.fromkeys(scorer.MODELS, 0.1), "label": 1},
+            {"answer": "early", "sources": ["llama31", "qwen3"], "source_ranks": {"llama31": 1, "qwen3": 1},
+             "sample_frequencies": {"llama31": 0.8, "qwen3": 0.8}, "label": 0}]
     assert scorer.order_pool(rows, "model_vote")[0]["answer"] == "many_votes"
     assert scorer.order_pool(rows, "rank_vote")[0]["answer"] == "early"
     original = {method: [r["answer"] for r in scorer.order_pool(rows, method)] for method in scorer.METHODS}
     for r in rows: r["label"] = 1 - r["label"]
     assert {method: [r["answer"] for r in scorer.order_pool(rows, method)] for method in scorer.METHODS} == original
+
+
+def test_sample_frequency_counts_draws_instead_of_unique_model_votes():
+    banks = {m: {"original": [{"question_id": "q", "samples": [draw("rare", 1),
+        *[dict(draw("unused", d), answer=None, parse_error="failed") for d in range(2, 11)]]}]}
+        for m in scorer.MODELS}
+    banks["llama31"]["original"][0]["samples"] = [draw("frequent", d) for d in range(1, 11)]
+    pool = scorer.merge_pool(banks, "original")
+    assert scorer.order_pool(pool, "model_vote")[0]["answer"] == "rare"
+    assert scorer.order_pool(pool, "sample_frequency")[0]["answer"] == "frequent"
+    assert sum(next(r for r in pool if r["answer"] == "rare")["sample_frequencies"].values()) == pytest.approx(0.2)
+
+
+def test_frequency_counts_duplicate_candidate_once_per_draw_and_retains_failed_draws():
+    banks = {m: {"max5": []} for m in scorer.MODELS}
+    banks["llama31"]["max5"] = [{"question_id": "q", "samples": [
+        {"answers": [{"answer": "A", "relation_type": "original"},
+                     {"answer": " a ", "relation_type": "synonym"}]},
+        {"answers": [], "parse_error": "failed"}]}]
+    pool = scorer.merge_pool(banks, "max5")
+    assert len(pool) == 1
+    assert pool[0]["sample_frequencies"] == {"llama31": 0.5}
+
+
+def test_frequency_greedy_equals_model_vote_and_float_ties_use_fixed_provenance():
+    rows = [{"answer": "later", "sources": ["qwen3"], "source_ranks": {"qwen3": 1},
+             "sample_frequencies": {"qwen3": 1.0}},
+            {"answer": "earlier", "sources": ["llama31"], "source_ranks": {"llama31": 1},
+             "sample_frequencies": {"llama31": sum([0.1] * 10)}}]
+    assert [r["answer"] for r in scorer.order_pool(rows, "sample_frequency")] == ["earlier", "later"]
+    rows[1]["sample_frequencies"]["llama31"] = 1.0
+    assert scorer.order_pool(rows, "sample_frequency") == scorer.order_pool(rows, "model_vote")
 
 
 @pytest.mark.parametrize("mode", ["greedy", "sampling10"])
@@ -150,7 +185,7 @@ def test_archives_reject_invalid_draws_evidence_or_configuration(tmp_path, kind)
     with pytest.raises(ValueError): scorer.load_archive(directory, "sampling10")
 
 
-def test_end_to_end_scores_twelve_conditions_batches_costs_and_reuses_greedy(tmp_path, monkeypatch):
+def test_end_to_end_scores_frequency_and_rescores_legacy_pools_without_java(tmp_path, monkeypatch):
     submission, prepared = panel(tmp_path)
     greedy = {m: tmp_path / f"{m}-greedy" for m in scorer.MODELS}
     jobs = dict(zip(scorer.MODELS, ("10.gadi-pbs", "11.gadi-pbs", "12.gadi-pbs")))
@@ -173,8 +208,8 @@ def test_end_to_end_scores_twelve_conditions_batches_costs_and_reuses_greedy(tmp
     output = tmp_path / "scored"
     scorer.analyze(submission, output, Path("fake.jar"), resamples=20)
     result = read(output / "comparison_summary.json")
-    assert len(result["conditions"]) == 12
-    assert len(result["paired_contrasts"]) == 12
+    assert len(result["conditions"]) == 16
+    assert len(result["paired_contrasts"]) == 16
     assert result["conditions"]["original_greedy_round_robin"]["metrics"]["mrr_at5"] == pytest.approx(50/95)
     assert result["conditions"]["max5_sampling10_model_vote"]["metrics"]["mrr_at5"] == pytest.approx(25/95)
     assert result["conditions"]["max5_sampling10_model_vote"]["per_batch"]["B1"]["coverage_at5"] == 1
@@ -185,6 +220,38 @@ def test_end_to_end_scores_twelve_conditions_batches_costs_and_reuses_greedy(tmp
     assert result["ensemble_costs"]["max5_sampling10"]["request_count"] == 2850
     assert result["ensemble_costs"]["original_greedy"]["request_count"] == 285
     assert read(output / "manifest.json")["status"] == "complete"
+    # Simulate the already completed 12-condition Gadi comparison.
+    result["conditions"] = {k: v for k, v in result["conditions"].items() if "sample_frequency" not in k}
+    result["paired_contrasts"] = {k: v for k, v in result["paired_contrasts"].items() if "sample_frequency" not in k}
+    write(output / "comparison_summary.json", result)
+    old_scores = read(output / "comparison_per_question.json")
+    write(output / "comparison_per_question.json", {k: v for k, v in old_scores.items() if "sample_frequency" not in k})
+    before = {p.name: digest(p) for p in output.iterdir() if p.is_file()}
+    def forbidden(*args, **kwargs):
+        pytest.fail("Frequency rescoring must reuse official labels without Java")
+    monkeypatch.setattr(scorer, "official_candidate_matches", forbidden)
+    rescored = tmp_path / "frequency"
+    frequency.rescore(output, rescored, resamples=20)
+    updated = read(rescored / "comparison_summary.json")
+    assert len(updated["conditions"]) == 16
+    assert len(updated["paired_contrasts"]) == 28
+    assert updated["ensemble_costs"] == result["ensemble_costs"]
+    for name, condition in result["conditions"].items():
+        assert updated["conditions"][name] == condition
+    for arm in scorer.ARMS:
+        assert updated["conditions"][f"{arm}_greedy_sample_frequency"] == updated["conditions"][f"{arm}_greedy_model_vote"]
+    assert read(rescored / "manifest.json")["status"] == "complete"
+    assert {p.name: digest(p) for p in output.iterdir() if p.is_file()} == before
+    with pytest.raises(FileExistsError):
+        frequency.rescore(output, rescored, resamples=20)
+    # Changing frequencies, even with unchanged official labels, must fail.
+    candidate_path = output / "original_sampling10_candidates.jsonl"
+    corrupted = scorer.records(candidate_path)
+    corrupted[0]["sample_frequencies"]["llama31"] = 0.1
+    scorer.write_jsonl(candidate_path, corrupted)
+    with pytest.raises(ValueError, match="frequencies changed"):
+        frequency.rescore(output, tmp_path / "tampered", resamples=20)
+    assert not (tmp_path / "tampered").exists()
 
 
 @pytest.mark.parametrize("fail", [False, True])

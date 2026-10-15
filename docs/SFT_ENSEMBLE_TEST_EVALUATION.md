@@ -3,7 +3,7 @@
 Compare the original single-answer SFT and max-five expansion SFT checkpoints
 of Llama-3.1, Qwen3 and Ministral on the same 95 official test factoids.
 The models and their native prompts remain frozen. This experiment generates
-responses and applies three fixed ordering rules; it performs no training or paid judging.
+responses and applies fixed ordering rules; it performs no training or paid judging.
 
 ## Conditions
 
@@ -22,7 +22,9 @@ preflight token checks as the completed test experiment. There is no additional
 evidence truncation. Original and max-five have different native prompt lengths
 and output lengths; equal request counts do not imply equal inference cost.
 
-Each of the four pools receives three selectors, giving **12 ensemble conditions**:
+Each of the four pools receives four selectors, giving **16 ensemble conditions**.
+The completed comparison `181287698.gadi-pbs` originally used only the first
+three selectors (12 conditions); the additional frequency comparison reuses it:
 
 - **Round-robin:** interleave source positions in the fixed Llama, Qwen3, Ministral
   order, skipping duplicate strings already emitted. Duplicate shared answers
@@ -34,6 +36,13 @@ Each of the four pools receives three selectors, giving **12 ensemble conditions
   rank is the first unique occurrence in draw order and then within-response order;
   repeated occurrences do not increase the score. For example, ranks 1 and 2 from
   two models contribute `1 + 1/2`. This uses source ordering, not calibrated probabilities.
+- **Sample-frequency voting:** sum, over the three models, the fraction of draws
+  containing the candidate. With ten draws per model this is equivalent to total
+  occurrence count across the 30 responses. Each normalised candidate contributes
+  at most once per response, regardless of its position or repeated appearance.
+  Failed draws remain in the denominator. It counts repeated sample support,
+  whereas model voting counts each supporting model just once. With greedy
+  generation, frequency voting must give exactly the same ranking as model voting.
 
 Exact ties use the same fixed source order and source rank, then the normalised
 string. No official labels or semantic judgments participate in ordering.
@@ -92,12 +101,41 @@ qstat -fx $ids | grep -E 'Job Id|job_state|Exit_status|comment'
 Generation archives are `outputs/sft_ensemble_test/MODEL-sampling10-JOB_ID.gadi-pbs`.
 Combined scores are `outputs/sft_ensemble_test/comparison-SCORE_JOB_ID.gadi-pbs`:
 
-- `comparison_summary.json`: all 12 conditions, per-batch scores, paired contrasts and costs;
+- `comparison_summary.json`: all conditions, per-batch scores, paired contrasts and costs;
 - `comparison_per_question.json`: all question-level outcomes, including empty pools;
 - `rankings.jsonl`: full ordered pools with model/draw provenance;
 - `original_greedy_candidates.jsonl`, `max5_greedy_candidates.jsonl`,
   `original_sampling10_candidates.jsonl`, `max5_sampling10_candidates.jsonl`;
 - `manifest.json` and `official_scores/`: archive hashes, completion status and official matcher files.
+
+## Add frequency voting to the completed comparison
+
+Run this short CPU analysis from `gadi_sft_8b_starter`; no new job submission or
+GPU generation is required:
+
+```bash
+git pull --ff-only
+module load python3/3.12.13
+source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
+python ../scripts/rescore_sft_ensemble_frequency.py \
+  outputs/sft_ensemble_test/comparison-181287698.gadi-pbs \
+  --output "outputs/sft_ensemble_test/frequency-$(date -u +%Y%m%d-%H%M%S)"
+```
+
+The analysis validates all six source generation archives and reconstructs the
+four pools, including sample frequencies. Cached official candidate labels must
+reproduce all 12 original conditions before frequency is evaluated. It uses no
+Java scorer, model loading, training or paid API. Previous files stay unchanged;
+the new output directory contains all 16 conditions and full rankings, per-batch
+and question-level scores, plus paired 95% bootstrap intervals (10000 resamples,
+seed 3407) for frequency minus each previous ordering rule. Empty/failed question
+outputs remain in the 95-question denominator. The new manifest records source
+and scoring-code hashes. An existing output directory is never overwritten.
+
+Full-pool coverage must remain identical for every selector applied to the same
+pool. Improvements can occur only in ordering and coverage at fixed candidate
+budgets. The added test comparison is exploratory because frequency was proposed
+after inspecting the original test scores; its intervals have no multiplicity correction.
 
 ## Interpretation
 

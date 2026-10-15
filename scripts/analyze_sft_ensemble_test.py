@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score original/max-five ensembles with three fixed, untrained selectors."""
+"""Score original/max-five ensembles with fixed, untrained selectors."""
 from __future__ import annotations
 
 import argparse
@@ -22,7 +22,7 @@ from scripts.train_candidate_reranker_pilot import key, clean
 from src.notebook_workflows.coverage_comparison import official_candidate_matches
 
 ARMS = ("original", "max5")
-METHODS = ("round_robin", "model_vote", "rank_vote")
+METHODS = ("round_robin", "model_vote", "rank_vote", "sample_frequency")
 
 
 def load_archive(directory, mode):
@@ -163,16 +163,22 @@ def order_pool(rows, method):
         return sorted(rows, key=lambda r: (-len(r["sources"]), tie_key(r)))
     if method == "rank_vote":
         return sorted(rows, key=lambda r: (-sum(1 / rank for rank in r["source_ranks"].values()), tie_key(r)))
+    if method == "sample_frequency":
+        # Each fraction counts presence at most once per draw, including failed
+        # draws in the denominator. All models have the same draw budget.
+        # Round away accumulation noise so e.g. ten 0.1 votes tie with 1.0.
+        return sorted(rows, key=lambda r: (
+            -round(sum(r["sample_frequencies"].values()), 12), tie_key(r)))
     raise ValueError("Unknown fixed selector")
 
 
-def summarize_pools(pools, examples, gold):
+def summarize_pools(pools, examples, gold, methods=METHODS):
     conditions, per_question, rankings = {}, {}, []
     for name, rows in pools.items():
         groups = {q: [] for q in examples}
         for row in rows:
             groups[row["question_id"]].append(row)
-        for method in METHODS:
+        for method in methods:
             ordered = {q: order_pool(rr, method) for q, rr in groups.items()}
             condition = f"{name}_{method}"
             metrics, scored = evaluate_rankings(ordered)
