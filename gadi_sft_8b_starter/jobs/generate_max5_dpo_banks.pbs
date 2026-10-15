@@ -21,4 +21,5 @@ export PYTHONUNBUFFERED=1
 cd "${PBS_O_WORKDIR}"
 options=(--model "${MODEL_KEY:?}")
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then options+=(--smoke-test); fi
+if [[ -n "${RESUME_BANK:-}" ]]; then options+=(--resume-from "$RESUME_BANK"); fi
 python scripts/run_max5_dpo_generation.py "${options[@]}"

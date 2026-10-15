@@ -135,7 +135,8 @@ def test_blinded_mini_plan_pricing_and_candidate_schema():
         assert j['maximum_cost_reserve_usd']<.1
 
 
-def test_shared_generator_keeps_teacher_answers_out_and_saves_five_draws(tmp_path,monkeypatch):
+@pytest.mark.parametrize('saved_draws',[0,3,5,7,10])
+def test_shared_generator_keeps_teacher_answers_out_and_saves_five_draws(tmp_path,monkeypatch,saved_draws):
     import torch
     import run_expansion_dpo_8b as worker
     teacher={'question_id':'fit','messages':[
@@ -171,6 +172,19 @@ def test_shared_generator_keeps_teacher_answers_out_and_saves_five_draws(tmp_pat
     assert all(sum(r['question_id']==q for r in rr)==5 for q in ('fit','validation'))
     assert sum(not c['do_sample'] for c in model.calls)==2
     assert state['responses_sha256']==data.digest(tmp_path/'responses.jsonl')
+    if saved_draws:
+        original=rr[:saved_draws]
+        resumed=tmp_path/'resumed';resumed.mkdir()
+        model.calls.clear()
+        state={}
+        worker.generate(SimpleNamespace(model='llama31',full_dataset=True,smoke_test=False),config,
+            {'adapter':'pinned','model_loader':'fast_language_model','chat_template_kwargs':{}},
+            resumed,state,initial_responses=original)
+        recovered=data.records(resumed/'responses.jsonl')
+        assert recovered[:saved_draws]==original
+        assert len(recovered)==10 and len(model.calls)==10-saved_draws
+        assert len({(r['split'],r['question_id'],r['draw']) for r in recovered})==10
+        assert state['responses_sha256']==data.digest(resumed/'responses.jsonl')
 
 
 @pytest.mark.parametrize('fail,models,expected',[(False,[],6),(False,['ministral3'],2),(True,[],0)])

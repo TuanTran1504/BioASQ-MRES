@@ -47,6 +47,47 @@ qstat -swx $job_ids
 qstat -fx $job_ids | grep -E 'Job Id|job_state|Exit_status|comment'
 ```
 
+### Recover a bank stopped by walltime
+
+Job `181233007.gadi-pbs` (Ministral) exceeded its 12-hour walltime after
+saving 5,990 of 7,200 responses. Its dependent CPU reranker job `181284982`
+was deleted without running. Recovery preserves the interrupted directory
+and copies every verified complete draw into a new run. The new GPU job
+generates only missing draws, including any missing draws within a partially
+completed question. It does not repeat completed Llama or Qwen banks.
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/resume_max5_dpo_bank.sh ministral3 \
+  outputs/max5_dpo_banks_8b/ministral3-generate-181233007.gadi-pbs
+bash scripts/submit_sft_ensemble_reranker.sh
+```
+
+The first script validates the old PBS job is finished, exact configuration,
+adapter provenance, generation package versions, question order, prompts,
+draws, seeds, response hashes and token accounting before queuing one recovery
+job. The worker rechecks prompts and token counts with the actual tokenizer.
+Malformed model outputs remain in the bank. Only a malformed final JSONL
+record without a terminating newline can be discarded as an interrupted write;
+complete-record corruption or reordered/duplicate draws stops recovery.
+Old files remain unchanged, and the new manifest records source file hashes,
+reused count and discarded-tail size. Full bank integrity is checked before
+marking the new run complete. Identical recorded seeds preserve the draw
+schedule, but do not prove bit-identical GPU outputs across separate processes.
+
+A recovery submission record overrides only the recovered model's prior job.
+The second command prepares a fresh frozen reranker submission with dependencies
+on the new bank and any other unfinished banks. The deleted reranker cannot
+resume automatically. It still trains three selectors in one CPU job.
+
+Both scripts print new submission records and job IDs. Check them using
+`qstat -sw -u "$USER"`. The recovery retains the default 12-hour allocation for
+the remaining work; `BANK_WALLTIME=06:00:00 bash ...` can override it if desired.
+No new DPO training or paid judging occurs in this recovery.
+
+### Prepare the completed banks for review
+
 After all three full jobs succeed:
 
 ```bash

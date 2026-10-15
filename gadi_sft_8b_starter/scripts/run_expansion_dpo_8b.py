@@ -98,7 +98,7 @@ def dpo_loss(chosen, rejected, ref_chosen, ref_rejected, beta, torch):
     return -torch.nn.functional.logsigmoid(margin).mean()
 
 
-def generate(args, config, source, output, state):
+def generate(args, config, source, output, state, initial_responses=None):
     panels = split_rows(config, args.full_dataset)
     if args.smoke_test:
         panels = {s: rows[:2] for s, rows in panels.items()}
@@ -120,13 +120,35 @@ def generate(args, config, source, output, state):
             if count > config["max_seq_length"] - config["max_new_tokens"]:
                 raise ValueError(f"{row['question_id']}: all snippets exceed generation budget; refusing truncation")
             prepared.append((split, row["question_id"], prompt, text, count))
-    responses = []
+    responses = list(initial_responses or [])
+    saved = {(r['split'],r['question_id'],r['draw']):r for r in responses}
+    if len(saved) != len(responses):
+        raise ValueError('Duplicate recovery draws')
+    for split, qid, prompt, text, count in prepared:
+        for draw in range(config['sampled_responses']+1):
+            previous = saved.get((split,qid,draw))
+            if previous is not None and (previous['prompt'] != prompt or previous['prompt_tokens'] != count):
+                raise ValueError(f'{qid}: recovered prompt or token count differs from current tokenization')
+    expected_keys = {(split,qid,draw) for split,qid,*_ in prepared
+                     for draw in range(config['sampled_responses']+1)}
+    if not set(saved).issubset(expected_keys):
+        raise ValueError('Recovery draws outside current generation panel')
     path = output / "responses.jsonl"
-    with path.open("w", encoding="utf-8") as handle:
+    with path.open("x", encoding="utf-8") as handle:
+        for row in responses:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        handle.flush()
+        if responses:
+            print(f'{args.model}: reused {len(responses)} saved responses; '
+                  f'{len(expected_keys)-len(responses)} draws remain',flush=True)
         for split, qid, prompt, text, count in prepared:
+            if all((split,qid,d) in saved for d in range(config['sampled_responses']+1)):
+                continue
             encoded = tokenize_text(tokenizer, text, return_tensors="pt", add_special_tokens=True)
             encoded = {k: v.to(device) for k, v in encoded.items()}
             for draw in range(config["sampled_responses"] + 1):
+                if (split,qid,draw) in saved:
+                    continue
                 seed = sample_seed(qid, draw + 1, config["seed"])
                 torch.manual_seed(seed)
                 torch.cuda.manual_seed_all(seed)
