@@ -1,0 +1,14 @@
+{
+  "focal_model": "llama31",
+  "seed": 3407,
+  "folds": 5,
+  "reranker_C": 0.1,
+  "training_pools": ["max5_greedy", "max5_sampling4"],
+  "sampled_responses": 4,
+  "max_candidates": 5,
+  "max_pairs_per_question": 2,
+  "minimum_reciprocal_rank_gain": 0.0,
+  "primary_rule": "same officially accepted first answer; no loss of accepted focal forms or full-pool coverage",
+  "semantic_review": "required before DPO training; official nonacceptance is not a semantic error label",
+  "stage": "audit_only"
+}
