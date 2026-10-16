@@ -110,3 +110,54 @@ Final evaluation on 95 official factoids must load these frozen artifacts withou
 fitting or tuning it on test labels. Existing greedy outputs can be reused; new
 ten-sample test generation is a separate GPU experiment. No jobs are submitted
 from the local machine by preparing these files.
+
+## Evaluate the completed selectors on the saved test pools
+
+The three selectors completed in `train-181350943.gadi-pbs`. Their printed
+validation-selection means are 0.578356 (original, C=1), 0.603935 (max-five,
+C=0.1), and 0.588223 (shared, C=1). These average different declared validation
+conditions and do not establish which selector performs best on an identical
+pool. They are not 95-question test scores.
+
+The three-model greedy and ten-sample test pools are already scored in
+`outputs/sft_ensemble_test/comparison-181287698.gadi-pbs`. Evaluate all three
+selectors on each of these four pools, alongside all four fixed ordering rules:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+module load python3/3.12.13
+source /scratch/nl78/$USER/venvs/bioasq-8b/bin/activate
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+python ../scripts/evaluate_sft_ensemble_rerankers.py \
+  --comparison outputs/sft_ensemble_test/comparison-181287698.gadi-pbs \
+  --rerankers outputs/sft_ensemble_reranker/train-181350943.gadi-pbs \
+  --output "outputs/sft_ensemble_reranker/test95-$(date -u +%Y%m%d-%H%M%S)"
+```
+
+This is CPU-only rescoring. It performs no fitting, GPU generation, Java
+evaluation, or paid API calls. It verifies the saved test pools and their cached
+official labels by reproducing all 12 original conditions, checks frozen model
+and artifact hashes and scikit-learn compatibility, confirms that the rerankers'
+fitting and validation IDs are disjoint from the test set, and verifies the
+generator checkpoint/prompt identities against the bank sources used in training.
+Predictions receive no official labels or gold aliases. Candidate counts,
+full-pool coverage and generation costs stay unchanged. Failed/empty questions
+remain in the denominators. Existing output directories are never overwritten.
+
+The new directory contains `comparison_summary.json`, `comparison_per_question.json`,
+`rankings.jsonl`, and a provenance `manifest.json`. It reports **28 conditions**:
+four candidate pools, each evaluated by round-robin, model voting, reciprocal-rank
+voting, sample-frequency voting, and the three frozen logistic selectors. Each
+condition includes aggregate metrics and per-batch results. Paired question-level
+95% bootstrap intervals (10000 resamples, seed 3407) compare each reranker with
+each fixed rule; same-selector formulation contrasts and the specialised
+original-versus-max-five complete-system contrast are also included.
+
+No selector is chosen or refitted from test results. Report the specialised
+selectors on their own formulations, and the shared selector on both formulations
+to hold selection constant; cross-formulation applications are additional
+diagnostics. The ten-sample test pools differ from the four-sample training pools
+in candidate diversity and source-rank distributions, despite normalised draw
+support. Interpret these as exploratory results on previously inspected test
+batches, with uncorrected intervals across multiple comparisons.
