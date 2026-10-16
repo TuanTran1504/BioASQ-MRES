@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=2GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N reranker-no-tags
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+python "${ABLATION_SUBMISSION:?}/code/scripts/ablate_reranker_relation_labels.py" \
+  --mode run --submission "$ABLATION_SUBMISSION" \
+  --output "${PWD}/outputs/reranker_relation_ablation/run-${PBS_JOBID}"
