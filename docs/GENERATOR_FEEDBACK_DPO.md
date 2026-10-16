@@ -1,0 +1,144 @@
+# Direction 1: train answer generation with ensemble-ranking feedback
+
+The reranker stays frozen. We construct preferences between complete, naturally
+generated max-five responses according to their effect on final ensemble
+ranking. This is different from the pairwise-reranker experiment: its trainable
+component was the reranker; the intended trainable component here is the SFT
+answer generator.
+
+Start with **Llama max-five SFT** as a pilot. The completed three-model banks
+already contain 1 greedy and 4 sampled responses per question and model. No
+additional GPU generation is needed to prepare the pilot. Qwen3 and Ministral
+remain unchanged companions. The CPU preparation command can optionally prepare
+each of the other focal generators separately too.
+
+## What this stage does
+
+One CPU job reuses the frozen feedback models from audit **181379068**, the
+validated response banks, and the official acceptance labels cached by
+reranker training **181350943**. It does not refit the reranker and does not
+submit a GPU training job or paid judge requests.
+
+For each question, one deterministic sampled slot of the focal model is
+replaced with each of its five saved responses in turn. Eleven companion
+responses remain identical. The pool is rebuilt with the original provenance,
+draw support, deduplication and source-rank rules. Gold labels are applied only
+after prediction to calculate final MRR@5 and coverage.
+
+- **1,296 fitting questions:** each is scored by its existing out-of-fold
+  reranker, whose vectorizers and weights were fitted without that entire fold.
+- **144 validation questions:** scored by the archived final max-five logistic
+  reranker, which was fitted on fitting questions. Validation is kept separate
+  for preference evaluation and subsequent checkpoint selection.
+- **dev160 and test95:** excluded from preference construction.
+
+The generator itself saw the fitting questions during SFT; only the reranker
+feedback is out of fold. The final reranker's regularization was previously
+selected using validation, so those scores remain selection diagnostics.
+
+## Separate preference objectives
+
+| Export | Preferred response | Purpose |
+| --- | --- | --- |
+| `ranking_gain` | Strictly better final MRR@5, with accepted focal forms retained | Direct downstream-ranking feedback |
+| `compactness` | Proper ordered subset of the rejected list, unchanged first candidate and retained relation tags, at least one focal accepted answer, and no reduction in final MRR@5 | Fewer expansions without losing accepted answers |
+| `retain_needed_expansion` | Longer nested response that retains an accepted focal answer absent from the shorter response, without worse final ranking | Controls against always returning fewer answers |
+
+For every objective, the preferred response must retain **all** officially
+accepted focal expressions in the rejected response and preserve final full-pool
+coverage. Comparisons that change only relation tags, case or whitespace are
+excluded. Responses must pass strict max-five parsing and finish below the
+output-token ceiling. No edited or synthetic completions are substituted for
+the original raw responses.
+
+Ranking preferences may change the initial answer; their categories explicitly
+separate same accepted initial, same unaccepted initial, and changed initial
+expression. They must not be described collectively as expansion-only
+corrections. An unaccepted initial expression may still be semantically correct.
+
+Each objective exports at most two content-deduplicated pairs per question,
+prioritizing top-five coverage gains, then reciprocal-rank gains. The objectives
+can overlap: do not concatenate files and count repeated pairs as additional
+independent examples. Compactness allows tied MRR and therefore must not be
+reported as demonstrated performance improvement. Deleting a valid synonym is
+also not evidence that the synonym was a harmful or incorrect expansion.
+
+## Submit preparation on Gadi
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_generator_feedback_preferences.sh
+```
+
+The default prepares **Llama only**, using the existing bank and feedback
+directories. To prepare all three focal generators in the same CPU job:
+
+```bash
+bash scripts/submit_generator_feedback_preferences.sh llama31 qwen3 ministral3
+```
+
+Use one of these commands, rather than submitting both. Optional environment
+variables `FEEDBACK_RERANKERS` and `FEEDBACK_AUDIT` override source directories.
+The launcher validates source hashes, bank identity, fold membership and
+preparation provenance before submitting a frozen code/PBS snapshot. It requests
+1 CPU, 16 GB and 2 hours in the normal queue.
+
+Monitor the returned job ID, or recover it from its submission record:
+
+```bash
+record=$(ls -td outputs/generator_feedback_dpo/submission-*/jobs.tsv | head -n 1)
+cat "$record"
+job=$(awk -F '\t' 'NR==2 {print $2}' "$record")
+qstat -swx "$job"
+qstat -fx "$job" | grep -E 'Job Id|job_state|Exit_status|comment'
+number=${job%%.*}
+tail -n 60 *o"$number"
+tail -n 60 *e"$number"
+```
+
+The output directory is `outputs/generator_feedback_dpo/preferences-JOB_ID.gadi-pbs`.
+
+```bash
+cat "outputs/generator_feedback_dpo/preferences-${job}/summary.json"
+```
+
+It contains:
+
+- `manifest.json` and `summary.json`: counts, feedback provenance and limitations;
+- `llama31/train_*_review_candidates.jsonl`: separate fitting preference sets;
+- `llama31/validation_*_review_candidates.jsonl`: separate validation sets;
+- `llama31/train_outcomes.jsonl` and `validation_outcomes.jsonl`: all saved
+  alternatives and ranking outcomes, including first accepted rank and top five;
+- `review_responses.jsonl`: deduplicated original completions, prompts, snippets,
+  candidate-level official acceptance and empty semantic-review fields.
+
+Other requested focal models have their own subdirectories. No training-ready
+`train.jsonl` or `validation.jsonl` is written.
+
+## Review and training follow-up
+
+Preference packages are marked `training_ready=false` and `review_required`.
+The earlier audit exposed tag shortcuts and unsupported numerical alternatives,
+so official acceptance plus better rank is insufficient to approve every
+expansion. Review chosen candidate correctness, evidence support, equivalence
+and relation labels before assembling a training set. For an expansion-only
+arm, require a semantically correct initial answer and keep it unchanged.
+
+The current paid max-five judge CLI expects full three-model bank packages;
+this targeted review export must not be passed to it as if it were that full
+package. No new judging spend is initiated by this preparation job.
+
+After reviewing yield and quality, build separate validated training arms:
+
+1. Ranking-feedback DPO using reliable strict-gain pairs.
+2. Compactness DPO with retention controls and question-balanced sampling.
+
+Do not automatically train if a reliable fitting or validation set is empty or
+has too few distinct questions. Freeze the original SFT reference and the
+logistic reranker. Select DPO settings on validation, then compare the unchanged
+SFT generator and DPO generator using matched generation budgets and the same
+frozen reranker. Report MRR@5, coverage@5, full-pool coverage, per-question
+gains/losses, candidate counts and generation cost. Generation/evaluation
+jobs and a training-ready preference validator are later stages; they are not
+silently launched by this CPU preparation command.

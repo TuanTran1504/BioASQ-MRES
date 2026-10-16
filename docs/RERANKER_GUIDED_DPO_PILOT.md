@@ -113,3 +113,12 @@ Outputs are under `outputs/reranker_guided_dpo/audit-JOB_ID.gadi-pbs`:
 The oracle-over-alternatives score uses fitting gold to choose a response offline.
 It is a diagnostic upper bound, not an inference procedure or demonstrated test
 gain. Useful yield and semantic quality must be established before DPO training.
+
+## Follow-up: generator preference preparation
+
+The [generator-feedback preparation workflow](GENERATOR_FEEDBACK_DPO.md) reuses
+these frozen fold models instead of refitting them. It adds separate validation
+preferences, filters tag-only changes, exports exact raw responses for review,
+and separates strict ranking gains from compactness and retention controls.
+Its default is a Llama pilot; optional focal generators are supported. It is
+still a data-preparation stage, not an automatic DPO training submission.
