@@ -312,3 +312,36 @@ feedback used four samples, while the multi-generation evaluation uses ten.
 There is one training and decoding seed. Archived GPU timings are descriptive
 because source jobs ran separately. Confirm any promising behavior on an
 untouched evaluation panel before making a confirmatory performance claim.
+
+### CPU-only recovery for scoring job 181458735
+
+GPU generation **181458734.gadi-pbs** succeeded. CPU scoring
+**181458735.gadi-pbs** failed before Java matching because the scorer's
+`official/` report directory had not been created. This is an output-folder
+bug, not an inference failure. The scorer now creates that directory; a
+regression test exercises the actual Java candidate matcher and its file writer.
+
+Keep the completed generation, original submitted code, and failed scoring
+directory unchanged. Submit just one CPU recovery job:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_generator_feedback_rescore.sh \
+  outputs/generator_feedback_dpo_evaluation/submission-20261017-023654-862209 \
+  outputs/generator_feedback_dpo_evaluation/generation-181458734.gadi-pbs
+```
+
+The recovery validates the original input/code/checkpoint hashes and completed
+generation, copies the original submitted code to a new recovery folder, and
+applies **only** the missing-directory correction to its scorer. It records
+both scorer hashes and verifies that every other copied code file is unchanged.
+It does not change the original submission manifest to bypass integrity checks.
+The frozen recovery runner, copied code, and original responses are checked
+again at execution. No GPU jobs, generation, training or paid calls are needed.
+
+The submission record is
+`outputs/generator_feedback_dpo_evaluation/scoring-recovery-*/jobs.tsv`.
+The new results go to
+`outputs/generator_feedback_dpo_evaluation/comparison-rescore-JOB_ID/comparison_summary.json`.
+The result manifest identifies the recovery and its recorded correction.

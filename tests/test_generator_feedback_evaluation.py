@@ -197,6 +197,8 @@ def test_full_scoring_keeps_gains_losses_and_blinds_features(tmp_path, monkeypat
     monkeypatch.setattr(ev, "score_components", blind_predict)
     calls = []
     def matcher(ee, cc, output, jar_path):
+        assert output.is_dir()
+        (output / "scorer_gold.json").write_text("matcher needs an existing directory")
         calls.append(cc)
         return {(r["question_id"], r["answer"]): r["answer"] == "Core" for r in cc}
     conditions, scores, rankings = score.score_pools(score.make_pools(baseline, dpo),
@@ -209,6 +211,27 @@ def test_full_scoring_keeps_gains_losses_and_blinds_features(tmp_path, monkeypat
     assert conditions["sft_sampling10_max5_reranker"]["metrics"]["mrr_at5"] == pytest.approx(2/3)
     assert conditions["dpo_sampling10_max5_reranker"]["metrics"]["mrr_at5"] == pytest.approx(2/3)
     assert rankings and len(conditions) == 12
+
+
+def test_real_official_matcher_creates_nested_report_directory(tmp_path, monkeypatch):
+    # Use the actual Java adapter and writer here: a matcher stub previously
+    # hid the missing output-directory failure on Gadi.
+    from scripts import evaluate_sft_ensemble_rerankers as ev
+    monkeypatch.setattr(ev, "score_components", lambda components, rows, contexts: np.asarray(
+        [1. if r["answer"] == "Core" else 0. for r in rows]))
+    examples = {e["question_id"]: e for e in panel(2)}
+    rows = [{"question_id": q, "answer": answer, "sources": ["llama31"],
+             "source_ranks": {"llama31": rank}, "sample_frequencies": {"llama31": 1.},
+             "relation_types": ["original"]}
+            for q in examples for rank, answer in enumerate(("Wrong", "Core"), 1)]
+    output = tmp_path / "new/nested/result"
+    conditions, _, _ = score.score_pools({"sft_greedy": rows}, examples,
+        {"selector": "max5", "components": {}}, output,
+        ROOT / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar")
+    assert (output / "official/scorer_gold.json").is_file()
+    assert (output / "official/official_candidate_scores.jsonl").is_file()
+    assert conditions["sft_greedy_max5_reranker"]["metrics"]["mrr_at5"] == 1
+    assert {r["label"] for r in rows} == {0, 1}
 
 
 def test_preparation_freezes_code_and_gold_blind_inputs(tmp_path, monkeypatch):

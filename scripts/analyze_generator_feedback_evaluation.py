@@ -183,6 +183,7 @@ def contrast(before, after, metrics, resamples):
 
 def score_pools(pools, examples, payload, output, jar, matcher=official_candidate_matches):
     distinct = {(r["question_id"], r["answer"]): r for rows in pools.values() for r in rows}
+    (output / "official").mkdir(parents=True, exist_ok=True)
     matches = matcher(list(examples.values()), list(distinct.values()), output / "official", jar_path=jar) if distinct else {}
     normalized = {}
     for (qid, answer), label in matches.items():
