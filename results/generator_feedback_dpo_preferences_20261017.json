@@ -1,0 +1,29 @@
+{
+  "stage": "reviewed preferences and prepared training workflow; GPU training not yet submitted",
+  "model": "Llama-3.1-8B max-five loss-selected SFT",
+  "source_preference_job": "181434386.gadi-pbs",
+  "annotation_model": "gpt-4.1-mini-2025-04-14",
+  "reviewed_responses": 377,
+  "unique_judged_units": 726,
+  "cached_requests": 174,
+  "charged_or_reserved_usd": 0.2470376,
+  "authorized_maximum_usd": 10,
+  "annotation_source": "Automated LLM labels plus assistant screening; not independent expert judgments",
+  "package": "generator_feedback_dpo_compactness_v2",
+  "train": {"compactness_pairs": 24, "retention_pairs": 12, "pairs": 36, "questions": 35},
+  "validation": {"compactness_pairs": 3, "retention_pairs": 1, "pairs": 4, "questions": 4},
+  "beta": 0.1,
+  "learning_rate": 0.000002,
+  "epochs": 3,
+  "gradient_accumulation_steps": 4,
+  "optimizer_steps": 27,
+  "warmup_steps": 3,
+  "checkpoint_selection": "validation preference loss",
+  "limitations": [
+    "Only Llama is trained in this pilot; Qwen3 and Ministral remain fixed companions.",
+    "Compactness can remove valid optional expressions, not only incorrect expansions.",
+    "Ranking-gain pairs changing initial answers are not included.",
+    "Four validation questions are insufficient for a strong checkpoint-selection or generalization claim.",
+    "No new downstream generation or evaluation result exists for this adapter yet."
+  ]
+}

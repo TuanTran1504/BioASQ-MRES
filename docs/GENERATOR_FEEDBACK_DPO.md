@@ -142,3 +142,99 @@ frozen reranker. Report MRR@5, coverage@5, full-pool coverage, per-question
 gains/losses, candidate counts and generation cost. Generation/evaluation
 jobs and a training-ready preference validator are later stages; they are not
 silently launched by this CPU preparation command.
+
+## Reviewed Llama compactness pilot (17 October 2026)
+
+The targeted semantic review is complete. GPT-4.1-mini judged all 726 unique
+candidate/original/relation units from 377 shortlisted responses in 174 cached
+requests, costing **US$0.2470376** under the previously authorized US$10 max-five
+judging cap. No gold aliases, official labels, model identity or intended
+preference direction were supplied to the judge. Every support quote must
+match a supplied snippet. Low confidence, unresolved attributes, repeated-label
+conflicts and official/semantic conflicts abstain.
+
+Assistant screening adds explicit vetoes for the ALD lower-bound omission,
+screening start ages mixed with age intervals, an androsterone/androstenone
+question/evidence mismatch, and a lamin-A/LMNA protein/gene abbreviation issue.
+The automated annotations and assistant screening are **not independent expert
+certification**. Some discarded expressions are valid aliases; this experiment
+optimizes compactness, not a C3-over-incorrect-answer objective.
+
+The final package is `generator_feedback_dpo_compactness_v2`:
+
+| Split | Compactness | Retention controls | Total pairs | Distinct questions |
+| --- | ---: | ---: | ---: | ---: |
+| Fitting | 24 | 12 | 36 | 35 |
+| Validation | 3 | 1 | 4 | 4 |
+
+Require every preferred candidate to be high-confidence correct, supported,
+equivalent and correctly tagged; require a supported, correct unchanged initial
+answer on both sides. Retention controls must be clean on both sides. Keep at
+most one pair per question/objective. Cap fitting compactness examples at twice
+the number of retained control questions, using deterministic seed-3407 order.
+Validation keeps all qualified distinct question/objective examples instead of
+downsampling. The four-question validation set is very small: checkpoint loss
+selection is an exploratory diagnostic, not reliable proof of generalization.
+Ranking-gain pairs are excluded from this training package.
+
+### Training settings
+
+Continue the **exact loss-selected max-five Llama SFT adapter** used to produce
+the banks. Update its existing language LoRA weights with standard whole-response
+DPO, summed completion-token log probabilities, beta **0.1**, learning rate
+**2e-6**, **3 epochs**, batch size **1**, accumulation **4**, and warm-up ratio
+**0.1**. This gives **27 optimizer steps and 3 warm-up steps**. Freeze reference
+completion log probabilities from the initial SFT weights, with dropout disabled.
+Refuse silent prompt/completion truncation (sequence ceiling 8,704 tokens).
+Select the saved adapter by **validation preference loss**, not MRR.
+
+The training package validator reconstructs every selected pair from the copied
+source candidates and semantic annotations. On Gadi it also links reviewed raw
+responses back to the original complete banks, verifies bank hashes, verifies
+the SFT checkpoint source, and pins portable training helpers with the submitted
+code. Source models, preference files and code remain checked for edits. An
+optional validator callback in the existing DPO trainer supports this distinct
+schema; legacy expansion/original DPO validation remains unchanged.
+
+### Upload the reviewed package and submit
+
+The prepared local archive is
+`Artifacts/generator-feedback-dpo-compactness-v2.tar.gz` (about 5.3 MB).
+
+In Windows PowerShell:
+
+```powershell
+Set-Location C:\Users\Dustin\Projects\BioASQ-MRES
+scp .\Artifacts\generator-feedback-dpo-compactness-v2.tar.gz dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/
+```
+
+Then on Gadi:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+mkdir -p outputs/generator_feedback_dpo/reviewed-compactness-v2
+tar -xzf /scratch/nl78/$USER/generator-feedback-dpo-compactness-v2.tar.gz \
+  -C outputs/generator_feedback_dpo/reviewed-compactness-v2
+bash scripts/submit_generator_feedback_dpo.sh \
+  outputs/generator_feedback_dpo/reviewed-compactness-v2
+```
+
+This submits **two GPU jobs**: a training smoke test, then a full pilot dependent
+on smoke success. It does not submit new generation, paid judging or final test
+evaluation. Do not pass this package to the legacy `submit_expansion_dpo_8b.sh`;
+its historical max-ten adapters and preference schema differ.
+
+```bash
+record=$(ls -td outputs/generator_feedback_dpo_training/submission-*/jobs.tsv | head -n 1)
+cat "$record"
+ids=$(awk -F '\t' 'NR>1 {print $2}' "$record")
+qstat -swx $ids
+qstat -fx $ids | grep -E 'Job Id|job_state|Exit_status|comment'
+```
+
+Training output is
+`outputs/generator_feedback_dpo_training/llama31-compactness-train-JOB_ID.gadi-pbs`.
+Inspect `manifest.json`, `training_log.json` and `adapter/`. A successful training
+job establishes that optimization completed; downstream improvement still needs
+matched-budget generation and scoring with the original frozen reranker.

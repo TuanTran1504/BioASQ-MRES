@@ -1,0 +1,20 @@
+{
+  "seed": 3407,
+  "formulation": "expansion",
+  "output_root": "outputs/generator_feedback_dpo_training",
+  "max_seq_length": 8704,
+  "beta": 0.1,
+  "learning_rate": 0.000002,
+  "num_train_epochs": 3,
+  "gradient_accumulation_steps": 4,
+  "warmup_ratio": 0.1,
+  "minimum_optimizer_steps": 12,
+  "minimum_train_questions": 16,
+  "minimum_validation_questions": 3,
+  "compactness_to_retention_ratio": 2,
+  "validation_use_all_reviewed_questions": true,
+  "checkpoint_selection": "minimum validation preference loss across three epochs; exploratory compactness pilot",
+  "epoch_validation_mrr": false,
+  "model_key": "llama31",
+  "reference": "exact loss-selected max-five Llama SFT used by response banks"
+}

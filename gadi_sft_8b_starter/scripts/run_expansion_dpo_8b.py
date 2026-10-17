@@ -193,10 +193,12 @@ def generate(args, config, source, output, state, initial_responses=None):
                 raise ValueError(f"No complete valid {split} {config.get('formulation', 'expansion')} response in generation smoke")
 
 
-def train(args, config, source, output, state):
+def train(args, config, source, output, state, *, preference_validator=None):
     preferences = Path(args.preferences).resolve()
     formulation = config.get("formulation", "expansion")
-    if formulation == "original":
+    if preference_validator is not None:
+        manifest, splits = preference_validator(preferences, config)
+    elif formulation == "original":
         from single_answer_dpo_data import validate_pairs as validate_single_pairs
         manifest, splits = validate_single_pairs(preferences, config, args.pair_strategy)
     else:
