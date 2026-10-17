@@ -238,3 +238,77 @@ Training output is
 Inspect `manifest.json`, `training_log.json` and `adapter/`. A successful training
 job establishes that optimization completed; downstream improvement still needs
 matched-budget generation and scoring with the original frozen reranker.
+
+### Evaluate the completed compactness continuation on dev160
+
+Training job **181456254.gadi-pbs** completed successfully: 27 optimizer steps,
+36 fitting and four validation pairs, best validation preference loss
+**0.6769970655441284**, and a saved adapter. These are training diagnostics,
+not evidence of better answering or ranking.
+
+Submit the matched development comparison:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_generator_feedback_evaluation.sh \
+  outputs/generator_feedback_dpo_training/llama31-compactness-train-181456254.gadi-pbs
+```
+
+This submits **three jobs**: a one-hour GPU smoke test, one dependent GPU job
+(eight-hour allowance) generating Llama DPO greedy and ten-sample responses,
+then a dependent two-hour CPU scoring job. It does not train anything, refit a
+reranker, use paid judging, or evaluate the official test batches.
+
+All six completed **loss-selected max-five SFT dev160 archives** are reused:
+Llama from evaluation 181038914, Qwen3 from 181038918, and Ministral from
+181038923, each with greedy and ten-sample decoding. Their native raw responses,
+parsing, complete evidence and source checkpoints are verified before reuse.
+Only the Llama adapter changes. In each decoding mode, the identical archived
+Qwen3 and Ministral responses participate in both ensembles. Ten-sample decoding
+uses temperature 0.8, top-p 0.95, top-k 0, seed 3407 and 512 output tokens; each
+response has at most five candidates. The original prompt and every snippet are
+retained. DPO tokenization and sequence allocation must match the starting SFT;
+no input truncation is permitted.
+
+The primary selector is the **existing max-five logistic reranker with relation
+labels**, from the exact artifact used for feedback. It is applied unchanged to
+both pools. Sample-frequency voting is reported as a secondary comparator, and
+Llama alone is scored in draw/within-response order. There is no dev-based
+choice of selector or checkpoint. Fitting and internal-validation question IDs
+must be disjoint from dev160. Submitted orchestration, inference helpers, data,
+checkpoints, official evaluator JAR and reranker artifacts are pinned by hashes;
+later checkout edits do not change the submitted code.
+
+Reports include:
+
+- Llama candidate count and output tokens per response, unique Llama candidates,
+  and unique combined-pool size. Failed draws remain in denominators and parse
+  failures, output ceilings and candidate-cap violations are reported explicitly.
+- Official Java candidate acceptance across the **entire pool**, followed by
+  coverage@1/5/10 and MRR@5. All empty/failed question pools remain in the denominator.
+- Paired bootstrap differences, full-pool and top-five gains/losses with question
+  IDs, raw rankings, and per-question compactness. A smaller pool alone is not a
+  demonstrated ranking or semantic-quality improvement.
+
+```bash
+record=$(ls -td outputs/generator_feedback_dpo_evaluation/submission-*/jobs.tsv | head -n 1)
+cat "$record"
+ids=$(awk -F '\t' 'NR>1 {print $2}' "$record")
+qstat -swx $ids
+qstat -fx $ids | grep -E 'Job Id|job_state|Exit_status|comment'
+```
+
+Generation output is `outputs/generator_feedback_dpo_evaluation/generation-JOB_ID`.
+CPU scoring writes
+`outputs/generator_feedback_dpo_evaluation/comparison-JOB_ID/comparison_summary.json`,
+`comparison_per_question.json`, `compactness_per_question.json`, `rankings.jsonl`
+and the labeled candidate pools. Its standard output prints SFT/DPO MRR,
+coverage, compactness and full-pool gains/losses for each decoding mode.
+
+This is an exploratory, historically inspected development panel. The DPO
+checkpoint was selected on only four preference-validation questions; training
+feedback used four samples, while the multi-generation evaluation uses ten.
+There is one training and decoding seed. Archived GPU timings are descriptive
+because source jobs ran separately. Confirm any promising behavior on an
+untouched evaluation panel before making a confirmatory performance claim.
