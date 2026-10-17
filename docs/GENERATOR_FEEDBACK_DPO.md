@@ -345,3 +345,54 @@ The submission record is
 The new results go to
 `outputs/generator_feedback_dpo_evaluation/comparison-rescore-JOB_ID/comparison_summary.json`.
 The result manifest identifies the recovery and its recorded correction.
+
+### Inspect the three changed ensemble rankings
+
+The reported dev160 ten-sample ensemble changes are:
+
+| Question ID | Question | SFT MRR | DPO MRR |
+|---|---|---:|---:|
+| `54f89e1a06d9727f76000001` | Which kinase is inhibited by the small molecule KN-93? | 1.0 | 0.5 |
+| `5c580aff07647bbc4b00001a` | Which ultraconserved element is associated with Embryonic Stem Cells (ESC) self-renewal? | 0.5 | 1.0 |
+| `64136fbf201352f04a00003d` | What is AUROC in context of predictive modeling? | 0.0 | 0.2 |
+
+These are rank changes, not by themselves semantic error diagnoses. Inspect raw
+responses and reranker inputs before attributing them to lost variants, answer
+order, frequency, relation metadata or a need to retrain the selector.
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+python ../scripts/export_generator_feedback_cases.py \
+  --comparison outputs/generator_feedback_dpo_evaluation/comparison-rescore-181462685.gadi-pbs \
+  --output outputs/generator_feedback_dpo_evaluation/case-audit-181462685 \
+  --archive /scratch/nl78/$USER/generator-feedback-dpo-cases-181462685.tar.gz
+```
+
+This runs a read-only audit of existing source artifacts and writes a new small
+export. It checks all stored pool/ranking membership, score ordering, summary
+metrics, original responses and frozen selector provenance. It automatically
+selects all questions with ensemble MRR changes, ordering regressions first.
+It records full evidence, gold aliases, both top-five lists, all accepted
+candidate ranks, unique expressions added/removed, model frequencies, source
+ranks, Llama per-draw/initial-answer occurrences, and exact additive logistic
+score contributions for accepted candidates and top-five competitors.
+`source_generations.jsonl` includes the unchanged companion responses as well
+as Llama SFT and DPO responses, in both decoding modes. No new judging,
+generation, training or official matching is performed. Exported cases are
+outcome-selected development diagnostics and must not become training examples.
+
+In local PowerShell:
+
+```powershell
+Set-Location C:\Users\Dustin\Projects\BioASQ-MRES
+New-Item -ItemType Directory -Force .\Artifacts\generator_feedback_dpo_cases_181462685 | Out-Null
+scp dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/generator-feedback-dpo-cases-181462685.tar.gz .\Artifacts\
+if ($LASTEXITCODE -eq 0) {
+    tar -xzf .\Artifacts\generator-feedback-dpo-cases-181462685.tar.gz -C .\Artifacts\generator_feedback_dpo_cases_181462685
+}
+```
+
+Review `report.md`, `cases.jsonl`, and `source_generations.jsonl`. An exact linear
+score decomposition identifies what the fixed reranker rewarded; it does not
+establish biomedical truth or prove that retraining on DPO pools would help.
