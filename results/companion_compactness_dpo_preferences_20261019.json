@@ -1,0 +1,178 @@
+{
+  "date": "2026-10-19",
+  "stage": "reviewed packages ready; user GPU submission pending",
+  "source_feedback_job": "181513120.gadi-pbs",
+  "source_manifest_sha256": "5a658e5918b190301095368bfe4b46a0226acf81c30837b7280cb118d05ea892",
+  "annotation_model": "gpt-4.1-mini-2025-04-14",
+  "shortlisted_pairs": 1939,
+  "reviewed_responses": 3242,
+  "unique_units": 4703,
+  "successful_llm_units": 4699,
+  "failed_units_explicitly_abstained": 4,
+  "affected_failed_responses": 5,
+  "original_api_judging_status": "partial; retained unchanged",
+  "final_review_status": "complete dispositions including four explicit nonsemantic abstentions",
+  "citation_normalization": {
+    "boundary_ellipsis_repairs": 58,
+    "affected_units": 46,
+    "rule": "Remove leading/trailing ellipsis only if remaining quoted characters are an exact substring of the cited snippet and length >=8",
+    "successful_semantic_labels_changed": 0
+  },
+  "cumulative_cost_usd": 2.3860583999999987,
+  "additional_cost_usd": 1.3582315999999974,
+  "authorized_cumulative_cap_usd": 10,
+  "models": {
+    "qwen3": {
+      "status": "ready",
+      "package_manifest_sha256": "60cea864c6549b6c11a1dd0f1391fc7c96ec7744193744acc8c8691dd37338e2",
+      "archive": "generator-feedback-dpo-expanded-qwen3-v2.tar.gz",
+      "archive_sha256": "eb5993fcfca086ca64210e65bc60bb6c96ee0e43c459d73934d7e8dae67bcaf3",
+      "archive_bytes": 13024799,
+      "partitions": {
+        "train": {
+          "eligible_pairs": {
+            "compactness": 340,
+            "retain_needed_expansion": 14
+          },
+          "distinct_eligible_questions": {
+            "compactness": 249,
+            "retain_needed_expansion": 13
+          },
+          "selected_pairs": 117,
+          "selected_questions": 116,
+          "selected_objectives": {
+            "compactness": 104,
+            "retain_needed_expansion": 13
+          },
+          "pool_effects": {
+            "unchanged_pool": 105,
+            "shrinks_pool": 12
+          }
+        },
+        "validation": {
+          "eligible_pairs": {
+            "compactness": 33,
+            "retain_needed_expansion": 2
+          },
+          "distinct_eligible_questions": {
+            "compactness": 24,
+            "retain_needed_expansion": 1
+          },
+          "selected_pairs": 25,
+          "selected_questions": 25,
+          "selected_objectives": {
+            "compactness": 24,
+            "retain_needed_expansion": 1
+          },
+          "pool_effects": {
+            "unchanged_pool": 23,
+            "shrinks_pool": 2
+          }
+        }
+      },
+      "excluded_pairs_by_reason": {
+        "unresolved_or_conflicting_response_review": 399,
+        "chosen_not_fully_supported_correct_equivalent_and_valid": 123,
+        "assistant_numeric_or_scope_veto": 11
+      },
+      "compactness_deletions": {
+        "train": {
+          "removed_candidates": 156,
+          "judge_assessed_valid": 87,
+          "judge_assessed_harmful": 69
+        },
+        "validation": {
+          "removed_candidates": 33,
+          "judge_assessed_valid": 17,
+          "judge_assessed_harmful": 16
+        }
+      }
+    },
+    "ministral3": {
+      "status": "ready",
+      "package_manifest_sha256": "fb167dc610ae2c16533547994bd7fd250c7c7ade98eec2eda1ae6022c3826308",
+      "archive": "generator-feedback-dpo-expanded-ministral3-v2.tar.gz",
+      "archive_sha256": "4c63fb1cda6f5cc25c1041899b3ece8284d83b89d1827c53882217dc5b7da139",
+      "archive_bytes": 12976015,
+      "partitions": {
+        "train": {
+          "eligible_pairs": {
+            "compactness": 356,
+            "retain_needed_expansion": 10
+          },
+          "distinct_eligible_questions": {
+            "compactness": 258,
+            "retain_needed_expansion": 8
+          },
+          "selected_pairs": 72,
+          "selected_questions": 72,
+          "selected_objectives": {
+            "compactness": 64,
+            "retain_needed_expansion": 8
+          },
+          "pool_effects": {
+            "unchanged_pool": 63,
+            "shrinks_pool": 9
+          }
+        },
+        "validation": {
+          "eligible_pairs": {
+            "compactness": 21,
+            "retain_needed_expansion": 1
+          },
+          "distinct_eligible_questions": {
+            "compactness": 17,
+            "retain_needed_expansion": 1
+          },
+          "selected_pairs": 18,
+          "selected_questions": 18,
+          "selected_objectives": {
+            "compactness": 17,
+            "retain_needed_expansion": 1
+          },
+          "pool_effects": {
+            "unchanged_pool": 16,
+            "shrinks_pool": 2
+          }
+        }
+      },
+      "excluded_pairs_by_reason": {
+        "unresolved_or_conflicting_response_review": 433,
+        "chosen_not_fully_supported_correct_equivalent_and_valid": 179,
+        "assistant_numeric_or_scope_veto": 17
+      },
+      "compactness_deletions": {
+        "train": {
+          "removed_candidates": 94,
+          "judge_assessed_valid": 61,
+          "judge_assessed_harmful": 33
+        },
+        "validation": {
+          "removed_candidates": 23,
+          "judge_assessed_valid": 12,
+          "judge_assessed_harmful": 11
+        }
+      }
+    }
+  },
+  "interpretation": "Compactness and accepted-form retention controls, not exclusively factual-error correction. Many deleted expressions remain valid optional alternatives.",
+  "protocol": {
+    "train_compactness_to_retention_ratio": 8,
+    "minimum_fitting_questions": 64,
+    "minimum_preference_validation_questions": 12,
+    "checkpoint_validation_questions": 144,
+    "companions": "Both starting SFT generators remain fixed",
+    "reranker": "Existing frozen max-five SFT logistic selector",
+    "primary_selection": "Unchanged strict individual and ensemble coverage preservation; starting SFT is fallback",
+    "secondary_selection": "Ensemble-only candidate reported separately, never overwrites strict selected adapter",
+    "dev160_and_test_used": false,
+    "gpu_jobs_submitted_by_assistant": false
+  },
+  "verification": [
+    "All source/output hashes verified",
+    "Packages reconstruct exactly from annotations and configs",
+    "Archives verified byte-for-byte",
+    "No selected pair contains abstained units or vetoed questions",
+    "50 targeted tests passed including mocked launchers and truncation recovery"
+  ]
+}

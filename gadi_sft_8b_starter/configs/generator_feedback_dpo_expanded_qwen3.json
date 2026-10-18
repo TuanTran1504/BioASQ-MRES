@@ -20,6 +20,11 @@
   "model_key": "qwen3",
   "reference": "exact loss-selected max-five qwen3 SFT used by response banks",
   "assistant_vetoes": {
+    "65f77397c4010b4d78000025": "The preferred list mixes Less than 0.5 percent with exactly 0.5 percent; the snippets also mix denominators and tumor subgroups. Hold out the bound and population ambiguity.",
+    "66099967fdcbea915f000018": "The question asks infusion duration but generated answers give a dose-normalized infusion rate. Hold out this duration-versus-rate ambiguity.",
+    "626aab13e764a5320400003b": "The sole snippet reports approximately 25 times the rate; both responses omit the approximation and the relative-rate wording is ambiguous. Hold out this numerical-precision case.",
+    "58a2df9c60087bc10a000006": "The 8 percent evidence concerns beta-thalassemia trait, while the question does not distinguish carrier frequency from disease incidence; other snippets concern different populations. Hold out this scope ambiguity.",
+    "5c7b1a5fd774d0424000000c": "Supplied snippets require herd immunity exceeding 95 percent; the generated 95 percent expressions omit the strict lower bound. Do not approve this as a clean retention control.",
     "606ad07394d57fd879000050": "Question says Southern Asians while the sole snippet concerns Southeast Asians; hold out the population-scope mismatch.",
     "6253307fe764a53204000024": "Snippet counts eight Lbx paralogons but says only three retain Lbx genes; do not approve eight gene copies.",
     "606b648394d57fd879000069": "HEp-2 origin snippets use conflicting oropharyngeal and laryngeal descriptions; hold out unresolved source attribution.",

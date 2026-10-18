@@ -3,7 +3,8 @@
 Extend the expanded Llama experiment to **Qwen3-8B and Ministral-3-8B**. Each
 model uses its own naturally generated max-five responses and its own exact
 loss-selected SFT adapter/reference. Do not train these models on the Llama-only
-preference package. Counts are unknown until preparation and semantic review.
+preference package. Reviewed companion packages are now available locally; see
+the completed review below before GPU submission.
 
 ## Protocol
 
@@ -109,13 +110,13 @@ these paths on Gadi, submit separately:
 
 ```bash
 bash scripts/submit_expanded_generator_dpo.sh \
-  outputs/generator_feedback_dpo/reviewed-expanded-qwen3-v1 qwen3
+  outputs/generator_feedback_dpo/reviewed-expanded-qwen3-v2 qwen3
 bash scripts/submit_expanded_generator_dpo.sh \
-  outputs/generator_feedback_dpo/reviewed-expanded-ministral3-v1 ministral3
+  outputs/generator_feedback_dpo/reviewed-expanded-ministral3-v2 ministral3
 ```
 
-These commands are **for the post-review stage**; those reviewed packages do
-not exist yet. Each submits smoke, training and validation-selection jobs with
+These commands are **for the post-review stage**, after transferring the v2
+packages described below. Each submits smoke, training and validation-selection jobs with
 success dependencies. Both models use the existing output root
 `outputs/generator_feedback_dpo_expanded`, with model-specific run names and
 separate submission records. All epoch adapters remain available regardless
@@ -132,3 +133,72 @@ These validation questions previously selected the frozen reranker's
 regularization. They remain selection diagnostics and do not establish unseen
 performance. No automatic combined-model, dev160 or official-test evaluation
 is included.
+
+## Completed companion review: 19 October 2026
+
+CPU preparation job `181513120.gadi-pbs` produced the verified source export.
+Blinded GPT-4.1-mini review covered 1,939 shortlisted pairs, 3,242 responses and
+4,703 distinct annotation units. The API successfully judged 4,699 units. Four
+units repeatedly produced malformed, truncated Unicode output; they were
+explicitly abstained, and all five affected responses were excluded from pair
+selection. They were never assigned semantic approval. The original partial
+API review and caches remain unchanged.
+
+A separate, logged derivative removed boundary ellipses from 58 evidence quotes
+across 46 units, only where the remaining quotation is an exact substring of its
+cited snippet. No successful correctness, support, equivalence, relation or
+confidence label changed. The derivative manifest carries the original review
+hashes, abstentions and complete quotation-repair log.
+
+Targeted assistant inspection also excluded additional numerical and scope
+ambiguities, including strict percentage bounds, carrier frequency versus
+disease incidence, and infusion duration versus dose-normalized infusion rate.
+These vetoes are confined to the companion configurations; Llama's data and
+selection decision remain unchanged.
+
+| Model | Fitting compactness / retention | Fitting pairs / questions | Preference-validation compactness / retention | Validation pairs |
+|---|---:|---:|---:|---:|
+| Qwen3 | 104 / 13 | 117 / 116 | 24 / 1 | 25 |
+| Ministral | 64 / 8 | 72 / 72 | 17 / 1 | 18 |
+
+One fitting question contributes to both objectives for Qwen3, as permitted by
+the existing one-pair-per-question-per-objective rule. Both packages meet the
+unchanged minima and 8:1 fitting ratio. Checkpoint selection still evaluates all
+144 internal-validation questions, not just these preference-validation subsets.
+
+These are compactness preferences, not exclusively harmful-expansion examples.
+For example, the selected Qwen3 compactness pairs delete 87 expressions judged
+valid and 69 judged harmful; Ministral deletes 61 valid and 33 harmful expressions.
+Only 12 Qwen3 and 9 Ministral fitting compactness pairs shrink the fixed ensemble
+pool; the others can reduce focal response length while companions retain those
+expressions. Generalization and actual MRR preservation require the GPU runs.
+
+The cumulative max-five review ledger is US$2.3860584, including the previous
+Llama reviews, within the original US$10 allowance. No GPU jobs were submitted
+by the assistant. Aggregate counts, archive hashes and verification are recorded
+in `results/companion_compactness_dpo_preferences_20261019.json`.
+
+Use the final **v2** archives in local `Artifacts/`; earlier v1 files are superseded.
+Upload from local PowerShell:
+
+```powershell
+cd C:\Users\Dustin\Projects\BioASQ-MRES
+scp .\Artifacts\generator-feedback-dpo-expanded-qwen3-v2.tar.gz .\Artifacts\generator-feedback-dpo-expanded-ministral3-v2.tar.gz dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/
+```
+
+Then on Gadi:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+for model in qwen3 ministral3; do
+  preferences="outputs/generator_feedback_dpo/reviewed-expanded-${model}-v2"
+  mkdir -p "$preferences" || break
+  tar -xzf "/scratch/nl78/$USER/generator-feedback-dpo-expanded-${model}-v2.tar.gz" -C "$preferences" || break
+  bash scripts/submit_expanded_generator_dpo.sh "$preferences" "$model" || break
+done
+```
+
+This submits six jobs: a smoke, DPO training and validation-selection chain for
+each model. The two training experiments keep their other two SFT generators
+fixed; they do not combine the separately trained DPO models yet.

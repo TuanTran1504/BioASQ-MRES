@@ -13,6 +13,44 @@ import run_generator_feedback_dpo as runner
 from scripts import judge_generator_feedback as judge
 
 
+def test_truncation_recovery_follows_multiple_limits_and_reuses_success(tmp_path):
+    (tmp_path / "responses").mkdir()
+    (tmp_path / "cache").mkdir()
+    jobs, _ = judge.prepare([raw("q", "train", 1, ["Core", "alias"], {"Core"})])
+    original = copy.deepcopy(jobs)
+    current = jobs[0]
+    for _ in range(2):
+        data.write(tmp_path / "responses" / (current["request_sha256"] + "-attempt.json"),
+                   {"choices": [{"finish_reason": "length"}]})
+        recovered = judge.recover_truncated_jobs(jobs, tmp_path)[0]
+        assert recovered["payload"]["max_tokens"] == current["payload"]["max_tokens"] * 2
+        current = recovered
+    assert jobs == original
+    data.write(tmp_path / "cache" / (current["request_sha256"] + ".json"), {})
+    assert judge.recover_truncated_jobs(jobs, tmp_path)[0] == current
+    assert judge.recover_truncated_jobs([original[0]], tmp_path)[0]["unit_ids"] == original[0]["unit_ids"]
+
+
+def test_persistent_truncation_splits_without_losing_or_rejudging_units(tmp_path):
+    jobs, _ = judge.prepare([raw("q", "train", 1, ["Core", "alias", "other"], {"Core"})])
+    job = copy.deepcopy(jobs[0])
+    job["payload"]["max_tokens"] = 8192
+    job["request_sha256"] = judge.shared.sha(job["payload"])
+    (tmp_path / "responses").mkdir()
+    data.write(tmp_path / "responses" / (job["request_sha256"] + "-attempt.json"),
+               {"choices": [{"finish_reason": "length"}]})
+    children = judge.recover_truncated_jobs([job], tmp_path)
+    assert len(children) == 2
+    assert [uid for child in children for uid in child["unit_ids"]] == job["unit_ids"]
+    for child in children:
+        public = json.loads(child["payload"]["messages"][1]["content"])
+        assert [c["index"] for c in public["candidates"]] == list(range(len(child["unit_ids"])))
+        assert child["payload"]["messages"][0] == job["payload"]["messages"][0]
+    (tmp_path / "cache").mkdir()
+    data.write(tmp_path / "cache" / (job["request_sha256"] + ".json"), {})
+    assert judge.recover_truncated_jobs([job], tmp_path) == [job]
+
+
 def test_expanded_review_reindexes_only_unjudged_units():
     row = raw("q", "train", 1, ["Core", "alias", "other"], {"Core"})
     jobs, units = judge.prepare([row])

@@ -112,14 +112,27 @@ def recover_truncated_jobs(jobs, budget):
     result = []
     for job in jobs:
         key = job["request_sha256"]
-        if not (budget / "cache" / (key + ".json")).exists():
+        while not (budget / "cache" / (key + ".json")).exists():
             responses = list((budget / "responses").glob(key + "-*.json"))
-            if any(shared.read(p)["choices"][0]["finish_reason"] == "length" for p in responses):
-                payload = json.loads(json.dumps(job["payload"]))
-                payload["max_tokens"] = min(32768, payload["max_tokens"] * 2)
-                job = {**job, "payload": payload, "request_sha256": shared.sha(payload),
-                       "maximum_cost_reserve_usd": (len(json.dumps(payload, ensure_ascii=False).encode()) + 2048)*INPUT_RATE + payload["max_tokens"]*OUTPUT_RATE}
-        result.append(job)
+            if (job["payload"]["max_tokens"] >= 32768 or
+                    not any(shared.read(p)["choices"][0]["finish_reason"] == "length" for p in responses)):
+                break
+            if job["payload"]["max_tokens"] >= 8192 and len(job["unit_ids"]) > 1:
+                midpoint = len(job["unit_ids"]) // 2
+                children = []
+                for chunk in (job["unit_ids"][:midpoint], job["unit_ids"][midpoint:]):
+                    known = {uid: None for uid in job["unit_ids"] if uid not in chunk}
+                    children.extend(missing_jobs([job], known))
+                result.extend(recover_truncated_jobs(children, budget))
+                job = None
+                break
+            payload = json.loads(json.dumps(job["payload"]))
+            payload["max_tokens"] = min(32768, payload["max_tokens"] * 2)
+            job = {**job, "payload": payload, "request_sha256": shared.sha(payload),
+                   "maximum_cost_reserve_usd": (len(json.dumps(payload, ensure_ascii=False).encode()) + 2048)*INPUT_RATE + payload["max_tokens"]*OUTPUT_RATE}
+            key = job["request_sha256"]
+        if job is not None:
+            result.append(job)
     return result
 
 
