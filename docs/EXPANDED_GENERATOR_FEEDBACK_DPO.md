@@ -158,3 +158,51 @@ all four epoch scores, eligibility, coverage transitions, token counts and the
 selected epoch. `selected_adapter/` contains the winner, including the original
 SFT if epoch zero wins. The training `adapter/` remains the best preference-loss
 checkpoint and is not overwritten by downstream selection.
+
+## Inspect the epoch-1 Llama coverage loss
+
+Completed selection job **181507871** retained epoch zero. On validation144,
+epoch 1 had ensemble MRR 0.611227 versus starting SFT 0.606944, with mean Llama
+tokens 46.80 versus 61.56. It lost one previously covered Llama question while
+losing none at ensemble level. These are internal selection diagnostics.
+
+Export that loss without changing selection, running models or judging again:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+python3 ../scripts/export_expanded_dpo_coverage_loss.py \
+  --comparison outputs/generator_feedback_dpo_expanded/llama31-compactness-train-181507870.gadi-pbs/validation-selection-181507871.gadi-pbs \
+  --epoch 1 \
+  --output outputs/generator_feedback_dpo_expanded/epoch1-coverage-loss-181507871 \
+  --archive /scratch/nl78/$USER/expanded-dpo-epoch1-loss-181507871.tar.gz
+```
+
+The exporter derives the question ID from the saved per-question full-pool
+coverage transitions. It checks source hashes, draws, seeds, evidence and cached
+official candidate labels, and reconstructs the focal Llama and ensemble metrics.
+It loads the exact hashed parser from the original submission without writing
+bytecode there. No Java rerun or optional Python packages are needed.
+
+`report.md` shows the four paired sampled responses and frozen ensemble top five.
+`cases.jsonl` adds full evidence, gold aliases, the greedy response pair and
+candidate acceptance flags. `source_responses.jsonl` includes the unchanged
+companions. Comparing normalized initial strings distinguishes an initial-wording
+change from deletion of an accepted later expression with the same initial
+answer. Neither event establishes a semantic error without examining evidence.
+
+On local PowerShell:
+
+```powershell
+Set-Location C:\Users\Dustin\Projects\BioASQ-MRES
+New-Item -ItemType Directory -Force .\Artifacts\expanded_dpo_epoch1_loss_181507871 | Out-Null
+scp dt9536@gadi.nci.org.au:/scratch/nl78/dt9536/expanded-dpo-epoch1-loss-181507871.tar.gz .\Artifacts\
+if ($LASTEXITCODE -eq 0) {
+    tar -xzf .\Artifacts\expanded-dpo-epoch1-loss-181507871.tar.gz -C .\Artifacts\expanded_dpo_epoch1_loss_181507871
+}
+```
+
+The original selection directory and selected adapter are read-only inputs.
+Choose a new export path if repeating the command; existing exports are not
+overwritten. Outcome-selected validation cases are diagnostic and not approved
+new fitting preferences.
