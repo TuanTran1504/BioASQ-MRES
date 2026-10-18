@@ -1,0 +1,27 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=04:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N llama-expanded-dpo
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+export HF_HUB_CACHE="${HF_HOME}/hub" TOKENIZERS_PARALLELISM=false PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+args=(--mode run --submission "${DPO_SUBMISSION:?}")
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then args+=(--smoke-test); fi
+python3 "$DPO_SUBMISSION/code/gadi_sft_8b_starter/scripts/run_generator_feedback_dpo.py" "${args[@]}"
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  training="${PWD}/outputs/generator_feedback_dpo_expanded/llama31-compactness-smoke-${PBS_JOBID}"
+  python3 "$DPO_SUBMISSION/code/gadi_sft_8b_starter/scripts/select_generator_feedback_dpo.py" \
+    --submission "$DPO_SUBMISSION" --training "$training" --output "$training/validation-smoke" --smoke-test
+fi

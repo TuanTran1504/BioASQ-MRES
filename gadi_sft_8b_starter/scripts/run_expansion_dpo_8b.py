@@ -325,7 +325,7 @@ def train(args, config, source, output, state, *, preference_validator=None):
         learning_rate=config["learning_rate"], warmup_steps=warmup,
         weight_decay=0.01, fp16=True, bf16=False, gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False}, optim="adamw_8bit",
-        eval_strategy="epoch", save_strategy="epoch", save_total_limit=int(config["num_train_epochs"]) if epoch_mrr else 2,
+        eval_strategy="epoch", save_strategy="epoch", save_total_limit=int(config["num_train_epochs"]) if (epoch_mrr or config.get("retain_epoch_checkpoints", False)) else 2,
         load_best_model_at_end=True, metric_for_best_model="eval_loss", greater_is_better=False,
         remove_unused_columns=False, report_to="none", logging_steps=1, seed=config["seed"],
         prediction_loss_only=True, label_names=["chosen_labels", "rejected_labels"])

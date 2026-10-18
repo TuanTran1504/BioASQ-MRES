@@ -171,3 +171,12 @@ and [original expected result](../reproducibility/best_list_system/expected_resu
 The export includes aggregate results and portable provenance. Source paths under
 `Artifacts/` identify local evidence files; those ignored artifacts, model weights,
 raw questions, gold aliases and API caches are not distributed in this result snapshot.
+
+## Expanded generator-feedback preferences
+
+[The 18 October preparation summary](generator_feedback_dpo_expanded_preferences_20261018.json)
+records 108 fitting and 22 validation pairs for Llama compactness DPO. It is a
+reviewed-data and protocol record, not a new training/evaluation result. The
+[submission guide](../docs/EXPANDED_GENERATOR_FEEDBACK_DPO.md) retains all epochs
+and selects against the starting-SFT fallback on all 144 internal-validation
+questions, with frozen companion models and reranker.

@@ -13,6 +13,31 @@ import run_generator_feedback_dpo as runner
 from scripts import judge_generator_feedback as judge
 
 
+def test_expanded_review_reindexes_only_unjudged_units():
+    row = raw("q", "train", 1, ["Core", "alias", "other"], {"Core"})
+    jobs, units = judge.prepare([row])
+    known = {jobs[0]["unit_ids"][0]: {"cached": True}}
+    remaining = judge.missing_jobs(jobs, known)
+    assert len(remaining) == 1 and not set(remaining[0]["unit_ids"]) & set(known)
+    public = json.loads(remaining[0]["payload"]["messages"][1]["content"])
+    assert [c["index"] for c in public["candidates"]] == list(range(len(public["candidates"])))
+    assert "accepted_training_aliases" not in public
+    assert len(remaining[0]["unit_ids"]) + len(known) == len(units)
+    assert remaining[0]["request_sha256"] != jobs[0]["request_sha256"]
+
+
+def test_expanded_pool_ties_preserve_other_pair_guards():
+    a = raw("q", "train", 0, ["Core"], {"Core"})
+    b = raw("q", "train", 1, ["Core", "alias"], {"Core"})
+    p = pair(a, b, "compactness")
+    p["chosen_outcome"]["pool_candidates"] = p["rejected_outcome"]["pool_candidates"]
+    originals = {r["response_id"]: r for r in (a,b)}
+    with pytest.raises(ValueError): data.check_pair(p, originals)
+    data.check_pair(p, originals, allow_pool_ties=True)
+    p["chosen_outcome"]["mrr_at5"] = 0
+    with pytest.raises(ValueError): data.check_pair(p, originals, allow_pool_ties=True)
+
+
 def raw(q, split, draw, answers, accepted):
     text = json.dumps({"answers": [{"answer": a, "relation_type": "original" if i == 0 else "synonym"}
                                   for i, a in enumerate(answers)]})

@@ -1,5 +1,9 @@
 # Direction 1: train answer generation with ensemble-ranking feedback
 
+The [expanded Llama follow-up](EXPANDED_GENERATOR_FEEDBACK_DPO.md) adds a
+108-pair fitting package and all-epoch selection on all 144 internal-validation
+questions. The original pilot and its artifacts below remain unchanged.
+
 The reranker stays frozen. We construct preferences between complete, naturally
 generated max-five responses according to their effect on final ensemble
 ranking. This is different from the pairwise-reranker experiment: its trainable

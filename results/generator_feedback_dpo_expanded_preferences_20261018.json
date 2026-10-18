@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-18",
+  "stage": "reviewed expanded preferences and prepared workflow; user submission pending",
+  "model": "Llama-3.1-8B loss-selected max-five SFT",
+  "source_feedback_job": "181434386.gadi-pbs",
+  "annotation_model": "gpt-4.1-mini-2025-04-14",
+  "shortlisted_pairs": 1040,
+  "reviewed_responses": 1736,
+  "unique_judgment_units": 3016,
+  "reused_judgment_units": 726,
+  "cumulative_cost_usd": 1.0278268000000013,
+  "additional_cost_usd": 0.7807892,
+  "authorized_cumulative_cap_usd": 10,
+  "partitions": {
+    "train": {
+      "eligible_pairs": {
+        "compactness": 388,
+        "retain_needed_expansion": 16
+      },
+      "distinct_eligible_questions": {
+        "compactness": 275,
+        "retain_needed_expansion": 12
+      },
+      "selected_pairs": 108,
+      "selected_questions": 108,
+      "selected_objectives": {
+        "compactness": 96,
+        "retain_needed_expansion": 12
+      },
+      "pool_effects": {
+        "unchanged_pool": 98,
+        "shrinks_pool": 10
+      }
+    },
+    "validation": {
+      "eligible_pairs": {
+        "compactness": 31,
+        "retain_needed_expansion": 1
+      },
+      "distinct_eligible_questions": {
+        "compactness": 21,
+        "retain_needed_expansion": 1
+      },
+      "selected_pairs": 22,
+      "selected_questions": 22,
+      "selected_objectives": {
+        "compactness": 21,
+        "retain_needed_expansion": 1
+      },
+      "pool_effects": {
+        "unchanged_pool": 19,
+        "shrinks_pool": 3
+      }
+    }
+  },
+  "excluded_pairs_by_reason": {
+    "unresolved_or_conflicting_response_review": 436,
+    "chosen_not_fully_supported_correct_equivalent_and_valid": 153,
+    "assistant_numeric_or_scope_veto": 15
+  },
+  "assistant_vetoes": {
+    "66099a03fdcbea915f00001d": "Preferred response treats screening start age 45 and age intervals 45-49/45-74 as equivalent; supplied snippets distinguish them.",
+    "58cc5bae02b8c60953000037": "Supplied ALD estimate has the lower bound 'at least'; preferred responses omit it. Hold out rather than approve the bound change.",
+    "5ace17c30340b9f058000009": "Question asks androsterone, but supplied OR7D4 evidence concerns androstenone. Do not approve the judge's unsupported terminology substitution.",
+    "601db4ac1cb411341a000048": "Preferred protein expression 'lamin A (LMNA)' declares gene name LMNA an abbreviation of a protein. Hold the gene/protein and precursor distinctions out of this clean pilot.",
+    "606ad07394d57fd879000050": "Question says Southern Asians while the sole snippet concerns Southeast Asians; hold out the population-scope mismatch.",
+    "6253307fe764a53204000024": "Snippet counts eight Lbx paralogons but says only three retain Lbx genes; do not approve eight gene copies.",
+    "606b648394d57fd879000069": "HEp-2 origin snippets use conflicting oropharyngeal and laryngeal descriptions; hold out unresolved source attribution.",
+    "5e35dc26158f994d3a000006": "Snippet says nearly 5,000 proteins; the preferred exact expression omits the approximation qualifier.",
+    "5e4940f46d0a277941000004": "Snippet estimates approximately 55; the shorter preference deletes the explicitly qualified forms. Hold out the precision change."
+  },
+  "package_manifest_sha256": "db0ae7d66f8e96b63ca0cba59c439ff3910accb27d45ceb205628dce2ec77bbf",
+  "archive_sha256": "ef7f70a9ed724fae919bb05c4505ee2946b63d8abc71ab26c2a626e3df0ba55a",
+  "training": {
+    "epochs": 3,
+    "optimizer_steps": 81,
+    "warmup_steps": 9,
+    "beta": 0.1,
+    "learning_rate": 2e-06,
+    "effective_pair_batch_size": 4
+  },
+  "downstream_selection": {
+    "questions": 144,
+    "epochs": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "samples_per_question_per_model": 4,
+    "unchanged_companions": [
+      "qwen3",
+      "ministral3"
+    ],
+    "frozen_reranker": "max5 logistic train-181350943.gadi-pbs",
+    "rule": "Preserve Llama and ensemble full-pool coverage; ensemble MRR >= epoch0; mean Llama tokens <= epoch0; no additional empty/ceiling/surplus responses; maximize MRR, then minimize tokens, then earliest epoch. Epoch0 fallback."
+  },
+  "limitations": [
+    "Automated semantic review plus assistant vetoes, not independent expert certification.",
+    "Compactness may remove valid optional aliases.",
+    "8:1 compactness/control cap is an experimental choice.",
+    "This is not a full 1296-question preference dataset.",
+    "The same 144 internal-validation questions previously selected frozen-reranker regularization; no independent performance claim.",
+    "No new GPU training, dev160 or official-test result is available."
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "seed": 3407,
+  "formulation": "expansion",
+  "output_root": "outputs/generator_feedback_dpo_expanded",
+  "max_seq_length": 8704,
+  "beta": 0.1,
+  "learning_rate": 2e-06,
+  "num_train_epochs": 3,
+  "gradient_accumulation_steps": 4,
+  "warmup_ratio": 0.1,
+  "minimum_optimizer_steps": 12,
+  "minimum_train_questions": 64,
+  "minimum_validation_questions": 12,
+  "compactness_to_retention_ratio": 8,
+  "validation_use_all_reviewed_questions": true,
+  "review_scope": "all_compactness",
+  "retain_epoch_checkpoints": true,
+  "checkpoint_selection": "all epochs retained; separate full validation144 frozen-ensemble selection including epoch zero",
+  "epoch_validation_mrr": false,
+  "model_key": "llama31",
+  "reference": "exact loss-selected max-five Llama SFT used by response banks",
+  "assistant_vetoes": {
+    "606ad07394d57fd879000050": "Question says Southern Asians while the sole snippet concerns Southeast Asians; hold out the population-scope mismatch.",
+    "6253307fe764a53204000024": "Snippet counts eight Lbx paralogons but says only three retain Lbx genes; do not approve eight gene copies.",
+    "606b648394d57fd879000069": "HEp-2 origin snippets use conflicting oropharyngeal and laryngeal descriptions; hold out unresolved source attribution.",
+    "5e35dc26158f994d3a000006": "Snippet says nearly 5,000 proteins; the preferred exact expression omits the approximation qualifier.",
+    "5e4940f46d0a277941000004": "Snippet estimates approximately 55; the shorter preference deletes the explicitly qualified forms. Hold out the precision change."
+  }
+}

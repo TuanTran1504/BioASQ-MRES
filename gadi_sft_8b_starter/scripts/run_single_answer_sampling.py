@@ -69,8 +69,8 @@ def generation_options(config):
             raise ValueError("Expected one greedy generation")
         return {"max_new_tokens": config["max_new_tokens"], "do_sample": False,
                 "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
-    if config["num_generations"] != 10 or config["temperature"] <= 0:
-        raise ValueError("Expected ten stochastic samples with positive temperature")
+    if config["num_generations"] not in (4, 10) or config["temperature"] <= 0:
+        raise ValueError("Expected four or ten stochastic samples with positive temperature")
     return {"max_new_tokens": config["max_new_tokens"], "do_sample": True,
             "temperature": config["temperature"], "top_p": config["top_p"],
             "top_k": 0, "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
@@ -177,7 +177,7 @@ def main():
             encoded = {k: v.to(device) for k, v in encoded.items()}
             samples = []
             for draw in range(1, config["num_generations"] + 1):
-                seed = sample_seed(qid, draw, config["seed"])
+                seed = sample_seed(qid, draw + int(config.get("sample_seed_offset", 0)), config["seed"])
                 torch.manual_seed(seed)
                 torch.cuda.manual_seed_all(seed)
                 started = time.perf_counter()

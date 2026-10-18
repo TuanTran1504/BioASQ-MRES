@@ -48,8 +48,8 @@ def validate_native(directory, config, repository):
     return manifest, splits, source, prepared
 
 
-def prepare(repository, directory, submission):
-    config_path = repository / "gadi_sft_8b_starter/configs/generator_feedback_dpo.json"
+def prepare(repository, directory, submission, config_path=None):
+    config_path = config_path or repository / "gadi_sft_8b_starter/configs/generator_feedback_dpo.json"
     config = read(config_path)
     _, splits, source, feedback_prepared = validate_native(directory, config, repository)
     submission.mkdir(parents=True, exist_ok=False)
@@ -129,13 +129,14 @@ if __name__ == "__main__":
     p.add_argument("--mode", choices=("prepare", "run"), required=True)
     p.add_argument("--repository", type=Path, default=REPOSITORY)
     p.add_argument("--preferences", type=Path)
+    p.add_argument("--config", type=Path)
     p.add_argument("--submission", type=Path, required=True)
     p.add_argument("--smoke-test", action="store_true")
     args = p.parse_args()
     if args.mode == "prepare":
         if args.preferences is None:
             p.error("Preparation requires --preferences")
-        prepare(args.repository.resolve(), args.preferences.resolve(), args.submission.resolve())
+        prepare(args.repository.resolve(), args.preferences.resolve(), args.submission.resolve(), args.config.resolve() if args.config else None)
     else:
         prepared = read(args.submission / "prepared.json")
         directory = Path(prepared["repository"]) / "gadi_sft_8b_starter" / prepared["configuration"]["output_root"]

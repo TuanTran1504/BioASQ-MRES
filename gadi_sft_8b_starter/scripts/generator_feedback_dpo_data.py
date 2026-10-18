@@ -26,7 +26,7 @@ def write_rows(path, rows):
     path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
 
 
-def check_pair(pair, originals):
+def check_pair(pair, originals, allow_pool_ties=False):
     a, b = (originals[pair[k]] for k in ("chosen_id", "rejected_id"))
     if (pair["split"] not in ("train", "validation") or pair["model_key"] != "llama31"
             or a["split"] != pair["split"] or b["split"] != pair["split"]
@@ -51,7 +51,9 @@ def check_pair(pair, originals):
             or ao["fixed_response_ids"] != pair["fixed_response_ids"] or len(pair["fixed_response_ids"]) != 11):
         raise ValueError("Accepted-form, ranking or companion preservation failed")
     if pair["objective"] == "compactness":
-        if len(ac) >= len(bc) or not a["candidates"][0]["official_accepted"] or ao["pool_candidates"] >= bo["pool_candidates"]:
+        if (len(ac) >= len(bc) or not a["candidates"][0]["official_accepted"]
+                or ao["pool_candidates"] > bo["pool_candidates"]
+                or (not allow_pool_ties and ao["pool_candidates"] == bo["pool_candidates"])):
             raise ValueError("Compactness must shrink the pool with accepted initial retained")
     elif pair["objective"] == "retain_needed_expansion":
         if len(ac) <= len(bc) or accepted_b:
@@ -61,7 +63,8 @@ def check_pair(pair, originals):
 
 
 def choose_pairs(source, annotations, config):
-    _, candidates, original = load_shortlist(source)
+    scope = config.get("review_scope", "pool_reducing")
+    _, candidates, original = load_shortlist(source, scope)
     expected = {r["response_id"]: r for r in original}
     reviewed = {r["response_id"]: r for r in annotations}
     if len(reviewed) != len(annotations) or set(reviewed) != set(expected):
@@ -76,12 +79,13 @@ def choose_pairs(source, annotations, config):
             if any(a.get(k) != b.get(k) for k in ("answer", "relation_type", "official_accepted")):
                 raise ValueError("Review changed candidate text, relation or acceptance")
     eligible = {s: {"compactness": [], "retain_needed_expansion": []} for s in ("train", "validation")}
+    vetoes = {**VETOES, **config.get("assistant_vetoes", {})}
     exclusions, review = Counter(), []
     for p in candidates:
-        check_pair(p, expected)
+        check_pair(p, expected, allow_pool_ties=scope == "all_compactness")
         a, b = reviewed[p["chosen_id"]], reviewed[p["rejected_id"]]
         reason = None
-        if p["question_id"] in VETOES:
+        if p["question_id"] in vetoes:
             reason = "assistant_numeric_or_scope_veto"
         elif not data.reliable(a) or not data.reliable(b):
             reason = "unresolved_or_conflicting_response_review"
@@ -104,6 +108,9 @@ def choose_pairs(source, annotations, config):
                     "training_ready": True, "deletion_assessment": {
                         "removed_candidates": len(removed), "judge_assessed_valid": sum(data.valid(c) for c in removed),
                         "judge_assessed_harmful": sum(data.harmful(c) for c in removed)}}
+        if scope == "all_compactness":
+            accepted["pool_effect"] = ("shrinks_pool" if p["chosen_outcome"]["pool_candidates"] < p["rejected_outcome"]["pool_candidates"]
+                                       else "unchanged_pool" if p["chosen_outcome"]["pool_candidates"] == p["rejected_outcome"]["pool_candidates"] else "larger_pool_retention")
         eligible[p["split"]][p["objective"]].append(accepted)
     selected, counts = {}, {}
     for split, arms in eligible.items():
@@ -125,8 +132,10 @@ def choose_pairs(source, annotations, config):
                          "selected_pairs": len(selected[split]),
                          "selected_questions": len({p["question_id"] for p in selected[split]}),
                          "selected_objectives": dict(Counter(p["objective"] for p in selected[split]))}
+        if scope == "all_compactness":
+            counts[split]["pool_effects"] = dict(Counter(p["pool_effect"] for p in selected[split]))
     return selected, {"counts": counts, "excluded": dict(exclusions), "excluded_pairs": review,
-                      "assistant_vetoes": VETOES}
+                      "assistant_vetoes": vetoes}
 
 
 def build(source, judge, output, config_path=DEFAULT_CONFIG):
@@ -134,7 +143,8 @@ def build(source, judge, output, config_path=DEFAULT_CONFIG):
         raise FileExistsError(output)
     config = read(config_path)
     reviewed = read(judge / "manifest.json")
-    if reviewed["status"] != "complete" or reviewed["source_manifest_sha256"] != digest(source / "manifest.json"):
+    if (reviewed["status"] != "complete" or reviewed["source_manifest_sha256"] != digest(source / "manifest.json")
+            or reviewed.get("review_scope", "pool_reducing") != config.get("review_scope", "pool_reducing")):
         raise ValueError("Need complete, matching targeted semantic judgments")
     if digest(judge / "reviewed.jsonl") != reviewed["reviewed_sha256"]:
         raise ValueError("Semantic judgments changed")
@@ -164,7 +174,7 @@ def build(source, judge, output, config_path=DEFAULT_CONFIG):
         "model_key": "llama31", "configuration": config, "pair_counts": {s: len(r) for s, r in splits.items()},
         "source_manifest_sha256": digest(source / "manifest.json"), "files_sha256": hashes,
         "annotation_source": "GPT-4.1-mini automated review plus explicit assistant vetoes; not expert-certified",
-        "scope": "Question-capped 2:1 compactness/retention pilot; no ranking-gain arm or test preferences"})
+        "scope": f"Question-capped {config['compactness_to_retention_ratio']}:1 compactness/retention; {config.get('review_scope', 'pool_reducing')}; no ranking-gain arm or test preferences"})
     validate(output, config)
     print(json.dumps(summary["counts"], indent=2))
 
@@ -182,7 +192,8 @@ def validate(directory, config):
         raise ValueError("Feedback provenance changed")
     judging = read(directory / "judging_manifest.json")
     if (judging["status"] != "complete" or judging["source_manifest_sha256"] != manifest["source_manifest_sha256"]
-            or judging["reviewed_sha256"] != digest(directory / "annotations.jsonl")):
+            or judging["reviewed_sha256"] != digest(directory / "annotations.jsonl")
+            or judging.get("review_scope", "pool_reducing") != config.get("review_scope", "pool_reducing")):
         raise ValueError("Annotation provenance differs from the completed judging run")
     splits, summary = choose_pairs(directory / "source", records(directory / "annotations.jsonl"), config)
     for split, rows in splits.items():
@@ -203,5 +214,6 @@ if __name__ == "__main__":
     p.add_argument("--source", type=Path, required=True)
     p.add_argument("--judge", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = p.parse_args()
-    build(args.source.resolve(), args.judge.resolve(), args.output.resolve())
+    build(args.source.resolve(), args.judge.resolve(), args.output.resolve(), args.config.resolve())
