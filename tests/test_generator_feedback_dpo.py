@@ -175,12 +175,65 @@ def test_refuses_insufficient_distinct_questions(package, tmp_path):
         data.build(source, judgment, tmp_path / "out", path)
 
 
-def test_gpu_worker_uses_reviewed_validator_and_stays_separate_from_test(monkeypatch, tmp_path):
+def test_multi_model_review_builds_separate_focal_packages_without_cross_model_pairs(package, tmp_path):
+    source, judgment, original, config, _ = package
+    annotations = data.records(judgment / "reviewed.jsonl")
+    for model in ("qwen3", "ministral3"):
+        identities = {}
+        for row in original:
+            copied = copy.deepcopy(row)
+            copied["model_key"] = model
+            copied["response_id"] = data.data.response_id(model, row["question_id"], row["draw"], row["raw_response"])
+            identities[row["response_id"]] = copied["response_id"]
+            annotations.append(annotate(copied))
+        for split in ("train", "validation"):
+            for objective in ("compactness", "retain_needed_expansion", "ranking_gain"):
+                pp = data.records(source / f"llama31/{split}_{objective}_review_candidates.jsonl")
+                pp = [{**p, "model_key": model, "chosen_id": identities[p["chosen_id"]], "rejected_id": identities[p["rejected_id"]]} for p in pp]
+                data.write_rows(source / f"{model}/{split}_{objective}_review_candidates.jsonl", pp)
+    data.write_rows(source / "review_responses.jsonl", annotations)
+    data.write(source / "manifest.json", {"status":"review_required","models":["llama31","qwen3","ministral3"],
+        "output_sha256":{p.relative_to(source).as_posix():data.digest(p) for p in source.rglob("*") if p.is_file() and p.name != "manifest.json"}})
+    data.write_rows(judgment / "reviewed.jsonl", annotations)
+    data.write(judgment / "manifest.json", {"status":"complete","review_scope":"all_compactness",
+        "source_manifest_sha256":data.digest(source / "manifest.json"),"reviewed_sha256":data.digest(judgment / "reviewed.jsonl")})
+    _, all_pairs, all_rows = judge.load_shortlist(source,"all_compactness")
+    assert {p["model_key"] for p in all_pairs} == {"llama31","qwen3","ministral3"}
+    assert len(all_rows) == len(annotations)
+    for model in ("qwen3", "ministral3"):
+        cfg = {**config,"model_key":model,"review_scope":"all_compactness"}
+        path = tmp_path / (model+".json"); data.write(path,cfg)
+        out = tmp_path / (model+"-preferences")
+        data.build(source,judgment,out,path)
+        manifest, splits = data.validate(out,cfg)
+        assert manifest["model_key"] == model
+        assert {p["model_key"] for rr in splits.values() for p in rr} == {model}
+        with pytest.raises(ValueError): data.validate(out,{**cfg,"model_key":"llama31"})
+    with pytest.raises(ValueError): judge.load_shortlist(source,"all_compactness","wrong")
+
+
+def test_judging_new_source_reuses_cumulative_budget_without_reset(package, tmp_path):
+    source, _, _, _, _ = package
+    budget = tmp_path / "existing-budget"
+    ledger = {"attempts":[{"charged_or_reserved_usd":1.0278268,"status":"complete"}]}
+    judge.shared.save(budget / "spend-ledger.json",ledger)
+    output = tmp_path / "new-judge"
+    judge.run(source,output,scope="all_compactness",budget_directory=budget)
+    state = data.read(output / "manifest.json")
+    assert state["budget_directory"] == str(budget.resolve()) and state["max_usd"] == 10
+    assert data.read(budget / "spend-ledger.json") == ledger
+    with pytest.raises(ValueError,match="changed judging plan"):
+        judge.run(source,output,scope="all_compactness")
+
+
+@pytest.mark.parametrize("model", ["llama31", "qwen3", "ministral3"])
+def test_gpu_worker_uses_reviewed_validator_and_stays_separate_from_test(monkeypatch, tmp_path, model):
     import types
     submission = tmp_path / "submission"; submission.mkdir()
     pref = tmp_path / "preferences"; pref.mkdir()
     data.write(pref / "manifest.json", {"status": "ready"})
     config = data.read(data.DEFAULT_CONFIG)
+    config["model_key"] = model
     source = {"adapter": "exact_sft_adapter", "adapter_files_sha256": {}}
     splits = {"train": [{"question_id": "fitting"}], "validation": [{"question_id": "validation"}]}
     data.write(submission / "prepared.json", {"code_hashes": {}, "preferences": str(pref), "repository": str(tmp_path),
@@ -192,7 +245,7 @@ def test_gpu_worker_uses_reviewed_validator_and_stays_separate_from_test(monkeyp
     monkeypatch.setattr(data, "validate", lambda *args: (None, splits))
     called = []
     def train(args, cfg, ss, output, state, *, preference_validator):
-        assert ss == source and args.model == "llama31"
+        assert ss == source and args.model == model and state["model_key"] == model
         manifest, pp = preference_validator(args.preferences, cfg)
         assert pp is splits and manifest["pair_counts"]["train"] == 1
         assert not cfg["epoch_validation_mrr"]
@@ -245,12 +298,15 @@ def test_preparation_pins_portable_training_helpers(monkeypatch, tmp_path):
     assert (submission / "code" / relative).read_text() == "pinned portable helper"
 
 
-def test_native_bank_and_exact_raw_response_checks(monkeypatch, tmp_path):
+@pytest.mark.parametrize("model_key", ["llama31", "qwen3", "ministral3"])
+def test_native_bank_and_exact_raw_response_checks(monkeypatch, tmp_path, model_key):
     import types
     pref = tmp_path / "pref"; (pref / "source").mkdir(parents=True)
     generation = tmp_path / "generation.json"; data.write(generation, {})
     source = {"adapter": "exact_max5_sft"}
     native = raw("q", "train", 0, ["Core"], {"Core"})
+    native["model_key"] = model_key
+    native["response_id"] = data.data.response_id(model_key,"q",0,native["raw_response"])
     data.write_rows(pref / "annotations.jsonl", [native])
     banks, pinned = {}, {}
     for model in ("llama31", "qwen3", "ministral3"):
@@ -259,24 +315,28 @@ def test_native_bank_and_exact_raw_response_checks(monkeypatch, tmp_path):
         data.write_rows(path / "responses.jsonl", [native])
         pinned[model] = {"path": str(path), "manifest_sha256": data.digest(path / "manifest.json"),
                          "responses_sha256": data.digest(path / "responses.jsonl")}
-        banks[model] = {"manifest": {"source": source}}
+        banks[model] = {"manifest": {"source": source if model == model_key else {"adapter":"wrong_"+model}}}
     feedback = tmp_path / "feedback"; feedback.mkdir()
     data.write(feedback / "prepared.json", {"banks": pinned})
     data.write(pref / "source/manifest.json", {"submission": str(feedback), "prepared_sha256": data.digest(feedback / "prepared.json")})
     splits = {"train": [native] * 36, "validation": [native]}
     monkeypatch.setattr(data, "validate", lambda *args: ({}, splits))
+    def selected(config, model):
+        assert model == model_key
+        return source
     fake = types.SimpleNamespace(DEFAULT_CONFIG=generation, MODELS=tuple(banks),
-           pack_banks=lambda *args: (banks, [native]), selected_source=lambda *args: source)
+           pack_banks=lambda *args: (banks, [native]), selected_source=selected)
     monkeypatch.setattr(runner, "configure_data_root", lambda *args: fake)
-    runner.validate_native(pref, data.read(data.DEFAULT_CONFIG), tmp_path)
+    config = {**data.read(data.DEFAULT_CONFIG),"model_key":model_key}
+    assert runner.validate_native(pref, config, tmp_path)[2] == source
     changed = {**native, "raw_response": "changed completion"}
     data.write_rows(pref / "annotations.jsonl", [changed])
     with pytest.raises(ValueError, match="original native bank"):
-        runner.validate_native(pref, data.read(data.DEFAULT_CONFIG), tmp_path)
+        runner.validate_native(pref, config, tmp_path)
     data.write_rows(pref / "annotations.jsonl", [native])
     (tmp_path / "qwen3/responses.jsonl").write_text("changed bank")
     with pytest.raises(ValueError, match="bank changed"):
-        runner.validate_native(pref, data.read(data.DEFAULT_CONFIG), tmp_path)
+        runner.validate_native(pref, config, tmp_path)
 
 
 @pytest.mark.parametrize("fail", [False, True])

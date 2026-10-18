@@ -4,6 +4,9 @@ Prepared on 18 October 2026. This is a larger controlled follow-up to the
 36-pair Llama pilot, **not a completed training result or a full 1,296-question
 preference dataset**. The user submits the jobs on Gadi.
 
+The [Qwen3 and Ministral extension](COMPANION_COMPACTNESS_DPO.md) reuses this
+recipe with model-specific reviewed pairs, references and independent runs.
+
 The pilot reduced output tokens but changed dev160 ensemble MRR by only
 +0.00125 (95% paired bootstrap CI -0.008125 to +0.010625). The KN-93 regression
 showed that useful accepted wording can become less frequent or appear later.

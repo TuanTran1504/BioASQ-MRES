@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select expanded Llama DPO epochs on full internal validation with frozen companions."""
+"""Select focal-model DPO epochs on full internal validation with frozen companions."""
 import argparse
 import json
 from pathlib import Path
@@ -14,6 +14,7 @@ import src
 import joblib
 from prepare_matched_8b_sft import read, records, digest, write
 from run_generator_feedback_dpo import validate_native
+from generator_feedback_dpo_data import focal_model
 from scripts.prepare_reranker_guided_dpo import load_inputs, configure_data_root
 from scripts.train_sft_ensemble_reranker import build_pools
 from scripts.ablate_reranker_relation_labels import verify_files
@@ -27,12 +28,14 @@ from run_single_answer_sampling import sample_seed
 from select_sft_epoch_checkpoints import epoch_checkpoints, stage_adapter
 
 
-def choose(rows):
+def choose(rows, model="llama31", require_individual_coverage=True):
     """Predeclared conservative rule; epoch zero is an eligible fallback."""
     base = next(r for r in rows if r["epoch"] == 0)
+    prefix = "llama" if model == "llama31" else model
     eligible = []
     for r in rows:
-        r["eligible"] = (r["ensemble_full_pool_lost"] == 0 and r["llama_full_pool_lost"] == 0
+        r["eligible"] = (r["ensemble_full_pool_lost"] == 0
+                         and (not require_individual_coverage or r[f"{prefix}_full_pool_lost"] == 0)
                          and r["mrr_at5"] >= base["mrr_at5"] - 1e-12
                          and r["mean_output_tokens"] <= base["mean_output_tokens"] + 1e-12
                          and all(r["generation_quality"][k] <= base["generation_quality"][k]
@@ -133,6 +136,7 @@ def select(submission, training, output, smoke=False):
     verify_files(submission / "code", prepared["code_hashes"])
     repository = Path(prepared["repository"])
     config = prepared["configuration"]
+    focal = focal_model(config)
     if config.get("review_scope") != "all_compactness" or not config.get("retain_epoch_checkpoints"):
         raise ValueError("Full validation selection requires the expanded retained-epoch protocol")
     manifest, splits, source, feedback = validate_native(Path(prepared["preferences"]), config, repository)
@@ -170,7 +174,7 @@ def select(submission, training, output, smoke=False):
         {"role": "user", "content": json.dumps({"question": e["question"], "snippets": [
             {"id": s["snippet_id"], "text": s["text"]} for s in e["snippets"]]}, ensure_ascii=False)}] for e in examples}
     for row in baseline:
-        if row["model_key"] == "llama31" and (row["prompt"] != expected_messages[row["question_id"]]
+        if row["model_key"] == focal and (row["prompt"] != expected_messages[row["question_id"]]
                 or row["prompt_tokens"] != plan["expected_prompt_tokens"][row["question_id"]]):
             raise ValueError("Starting-SFT bank prompt or token count differs from epoch validation input")
     output.mkdir(parents=True, exist_ok=False)
@@ -178,7 +182,8 @@ def select(submission, training, output, smoke=False):
         "submission": str(submission), "prepared_sha256": digest(submission / "prepared.json"),
         "training": str(training), "training_manifest_sha256": digest(training / "manifest.json"),
         "reranker_hashes": hashes, "question_ids": [e["question_id"] for e in examples],
-        "selection_rule": "sampling4: no ensemble/Llama full-pool losses; MRR >= SFT; mean Llama tokens <= SFT; no additional empty, ceiling or surplus responses; maximize MRR then minimize tokens then earliest epoch; epoch zero fallback"}
+        "focal_model": focal,
+        "selection_rule": f"sampling4: no ensemble/{focal} full-pool losses; MRR >= SFT; mean {focal} tokens <= SFT; no additional empty, ceiling or surplus responses; maximize MRR then minimize tokens then earliest epoch; epoch zero fallback"}
     write(output / "manifest.json", selected_state)
     try:
         write_jsonl(output / "validation_inputs.jsonl", [{k: e[k] for k in ("question_id", "question", "snippets")} for e in examples])
@@ -219,15 +224,16 @@ def select(submission, training, output, smoke=False):
                     "--model-name", str(adapter), "--output-dir", str(root / mode), "--limit", str(len(examples)), "--preflight-all"], check=True)
                 rows[mode] = verify_generated(root / mode, examples, current, mode, plan)
                 generation_hashes[f"epoch-{epoch}/{mode}"] = {p.name: digest(p) for p in (root / mode).iterdir() if p.is_file()}
-            alternatives[epoch] = [r for r in baseline if r["model_key"] != "llama31"] + projected_rows(rows)
+            alternatives[epoch] = [r for r in baseline if r["model_key"] != focal] + projected_rows(rows, focal)
         contexts = {e["question_id"]: e for e in examples}
+        solo_prefix = "llama" if focal == "llama31" else focal
         pools = {}
         for epoch, rows in alternatives.items():
             pp, _ = build_pools(rows, {"validation": contexts})
             for mode in ("greedy", "sampling4"):
                 pools[f"epoch{epoch}_{mode}"] = pp["validation"][f"max5_{mode}"]
-                solo, _ = build_pools([r for r in rows if r["model_key"] == "llama31"], {"validation": contexts})
-                pools[f"llama_epoch{epoch}_{mode}"] = solo["validation"][f"max5_{mode}"]
+                solo, _ = build_pools([r for r in rows if r["model_key"] == focal], {"validation": contexts})
+                pools[f"{solo_prefix}_epoch{epoch}_{mode}"] = solo["validation"][f"max5_{mode}"]
         distinct = {(r["question_id"], r["answer"]): r for rr in pools.values() for r in rr}
         (output / "official").mkdir()
         jar = repository / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar"
@@ -242,10 +248,10 @@ def select(submission, training, output, smoke=False):
         for rr in pools.values():
             for r in rr:
                 r["label"] = int(matches[(r["question_id"], r["answer"])])
-        ensemble_pools = {n: rr for n, rr in pools.items() if not n.startswith("llama_")}
+        ensemble_pools = {n: rr for n, rr in pools.items() if not n.startswith(solo_prefix+"_")}
         conditions, scores, rankings = rank_frozen(payload, ensemble_pools, contexts)
         for n, rr in pools.items():
-            if n.startswith("llama_"):
+            if n.startswith(solo_prefix+"_"):
                 groups = {q: [] for q in ids}
                 for r in rr: groups[r["question_id"]].append(r)
                 metrics, perq = evaluate_rankings(groups)
@@ -253,11 +259,11 @@ def select(submission, training, output, smoke=False):
         selection_rows = []
         epoch_metadata = {c["epoch"]: {"validation_preference_loss": c["eval_loss"], "global_step": c["global_step"]} for c in checkpoints}
         base = scores["epoch0_sampling4_max5_reranker"]
-        solo_base = scores["llama_epoch0_sampling4"]
+        solo_base = scores[f"{solo_prefix}_epoch0_sampling4"]
         for epoch, rows in alternatives.items():
             current = scores[f"epoch{epoch}_sampling4_max5_reranker"]
-            solo = scores[f"llama_epoch{epoch}_sampling4"]
-            calls = [r for r in rows if r["model_key"] == "llama31" and r["draw"] > 0]
+            solo = scores[f"{solo_prefix}_epoch{epoch}_sampling4"]
+            calls = [r for r in rows if r["model_key"] == focal and r["draw"] > 0]
             if len(calls) != len(examples)*4:
                 raise ValueError("Incomplete validation sampling budget")
             selection_rows.append({"epoch": epoch, "mrr_at5": conditions[f"epoch{epoch}_sampling4_max5_reranker"]["metrics"]["mrr_at5"],
@@ -265,12 +271,18 @@ def select(submission, training, output, smoke=False):
                 "mean_output_tokens": sum(r["output_tokens"] for r in calls)/len(calls),
                 "generation_quality": generation_quality(calls),
                 "ensemble_full_pool_lost": coverage_transitions(base, current, "coverage_full_pool")["lost"],
-                "llama_full_pool_lost": coverage_transitions(solo_base, solo, "coverage_full_pool")["lost"],
+                f"{solo_prefix}_full_pool_lost": coverage_transitions(solo_base, solo, "coverage_full_pool")["lost"],
                 "coverage_transitions": {k: coverage_transitions(base, current, k) for k in ("coverage_at5", "coverage_full_pool")}})
-        winner = choose(selection_rows)
+        winner = choose(selection_rows, solo_prefix)
+        # An explicitly separate diagnostic does not replace the strict winner.
+        relaxed_rows = [{**r, "generation_quality": dict(r["generation_quality"])} for r in selection_rows]
+        ensemble_candidate = choose(relaxed_rows, solo_prefix, require_individual_coverage=False)
         shutil.copytree(adapter_paths[winner["epoch"]], output / "selected_adapter")
         write(output / "comparison_summary.json", {"question_count": len(examples), "conditions": conditions,
             "checkpoint_scores": selection_rows, "selected_epoch": winner["epoch"], "selection_rule": selected_state["selection_rule"],
+            "ensemble_only_candidate_epoch": ensemble_candidate["epoch"],
+            "ensemble_only_candidate_is_selected": ensemble_candidate["epoch"] == winner["epoch"],
+            "ensemble_only_candidate_rule": "Diagnostic only: same guards except individual-model full-pool loss; selected_adapter remains strict winner.",
             "limitations": ["Internal validation already selected the frozen reranker C; these are selection diagnostics, not held-out performance.",
                 "Four samples per model, matching the original feedback bank seed indices. One seed; no semantic judging of new generated answers."]})
         write(output / "comparison_per_question.json", scores)

@@ -26,9 +26,17 @@ def write_rows(path, rows):
     path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
 
 
-def check_pair(pair, originals, allow_pool_ties=False):
+def focal_model(config):
+    model = config.get("model_key", "llama31")
+    if model not in data.MODELS:
+        raise ValueError("Unknown compactness DPO model")
+    return model
+
+
+def check_pair(pair, originals, allow_pool_ties=False, model="llama31"):
     a, b = (originals[pair[k]] for k in ("chosen_id", "rejected_id"))
-    if (pair["split"] not in ("train", "validation") or pair["model_key"] != "llama31"
+    if (pair["split"] not in ("train", "validation") or pair["model_key"] != model
+            or a["model_key"] != model or b["model_key"] != model
             or a["split"] != pair["split"] or b["split"] != pair["split"]
             or a["question_id"] != pair["question_id"] or b["question_id"] != pair["question_id"]
             or pair["chosen"] != a["raw_response"] or pair["rejected"] != b["raw_response"]
@@ -64,7 +72,9 @@ def check_pair(pair, originals, allow_pool_ties=False):
 
 def choose_pairs(source, annotations, config):
     scope = config.get("review_scope", "pool_reducing")
-    _, candidates, original = load_shortlist(source, scope)
+    model = focal_model(config)
+    _, candidates, original = load_shortlist(source, scope, model)
+    annotations = [r for r in annotations if r["model_key"] == model]
     expected = {r["response_id"]: r for r in original}
     reviewed = {r["response_id"]: r for r in annotations}
     if len(reviewed) != len(annotations) or set(reviewed) != set(expected):
@@ -82,7 +92,7 @@ def choose_pairs(source, annotations, config):
     vetoes = {**VETOES, **config.get("assistant_vetoes", {})}
     exclusions, review = Counter(), []
     for p in candidates:
-        check_pair(p, expected, allow_pool_ties=scope == "all_compactness")
+        check_pair(p, expected, allow_pool_ties=scope == "all_compactness", model=model)
         a, b = reviewed[p["chosen_id"]], reviewed[p["rejected_id"]]
         reason = None
         if p["question_id"] in vetoes:
@@ -171,7 +181,7 @@ def build(source, judge, output, config_path=DEFAULT_CONFIG):
     write(output / "review_summary.json", summary)
     hashes = {p.relative_to(output).as_posix(): digest(p) for p in output.rglob("*") if p.is_file()}
     write(output / "manifest.json", {"status": "ready", "schema": "generator-feedback-compactness-v1",
-        "model_key": "llama31", "configuration": config, "pair_counts": {s: len(r) for s, r in splits.items()},
+        "model_key": focal_model(config), "configuration": config, "pair_counts": {s: len(r) for s, r in splits.items()},
         "source_manifest_sha256": digest(source / "manifest.json"), "files_sha256": hashes,
         "annotation_source": "GPT-4.1-mini automated review plus explicit assistant vetoes; not expert-certified",
         "scope": f"Question-capped {config['compactness_to_retention_ratio']}:1 compactness/retention; {config.get('review_scope', 'pool_reducing')}; no ranking-gain arm or test preferences"})
@@ -182,6 +192,7 @@ def build(source, judge, output, config_path=DEFAULT_CONFIG):
 def validate(directory, config):
     manifest = read(directory / "manifest.json")
     if (manifest.get("status") != "ready" or manifest.get("schema") != "generator-feedback-compactness-v1"
+            or manifest.get("model_key") != focal_model(config)
             or manifest["configuration"] != config):
         raise ValueError("Wrong or incomplete reviewed generator-feedback package")
     for name, expected in manifest["files_sha256"].items():

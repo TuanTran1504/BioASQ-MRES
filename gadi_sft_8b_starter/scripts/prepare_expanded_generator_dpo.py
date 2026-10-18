@@ -9,8 +9,13 @@ from run_base_original_prompt import snapshot_inference_code
 from prepare_matched_8b_sft import read, write, digest
 
 
-def prepare_expanded(repository, preferences, submission):
-    config = repository / "gadi_sft_8b_starter/configs/generator_feedback_dpo_expanded.json"
+def prepare_expanded(repository, preferences, submission, model="llama31"):
+    if model not in ("llama31", "qwen3", "ministral3"):
+        raise ValueError("Unknown compactness model")
+    suffix = "" if model == "llama31" else "_"+model
+    config = repository / f"gadi_sft_8b_starter/configs/generator_feedback_dpo_expanded{suffix}.json"
+    if read(config)["model_key"] != model:
+        raise ValueError("Requested model differs from pinned training configuration")
     prepare(repository, preferences, submission, config)
     prepared = read(submission / "prepared.json")
     snapshot = snapshot_inference_code(submission)
@@ -20,7 +25,7 @@ def prepare_expanded(repository, preferences, submission):
         shutil.copy2(repository / "gadi_sft_8b_starter/jobs" / filename, submission / filename)
     prepared["expanded_job_sha256"] = {f"{k}_expanded_generator_dpo.pbs": digest(submission / f"{k}_expanded_generator_dpo.pbs") for k in ("train", "select")}
     write(submission / "prepared.json", prepared)
-    print("Prepared expanded Llama DPO, all retained epochs and starting-SFT fallback; selection uses validation144 only.", flush=True)
+    print(f"Prepared expanded {model} DPO, all retained epochs and starting-SFT fallback; selection uses validation144 only.", flush=True)
 
 
 if __name__ == "__main__":
@@ -28,5 +33,6 @@ if __name__ == "__main__":
     p.add_argument("--repository", type=Path, default=REPOSITORY)
     p.add_argument("--preferences", type=Path, required=True)
     p.add_argument("--submission", type=Path, required=True)
+    p.add_argument("--model", choices=("llama31", "qwen3", "ministral3"), default="llama31")
     a = p.parse_args()
-    prepare_expanded(a.repository.resolve(), a.preferences.resolve(), a.submission.resolve())
+    prepare_expanded(a.repository.resolve(), a.preferences.resolve(), a.submission.resolve(), a.model)

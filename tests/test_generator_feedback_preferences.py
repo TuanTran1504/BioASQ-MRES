@@ -207,7 +207,8 @@ def test_run_uses_oof_only_for_fitting_and_final_frozen_model_for_validation(mon
 
 
 @pytest.mark.parametrize("fail", [False, True])
-def test_launcher_defaults_to_llama_and_submits_one_cpu_job(tmp_path, fail):
+@pytest.mark.parametrize("models", [[], ["qwen3", "ministral3"]])
+def test_launcher_declares_models_and_submits_one_cpu_job(tmp_path, fail, models):
     import os
     import shutil
     import subprocess
@@ -220,7 +221,7 @@ def test_launcher_defaults_to_llama_and_submits_one_cpu_job(tmp_path, fail):
     stub = '''
 module() { :; }
 source() { :; }
-python() {
+python3() {
   printf '%s\\n' "$*" > "$TEST_ARGS"
   [[ "$TEST_FAIL" == 0 ]] || return 1
   while (( $# )); do
@@ -236,10 +237,10 @@ qsub() { printf '%s\\n' "$*" >> "$TEST_LOG"; printf '401.gadi-pbs\\n'; }
     path.write_text(source.read_text().replace("${USER}", "${TEST_USER}").replace(
         "set -euo pipefail", "set -euo pipefail\n" + stub), newline="\n")
     log, args = tmp_path / "jobs.log", tmp_path / "args.txt"
-    result = subprocess.run([executable, path.as_posix()], capture_output=True, text=True,
+    result = subprocess.run([executable, path.as_posix(), *models], capture_output=True, text=True,
                             env={**os.environ, "TEST_USER": "test", "TEST_LOG": log.as_posix(),
                                  "TEST_ARGS": args.as_posix(), "TEST_FAIL": str(int(fail))}, timeout=30)
-    assert "--models llama31" in args.read_text()
+    assert "--models "+" ".join(models or ["llama31"]) in args.read_text()
     if fail:
         assert result.returncode != 0 and not log.exists()
     else:

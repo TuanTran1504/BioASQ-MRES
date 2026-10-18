@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Continue exact max-five Llama SFT on reviewed compactness preferences."""
+"""Continue the focal model's exact max-five SFT on reviewed compactness preferences."""
 import argparse
 from importlib.metadata import version
 from pathlib import Path
@@ -38,9 +38,10 @@ def validate_native(directory, config, repository):
     for row in records(directory / "annotations.jsonl"):
         if row["response_id"] not in native or any(row.get(k) != v for k, v in native[row["response_id"]].items()):
             raise ValueError("Reviewed completion differs from its original native bank")
-    source = data.selected_source(generation, "llama31")
+    model = preferences.focal_model(config)
+    source = data.selected_source(generation, model)
     from matched_8b_provenance import validate_provenance
-    validate_provenance({"expansion": banks["llama31"]["manifest"]["source"]}, {"expansion": source})
+    validate_provenance({"expansion": banks[model]["manifest"]["source"]}, {"expansion": source})
     from run_expansion_dpo_8b import training_schedule
     training_schedule(config, len(splits["train"]))
     # Existing trainer requires this explicit source provenance in its callback.
@@ -67,7 +68,7 @@ def prepare(repository, directory, submission, config_path=None):
           "preferences_manifest_sha256": digest(directory / "manifest.json"), "configuration": config,
           "source": source, "code_hashes": code, "pair_counts": {s: len(r) for s, r in splits.items()},
           "native_banks": feedback_prepared["banks"], "job_sha256": digest(submission / "job.pbs")})
-    print(f"Validated native max-five Llama source and reviewed preferences: { {s: len(r) for s, r in splits.items()} }", flush=True)
+    print(f"Validated native max-five {preferences.focal_model(config)} source and reviewed preferences: { {s: len(r) for s, r in splits.items()} }", flush=True)
 
 
 def activate_portable_helpers():
@@ -95,7 +96,8 @@ def run(submission, output, smoke=False):
     if source != prepared["source"] or feedback["banks"] != prepared["native_banks"]:
         raise ValueError("Training source changed since submission")
     output.mkdir(parents=True, exist_ok=False)
-    state = {"status": "running", "phase": "train", "model_key": "llama31", "formulation": "expansion",
+    model = preferences.focal_model(config)
+    state = {"status": "running", "phase": "train", "model_key": model, "formulation": "expansion",
              "source": source, "smoke_test": smoke, "full_dataset": True,
              "configuration": config, "submission": str(submission),
              "prepared_sha256": digest(submission / "prepared.json"),
@@ -105,7 +107,7 @@ def run(submission, output, smoke=False):
     try:
         import run_expansion_dpo_8b as worker
         activate_portable_helpers()
-        args = argparse.Namespace(preferences=directory, model="llama31", smoke_test=smoke)
+        args = argparse.Namespace(preferences=directory, model=model, smoke_test=smoke)
         worker.train(args, config, source, output, state,
                      preference_validator=lambda path, cfg: (manifest, splits))
         # Detect edits while the GPU job was running.
@@ -140,5 +142,5 @@ if __name__ == "__main__":
     else:
         prepared = read(args.submission / "prepared.json")
         directory = Path(prepared["repository"]) / "gadi_sft_8b_starter" / prepared["configuration"]["output_root"]
-        name = f"llama31-compactness-{'smoke' if args.smoke_test else 'train'}-{os.environ.get('PBS_JOBID', 'manual')}"
+        name = f"{preferences.focal_model(prepared['configuration'])}-compactness-{'smoke' if args.smoke_test else 'train'}-{os.environ.get('PBS_JOBID', 'manual')}"
         run(args.submission.resolve(), directory / name, args.smoke_test)

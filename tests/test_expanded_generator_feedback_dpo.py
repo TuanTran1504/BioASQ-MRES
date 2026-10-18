@@ -43,6 +43,20 @@ def test_selection_ties_prefer_compactness_then_earliest_epoch():
     assert selection.choose(rows[:2])["epoch"] == 0
 
 
+@pytest.mark.parametrize("focal", ["llama31", "qwen3", "ministral3"])
+def test_ensemble_candidate_is_explicitly_separate_from_strict_selection(focal):
+    prefix = "llama" if focal == "llama31" else focal
+    base, trial = score(0), score(1,mrr=.61,tokens=40)
+    if prefix != "llama":
+        for r in (base,trial): r[f"{prefix}_full_pool_lost"] = r.pop("llama_full_pool_lost")
+    trial[f"{prefix}_full_pool_lost"] = 1
+    assert selection.choose([base,trial],focal)["epoch"] == 0
+    strict_status = [r["eligible"] for r in (base,trial)]
+    copied = copy.deepcopy([base,trial])
+    assert selection.choose(copied,focal,require_individual_coverage=False)["epoch"] == 1
+    assert [r["eligible"] for r in (base,trial)] == strict_status
+
+
 def test_short_invalid_outputs_are_not_compactness_successes():
     rows = [{"raw_response": "", "output_tokens": 0},
             {"raw_response": response(["Core"]), "output_tokens": 512},
@@ -87,14 +101,15 @@ def test_truncated_judgment_recovery_reuses_completed_requests(tmp_path):
 
 
 @pytest.mark.parametrize("tamper", [None, "seed", "top_p"])
-def test_three_epoch_selection_replaces_only_llama_and_never_supplies_gold_to_worker(tmp_path, monkeypatch, tamper):
+@pytest.mark.parametrize("focal", ["llama31", "qwen3", "ministral3"])
+def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_worker(tmp_path, monkeypatch, tamper, focal):
     sub, train, out = tmp_path / "sub", tmp_path / "train", tmp_path / "out"
     sub.mkdir(); (train / "adapter").mkdir(parents=True)
     for name in ("adapter_config.json", "adapter_model.safetensors", "tokenizer_config.json"):
         (train / "adapter" / name).write_text("saved")
     source = dict(adapter=str(train / "adapter"), system_prompt="Return up to FIVE answers.",
-                  model_loader="fast_language", chat_template_kwargs={}, base_snapshot="base")
-    cfg = dict(review_scope="all_compactness", retain_epoch_checkpoints=True, num_train_epochs=3)
+                  model_loader="fast_model" if focal == "ministral3" else "fast_language", chat_template_kwargs={}, base_snapshot="base")
+    cfg = dict(review_scope="all_compactness", retain_epoch_checkpoints=True, num_train_epochs=3, model_key=focal)
     metadata = dict(path="unused", manifest_sha256="hash", responses_sha256="raw")
     feedback = dict(banks={m: metadata for m in ("llama31", "qwen3", "ministral3")}, rerankers=str(tmp_path / "rr"), reranker_hashes={})
     prepared = dict(repository=str(tmp_path), configuration=cfg, code_hashes={}, preferences="reviewed", native_banks=feedback["banks"])
@@ -162,8 +177,10 @@ def test_three_epoch_selection_replaces_only_llama_and_never_supplies_gold_to_wo
             # Unchanged companions retain their original four-draw frequencies.
             for r in rr:
                 if r["answer"] == "alias":
-                    assert r["sample_frequencies"].get("qwen3") == 1
-                    assert r["sample_frequencies"].get("ministral3") == 1
+                    for companion in set(feedback["banks"])-{focal}:
+                        assert r["sample_frequencies"].get(companion) == 1
+                    if not name.startswith("epoch0_"):
+                        assert focal not in r["sources"]
             groups = {q: [r for r in rr if r["question_id"] == q] for q in contexts}
             metrics, perq = selection.evaluate_rankings(groups)
             conditions[name+"_max5_reranker"] = {"metrics": metrics}; scores[name+"_max5_reranker"] = perq
@@ -180,6 +197,9 @@ def test_three_epoch_selection_replaces_only_llama_and_never_supplies_gold_to_wo
     assert len(calls) == 6 and summary["question_count"] == 144
     assert [r["epoch"] for r in summary["checkpoint_scores"]] == [0,1,2,3]
     assert summary["selected_epoch"] == 1
+    assert summary["ensemble_only_candidate_epoch"] == 1
+    solo_prefix = "llama" if focal == "llama31" else focal
+    assert f"{solo_prefix}_epoch1_sampling4" in summary["conditions"]
     assert real_read(out / "manifest.json")["status"] == "complete"
     assert (out / "selected_adapter/adapter_model.safetensors").read_text() == "1"
 
@@ -191,7 +211,8 @@ def test_fresh_selector_cli_imports():
 
 
 @pytest.mark.parametrize("fail", [False, True])
-def test_expanded_launcher_preflights_before_three_dependent_jobs(tmp_path, fail):
+@pytest.mark.parametrize("model", ["llama31", "qwen3", "ministral3"])
+def test_expanded_launcher_preflights_before_three_dependent_jobs(tmp_path, fail, model):
     import shutil
     bash = Path("C:/Program Files/Git/bin/bash.exe")
     executable = str(bash) if bash.exists() else shutil.which("bash")
@@ -214,10 +235,12 @@ qsub() { printf '%s\\n' "$*" >> "$TEST_LOG"; printf '402.gadi-pbs\\n'; }
     path = scripts / source.name
     path.write_text(source.read_text().replace("${USER}", "${TEST_USER}").replace("set -euo pipefail", "set -euo pipefail\n"+stub), newline="\n")
     log = tmp_path / "jobs.log"
-    result = subprocess.run([executable, path.as_posix(), pref.as_posix()], capture_output=True, text=True,
+    result = subprocess.run([executable, path.as_posix(), pref.as_posix(), model], capture_output=True, text=True,
                             env={**os.environ,"TEST_USER":"test","TEST_LOG":log.as_posix(),"TEST_FAIL":str(int(fail))}, timeout=30)
     if fail: assert result.returncode != 0 and not log.exists()
     else:
         assert result.returncode == 0, result.stderr
         lines = log.read_text().splitlines()
         assert len(lines) == 3 and all("afterok:402.gadi-pbs" in line for line in lines[1:])
+        assert all(f"DPO_MODEL={model}" in line for line in lines[:2])
+        assert f"{model}-compactness-train-402.gadi-pbs" in lines[2]

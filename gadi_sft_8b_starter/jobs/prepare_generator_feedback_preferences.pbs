@@ -14,6 +14,9 @@ module load "${PYTHON_MODULE:-python3/3.12.13}"
 source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
 export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 cd "${PBS_O_WORKDIR}"
-python "${FEEDBACK_SUBMISSION:?}/code/scripts/prepare_generator_feedback_preferences.py" \
+python3 "${FEEDBACK_SUBMISSION:?}/code/scripts/prepare_generator_feedback_preferences.py" \
   --mode run --submission "$FEEDBACK_SUBMISSION" \
   --output "${PWD}/outputs/generator_feedback_dpo/preferences-${PBS_JOBID}"
+python3 "$FEEDBACK_SUBMISSION/code/scripts/archive_generator_feedback_preferences.py" \
+  --directory "${PWD}/outputs/generator_feedback_dpo/preferences-${PBS_JOBID}" \
+  --archive "/scratch/nl78/${USER}/generator-feedback-preferences-${PBS_JOBID}.tar.gz"

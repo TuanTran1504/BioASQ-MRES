@@ -21,7 +21,7 @@ args=(--mode run --submission "${DPO_SUBMISSION:?}")
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then args+=(--smoke-test); fi
 python3 "$DPO_SUBMISSION/code/gadi_sft_8b_starter/scripts/run_generator_feedback_dpo.py" "${args[@]}"
 if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
-  training="${PWD}/outputs/generator_feedback_dpo_expanded/llama31-compactness-smoke-${PBS_JOBID}"
+  training="${PWD}/outputs/generator_feedback_dpo_expanded/${DPO_MODEL:-llama31}-compactness-smoke-${PBS_JOBID}"
   python3 "$DPO_SUBMISSION/code/gadi_sft_8b_starter/scripts/select_generator_feedback_dpo.py" \
     --submission "$DPO_SUBMISSION" --training "$training" --output "$training/validation-smoke" --smoke-test
 fi

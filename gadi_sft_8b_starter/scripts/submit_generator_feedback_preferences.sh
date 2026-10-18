@@ -9,7 +9,7 @@ models=("$@")
 if (( ${#models[@]} == 0 )); then models=(llama31); fi
 submission="${PWD}/outputs/generator_feedback_dpo/submission-$(date -u +%Y%m%d-%H%M%S)-$$"
 if [[ "$submission" == *','* || "$submission" == *$'\n'* ]]; then echo 'Unsupported submission path' >&2; exit 2; fi
-python ../scripts/prepare_generator_feedback_preferences.py --mode prepare \
+python3 ../scripts/prepare_generator_feedback_preferences.py --mode prepare \
   --repository "$(cd .. && pwd)" --submission "$submission" --models "${models[@]}" \
   --rerankers "${FEEDBACK_RERANKERS:-outputs/sft_ensemble_reranker/train-181350943.gadi-pbs}" \
   --previous-audit "${FEEDBACK_AUDIT:-outputs/reranker_guided_dpo/audit-181379068.gadi-pbs}"

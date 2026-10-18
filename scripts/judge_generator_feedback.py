@@ -19,25 +19,32 @@ SYSTEM = shared.SYSTEM.replace("and accepted training aliases", "without gold-an
     "No accepted aliases are provided; judge using the question and supplied evidence.")
 
 
-def load_shortlist(directory, scope="pool_reducing"):
+def load_shortlist(directory, scope="pool_reducing", model=None):
     if scope not in ("pool_reducing", "all_compactness"):
         raise ValueError("Unknown compactness review scope")
     manifest = shared.read(directory / "manifest.json")
-    if manifest.get("status") != "review_required" or manifest.get("models") != ["llama31"]:
-        raise ValueError("Expected the completed Llama generator-feedback package")
+    models = manifest.get("models", [])
+    if (manifest.get("status") != "review_required" or not models or len(set(models)) != len(models)
+            or not set(models) <= {"llama31", "qwen3", "ministral3"}):
+        raise ValueError("Expected completed model-specific generator-feedback preferences")
+    if model is not None and model not in models:
+        raise ValueError("Requested model is absent from the feedback package")
     for name, digest in manifest["output_sha256"].items():
         path = (directory / name).resolve()
         if not path.is_relative_to(directory.resolve()) or shared.digest(path) != digest:
             raise ValueError("Source preference package changed")
     pairs = []
-    for split in ("train", "validation"):
-        for objective in ("compactness", "retain_needed_expansion"):
-            rows = shared.records(directory / f"llama31/{split}_{objective}_review_candidates.jsonl")
-            if objective == "compactness":
-                rows = [p for p in rows if p["category"] == "same_accepted_initial" and
-                        (scope == "all_compactness" or
-                         p["chosen_outcome"]["pool_candidates"] < p["rejected_outcome"]["pool_candidates"])]
-            pairs.extend(rows)
+    for focal in ([model] if model is not None else models):
+        for split in ("train", "validation"):
+            for objective in ("compactness", "retain_needed_expansion"):
+                rows = shared.records(directory / f"{focal}/{split}_{objective}_review_candidates.jsonl")
+                if any(p["model_key"] != focal or p["split"] != split or p["objective"] != objective for p in rows):
+                    raise ValueError("Feedback file contains a different model, split or objective")
+                if objective == "compactness":
+                    rows = [p for p in rows if p["category"] == "same_accepted_initial" and
+                            (scope == "all_compactness" or
+                             p["chosen_outcome"]["pool_candidates"] < p["rejected_outcome"]["pool_candidates"])]
+                pairs.extend(rows)
     wanted = {p[k] for p in pairs for k in ("chosen_id", "rejected_id")}
     rows = [r for r in shared.records(directory / "review_responses.jsonl") if r["response_id"] in wanted]
     if len(rows) != len(wanted) or {r["response_id"] for r in rows} != wanted:
@@ -117,7 +124,7 @@ def recover_truncated_jobs(jobs, budget):
 
 
 def run(source, output, execute=False, max_calls=10000, maximum=10.0, workers=4, key_file=ROOT / "open_ai_api.txt",
-        scope="pool_reducing", seed_judge=None):
+        scope="pool_reducing", seed_judge=None, budget_directory=None):
     if not 0 < maximum <= 10 or not 1 <= workers <= 8 or max_calls < 1:
         raise ValueError("Use a positive call limit, 1-8 workers and at most US$10")
     manifest, pairs, rows = load_shortlist(source, scope)
@@ -126,7 +133,11 @@ def run(source, output, execute=False, max_calls=10000, maximum=10.0, workers=4,
     if seed_judge is not None:
         reused = {k: v for k, v in reused.items() if k in units}
         jobs = missing_jobs(jobs, reused)
-    budget = seed_judge if seed_judge is not None else output
+    if budget_directory is not None and seed_judge is not None and budget_directory.resolve() != seed_judge.resolve():
+        raise ValueError("Seed judgments must retain their original shared spending ledger")
+    budget = budget_directory or (seed_judge if seed_judge is not None else output)
+    if budget_directory is not None and not (budget / "spend-ledger.json").is_file():
+        raise ValueError("Explicit shared budget must already have a spending ledger")
     jobs = recover_truncated_jobs(jobs, budget)
     state = {"status": "prepared", "source": str(source.resolve()), "source_manifest_sha256": shared.digest(source / "manifest.json"),
              "model": MODEL, "system_sha256": shared.sha(SYSTEM), "shortlisted_pairs": len(pairs),
@@ -140,7 +151,8 @@ def run(source, output, execute=False, max_calls=10000, maximum=10.0, workers=4,
     if (output / "manifest.json").exists():
         old = shared.read(output / "manifest.json")
         old.setdefault("review_scope", "pool_reducing")
-        if any(old.get(k) != state.get(k) for k in ("source_manifest_sha256", "model", "system_sha256", "unit_count", "max_usd", "review_scope", "seed_judging_manifest_sha256")):
+        old.setdefault("budget_directory", str(output.resolve()))
+        if any(old.get(k) != state.get(k) for k in ("source_manifest_sha256", "model", "system_sha256", "unit_count", "max_usd", "review_scope", "seed_judging_manifest_sha256", "budget_directory")):
             raise ValueError("Cannot resume a changed judging plan or budget")
     shared.save(output / "manifest.json", state)
     shared.save(output / "plan.json", jobs)
@@ -184,6 +196,8 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--scope", choices=("pool_reducing", "all_compactness"), default="pool_reducing")
     p.add_argument("--seed-judge", type=Path)
+    p.add_argument("--budget-directory", type=Path, help="Reuse an existing cumulative spending ledger for this new review batch")
     args = p.parse_args()
     run(args.source.resolve(), args.output.resolve(), args.run, args.max_new_calls, args.max_usd, args.workers,
-        scope=args.scope, seed_judge=args.seed_judge.resolve() if args.seed_judge else None)
+        scope=args.scope, seed_judge=args.seed_judge.resolve() if args.seed_judge else None,
+        budget_directory=args.budget_directory.resolve() if args.budget_directory else None)
