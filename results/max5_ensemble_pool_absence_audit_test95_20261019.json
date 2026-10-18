@@ -1,0 +1,78 @@
+{
+  "question_count": 95,
+  "audited_pool_absences": 20,
+  "historical_official_pool_coverage": 75,
+  "primary_diagnostic_counts": {
+    "supported_unaccepted_form": 16,
+    "anatomical_specificity_gap": 1,
+    "evidence_reference_statistic_mismatch": 2,
+    "unicode_surface_loss": 1
+  },
+  "category_names": {
+    "supported_unaccepted_form": "Supported answer form present; exact reference wording absent",
+    "unicode_surface_loss": "Exact accepted raw answer lost during whitespace normalization",
+    "evidence_reference_statistic_mismatch": "Numerical/statistical reference and evidence alignment needs adjudication",
+    "anatomical_specificity_gap": "Insufficient anatomical specificity relative to the reference"
+  },
+  "sampled_response_quality": {
+    "responses": 600,
+    "empty_parsed_response": 0,
+    "ceiling_response": 0,
+    "surplus_response": 1,
+    "schema_issue_response": 3
+  },
+  "original_sampling10_recovered_question_ids": [
+    "67e133f118b1e36f2e00006f",
+    "67e296bc18b1e36f2e000085"
+  ],
+  "unicode_loss": {
+    "question_id": "67df1a1d18b1e36f2e000065",
+    "exact_raw_initial_draws": 11,
+    "by_model": {
+      "llama31": 5,
+      "qwen3": 5,
+      "ministral3": 1
+    },
+    "raw_thin_space_officially_accepted": true,
+    "pooled_ascii_space_officially_accepted": false,
+    "normalization": "re.sub(r\"\\s+\", \" \", text).strip()"
+  },
+  "semantic_review_scope": "Manual primary diagnoses from the supplied snippets, not independent expert adjudication or a new semantic-accuracy estimate. A supported expression somewhere in the pool does not approve every initial answer or expansion.",
+  "historical_scores_changed": false,
+  "generator_or_reranker_code_changed": false,
+  "training_ready": false,
+  "input_manifest_sha256": "8451f570eb089efb2f3f58a762b4eb0a4ad0d1f52dc7413acb233ea6562f1251",
+  "date": "2026-10-19",
+  "inspection_manifest_sha256": "3111b7ba4050ba4fe33b170c06a8bcd3ed71300e4e6f2800ac23f4d84a48500c",
+  "source_comparison_manifest_sha256": "1514633b1fb91e13ee1c630fa49c730f8f19b2a062515b77cbec0657d3c0bee6",
+  "primary_category_question_ids": {
+    "supported_unaccepted_form": [
+      "67c9e75881b1027333000006",
+      "67c9e84181b1027333000008",
+      "67cdbdb981b1027333000018",
+      "67cf221a81b1027333000022",
+      "67d7fe1718b1e36f2e000043",
+      "67ded64018b1e36f2e000060",
+      "67e014c918b1e36f2e000068",
+      "67e08afd18b1e36f2e00006a",
+      "67e0906c18b1e36f2e00006b",
+      "67e133f118b1e36f2e00006f",
+      "67e296bc18b1e36f2e000085",
+      "67e40c0f18b1e36f2e0000a2",
+      "67e6d1b518b1e36f2e0000d3",
+      "67fa3c5818b1e36f2e000109",
+      "67fbe68c18b1e36f2e00011e",
+      "67fc1a3818b1e36f2e000129"
+    ],
+    "anatomical_specificity_gap": [
+      "67cc97c481b1027333000012"
+    ],
+    "evidence_reference_statistic_mismatch": [
+      "67d7228818b1e36f2e000034",
+      "67e26d6218b1e36f2e000074"
+    ],
+    "unicode_surface_loss": [
+      "67df1a1d18b1e36f2e000065"
+    ]
+  }
+}

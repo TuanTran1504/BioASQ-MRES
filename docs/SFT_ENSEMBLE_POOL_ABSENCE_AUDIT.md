@@ -85,3 +85,60 @@ The export does not assign these semantic diagnoses. Counts and concrete example
 must come from the downloaded real cases, not synthetic illustrations. These
 historically inspected test cases remain diagnostic and are excluded from future
 preference construction and fitting.
+
+## Completed inspection: 19 October 2026
+
+The real exported files were downloaded and all hashes verified. All four pools
+for all 20 questions reconstructed exactly from the 240 saved generation rows;
+sample seeds, parsed answers and evidence counts were independently checked.
+The 600 target max-five sampled responses contained no empty parses and no
+output-token-ceiling cases. Three responses had recoverable schema issues; the
+one response exceeding the candidate cap discarded Fontan wording that did not
+contain an accepted alias.
+
+Primary, source-evidence-based manual diagnoses are:
+
+| Diagnosis | Questions |
+|---|---:|
+| Supported answer form present, but exact reference wording/format absent | 16 |
+| Exact accepted raw answer lost during whitespace normalization | 1 |
+| Numerical/statistical reference and evidence alignment needs adjudication | 2 |
+| Anatomical specificity gap relative to the reference | 1 |
+
+These are diagnostic categories, not a new semantic-accuracy metric or expert
+adjudication. They do not approve every initial answer or expansion. Historical
+official pool coverage remains 75/95, and production code was not changed.
+
+The processing case is SPDL1, question `67df1a1d18b1e36f2e000065`.
+The exact reference answer containing U+2009 thin spaces appears as the initial
+answer in 11/30 raw max-five sampled responses: Llama 5, Qwen3 5, Ministral 1.
+The expansion parser preserves those characters. The ensemble `merge_pool`
+stores `clean(candidate["answer"])`, and `clean()` collapses Unicode whitespace
+to ordinary ASCII spaces. The reference is not normalized by that helper.
+An isolated check with the official Java scorer accepted the original thin-space
+answer and rejected the cleaned ordinary-space answer. This check did not alter
+historical labels, rankings or scores.
+
+The two numerical cases are MS survival and systemic-sclerosis onset age. Their
+supplied snippets describe different cohorts, time origins and statistical
+quantities; their generated values must not be declared equivalent to the
+reference numbers without adjudication. Fontan initial answers name the heart,
+but the pool never names the vena cava required by the more specific reference.
+That is a relative specificity gap, not proof of absent anatomical knowledge.
+
+Only two of these 20 cases are covered in the original ten-sample pool: the
+Calabash chalk question (exact alias `Antiemetic`) and epilepsy exome count
+(exact alias `>54,000 human exomes`). Neither greedy pool covers any of the 20.
+
+The complete observed-case table, exact evidence quotes, initial-answer
+distributions and official Unicode reproduction are saved under local
+`Artifacts/max5_ensemble_pool_absences_test95_v1/inspection/`. Aggregate findings
+and provenance are recorded in
+`results/max5_ensemble_pool_absence_audit_test95_20261019.json`.
+
+The immediate processing follow-up is a separately labeled, gold-blind
+surface-preservation comparison on all 95 questions. Keep normalized dedup keys
+separate from submission surfaces and assess any new gains/losses before changing
+the production pipeline. Do not infer a revised aggregate score from this single
+case, and do not modify the frozen feature code used by queued experiments in
+place.
