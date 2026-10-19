@@ -50,12 +50,23 @@ def validate_epoch_one(selection, model, repository):
     """Use retained epoch 1, never the final/loss-selected training adapter."""
     selected = read(selection / "manifest.json")
     if (selected.get("status") != "complete" or selected.get("smoke_test") is not False
-            or selected.get("validation_question_count") != 144 or selected.get("focal_model") != model):
+            or selected.get("validation_question_count") != 144):
         raise ValueError("Need a complete validation144 selection for " + model)
     training = Path(selected["training"])
     state = read(training / "manifest.json")
     submission = Path(state["submission"])
     prepared = read(submission / "prepared.json")
+    # The original Llama-only selector predates the focal_model manifest field.
+    # Infer only that legacy identity, using the training record/configuration
+    # whose hashes and source lineage are verified below. An explicit mismatch
+    # (including null), or a missing field for a companion model, still fails.
+    recorded_model = selected.get("focal_model")
+    if ("focal_model" not in selected and model == "llama31"
+            and state.get("model_key") == "llama31"
+            and prepared["configuration"].get("model_key") == "llama31"):
+        recorded_model = "llama31"
+    if recorded_model != model:
+        raise ValueError("Validation selection model identity differs: " + model)
     if (state.get("status") != "complete" or state.get("smoke_test") is not False
             or state.get("phase") != "save_adapter" or state.get("model_key") != model
             or state.get("global_steps", 0) <= 0

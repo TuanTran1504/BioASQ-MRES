@@ -108,14 +108,16 @@ def test_actual_java_scoring_creates_its_report_directory(tmp_path, monkeypatch)
 
 
 @pytest.fixture
-def epoch_run(tmp_path, monkeypatch):
+def epoch_run(tmp_path, monkeypatch, request):
+    model = getattr(request, "param", "qwen3")
+    prefix = "llama" if model == "llama31" else model
     training = tmp_path / "training"; training.mkdir()
     submission = tmp_path / "training-submission"; submission.mkdir()
     selection = training / "selection"; selection.mkdir()
     preferences = tmp_path / "preferences"; preferences.mkdir()
     run.write(preferences / "manifest.json", {})
     ss = source("native-sft")
-    config = {"model_key": "qwen3", "retain_epoch_checkpoints": True, "num_train_epochs": 3}
+    config = {"model_key": model, "retain_epoch_checkpoints": True, "num_train_epochs": 3}
     splits = {"train": [{"question_id": "t0"}], "validation": [{"question_id": "v0"}]}
     feedback = {"banks": {}, "reranker_hashes": {"manifest.json": "reranker"}}
     prepared = {"preferences": str(preferences), "configuration": config, "source": ss, "native_banks": {},
@@ -134,7 +136,7 @@ def epoch_run(tmp_path, monkeypatch):
         run.write(cp / "adapter_config.json", {"base_model_name_or_path": "base"})
         (cp / "adapter_model.safetensors").write_bytes(f"epoch{epoch}".encode())
     (training / "reference_logps.jsonl").write_text("[]")
-    state = {"status": "complete", "phase": "save_adapter", "smoke_test": False, "model_key": "qwen3",
+    state = {"status": "complete", "phase": "save_adapter", "smoke_test": False, "model_key": model,
         "global_steps": 3, "submission": str(submission), "prepared_sha256": run.digest(submission / "prepared.json"),
         "configuration": config, "source": ss, "trained_pair_counts": {"train": 1, "validation": 1},
         "preference_pair_counts": {"train": 1, "validation": 1},
@@ -142,12 +144,14 @@ def epoch_run(tmp_path, monkeypatch):
         "reference_logps_sha256": run.digest(training / "reference_logps.jsonl"),
         "adapter_files_sha256": {p.name: run.digest(p) for p in (training / "adapter").iterdir()}}
     run.write(training / "manifest.json", state)
-    rows = [{"epoch": e, "mrr_at5": .6, "mean_output_tokens": 60-e*5, "qwen3_full_pool_lost": int(e > 1),
+    rows = [{"epoch": e, "mrr_at5": .6, "mean_output_tokens": 60-e*5,
+        f"{prefix}_full_pool_lost": int(e > (1 if model == "qwen3" else 0)),
         "ensemble_full_pool_lost": 0, "generation_quality": dict(empty_responses=0, ceiling_responses=0, surplus_responses=0)} for e in (0, 1, 2, 3)]
-    run.write(selection / "comparison_summary.json", {"question_count": 144, "selected_epoch": 1, "checkpoint_scores": rows})
-    selected = {"status": "complete", "smoke_test": False, "validation_question_count": 144, "focal_model": "qwen3",
+    winner = run.CONFIGURATIONS["strict"][model]
+    run.write(selection / "comparison_summary.json", {"question_count": 144, "selected_epoch": winner, "checkpoint_scores": rows})
+    selected = {"status": "complete", "smoke_test": False, "validation_question_count": 144, "focal_model": model,
         "training": str(training), "submission": str(submission), "prepared_sha256": state["prepared_sha256"],
-        "training_manifest_sha256": run.digest(training / "manifest.json"), "selected_epoch": 1,
+        "training_manifest_sha256": run.digest(training / "manifest.json"), "selected_epoch": winner,
         "reranker_hashes": feedback["reranker_hashes"],
         "output_sha256": {p.relative_to(selection).as_posix(): run.digest(p) for p in selection.rglob("*") if p.is_file()}}
     run.write(selection / "manifest.json", selected)
@@ -176,6 +180,44 @@ def test_epoch_one_is_exact_retained_checkpoint_and_strict_selection_is_pinned(e
         ss, dpo, _, _, pins = run.validate_epoch_one(selection, "qwen3", ROOT)
         assert dpo["adapter"] == str(selection / "epoch-1/adapter") and dpo["dpo_epoch"] == 1
         assert ss["adapter"] == "native-sft" and pins
+
+
+@pytest.mark.parametrize("epoch_run", ["llama31", "qwen3", "ministral3"], indirect=True)
+def test_legacy_llama_manifest_without_focal_model_is_read_without_rewriting(epoch_run):
+    selection, training = epoch_run
+    selected = run.read(selection / "manifest.json")
+    model = selected.pop("focal_model")
+    run.write(selection / "manifest.json", selected)
+    original_hash = run.digest(selection / "manifest.json")
+    if model == "llama31":
+        _, dpo, _, _, pins = run.validate_epoch_one(selection, model, ROOT)
+        assert dpo["adapter"] == str(selection / "epoch-1/adapter")
+        assert pins[str(selection / "manifest.json")] == original_hash
+    else:
+        with pytest.raises(ValueError, match="model identity"):
+            run.validate_epoch_one(selection, model, ROOT)
+    assert run.digest(selection / "manifest.json") == original_hash
+
+
+@pytest.mark.parametrize("epoch_run", ["llama31"], indirect=True)
+@pytest.mark.parametrize("change", ["wrong_training_model", "explicit_null", "wrong_count", "smoke", "incomplete", "weights"])
+def test_legacy_compatibility_keeps_model_completion_and_checkpoint_guards(epoch_run, change):
+    selection, training = epoch_run
+    selected = run.read(selection / "manifest.json")
+    selected.pop("focal_model")
+    if change == "wrong_training_model":
+        state = run.read(training / "manifest.json")
+        state["model_key"] = "qwen3"
+        run.write(training / "manifest.json", state)
+        selected["training_manifest_sha256"] = run.digest(training / "manifest.json")
+    if change == "explicit_null": selected["focal_model"] = None
+    if change == "wrong_count": selected["validation_question_count"] = 4
+    if change == "smoke": selected["smoke_test"] = True
+    if change == "incomplete": selected["status"] = "running"
+    if change == "weights": (selection / "epoch-1/adapter/adapter_model.safetensors").write_bytes(b"modified")
+    run.write(selection / "manifest.json", selected)
+    with pytest.raises(ValueError):
+        run.validate_epoch_one(selection, "llama31", ROOT)
 
 
 def test_complete_generate_and_score_pipeline_without_gpu(tmp_path, monkeypatch):

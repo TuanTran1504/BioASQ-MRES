@@ -32,6 +32,12 @@ Epoch-one adapters are read from each completed selection run's
 and pinned with their native tokenizer. The final loss-selected training adapter
 is not substituted for epoch one. Existing strict selection outputs are unchanged.
 
+The original Llama-only selection format omitted `focal_model`. The reader accepts
+that legacy format only for Llama when its linked training record and pinned
+configuration both identify Llama. All completion, validation-size, source,
+selection and checkpoint-hash checks still apply. Missing companion identities
+or explicit conflicting identities are rejected; historical manifests are not edited.
+
 The baseline response archives come from
 `outputs/sft_ensemble_test/comparison-181287698.gadi-pbs`.
 The reranker is `max5/reranker.joblib` from
