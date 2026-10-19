@@ -124,6 +124,33 @@ validation scores and downloads only the pinned encoder checkpoint if missing
 files before submitting anything. The first preparation may take several minutes.
 It uses the existing `bioasq-8b` environment; it does not install or upgrade packages.
 
+The pinned backbone is copied into `SUBMISSION/backbone` as ordinary files
+(approximately 440 MB per submission), following Hugging Face cache symlinks.
+The copy must match the source hashes, and preparation rejects a source that
+changes during copying. Workers verify and load the private copy; later changes
+to the shared cache cannot alter a prepared experiment.
+
+### Recovery from the cache-link verification failure
+
+The original smoke job `181619423` stopped before training with
+`Frozen input changed: config.json`. The old verifier rejects files whose resolved
+paths leave the snapshot directory. On Linux, normal Hugging Face snapshots link
+to a separate `blobs` directory, so this can fail even if the file hash matches.
+The message alone does not prove that the config contents changed.
+
+After pulling the fix, prepare and submit a new chain with the normal command:
+
+```bash
+git pull --ff-only
+bash scripts/submit_contextual_sft_reranker.sh
+```
+
+This creates a new submission with a materialized backbone and newly frozen code.
+Do not resubmit the old `job.pbs`, edit its saved hashes, or disable validation.
+The old submission is retained for diagnosis. This reruns preparation and the
+smoke check, then trains and scores only after dependencies succeed. The separate
+ten-sample logistic-reranker generation jobs do not need to be resubmitted.
+
 Three GPU jobs are submitted:
 
 | Stage | Budget | Purpose |

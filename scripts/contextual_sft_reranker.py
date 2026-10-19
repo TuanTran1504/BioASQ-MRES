@@ -192,6 +192,22 @@ def hash_files(directory):
             if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'}
 
 
+def freeze_backbone(snapshot, destination):
+    """Materialize HF cache links as private files, retaining content verification."""
+    expected = hash_files(snapshot)
+    destination.mkdir(parents=True, exist_ok=False)
+    for name in expected:
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # HF snapshots normally symlink into ../../blobs. copy2 follows links;
+        # never hardlink or symlink the submission back to the mutable cache.
+        shutil.copy2(snapshot / name, target, follow_symlinks=True)
+    verify_files(destination, expected)
+    if hash_files(snapshot) != expected:
+        raise ValueError('Backbone cache changed while freezing the submission')
+    return destination
+
+
 def validate_membership(examples, test, dev_ids):
     if {s: len(v) for s, v in examples.items()} != {'train': 1296, 'validation': 144} or len(test) != 95:
         raise ValueError('Need 1296 fitting, 144 validation and 95 test questions')
@@ -231,6 +247,9 @@ def prepare(repository, baseline, comparison, submission, download_model=False):
         local_files_only=not download_model))
     if not list(snapshot.glob('*.bin')) and not list(snapshot.glob('*.safetensors')):
         raise ValueError('Pinned BiomedBERT weights are incomplete')
+    cache_snapshot = snapshot
+    submission.mkdir(parents=True, exist_ok=False)
+    snapshot = freeze_backbone(cache_snapshot, submission / 'backbone')
     from transformers import AutoTokenizer, AutoConfig
     tokenizer = AutoTokenizer.from_pretrained(snapshot, local_files_only=True)
     backbone = AutoConfig.from_pretrained(snapshot, local_files_only=True)
@@ -243,7 +262,6 @@ def prepare(repository, baseline, comparison, submission, download_model=False):
     for pool, condition in cc.items():
         if condition['metrics'] != old_validation[pool + '_max5_reranker']:
             raise ValueError('Frozen logistic validation results no longer reproduce')
-    submission.mkdir(parents=True, exist_ok=False)
     audits = {}
     for split in ('train', 'validation'):
         ev.write_jsonl(submission / f'{split}_examples.jsonl', examples[split].values())
@@ -272,6 +290,7 @@ def prepare(repository, baseline, comparison, submission, download_model=False):
     files = hash_files(submission)
     state = {'schema': config['schema'], 'repository': str(repository), 'config': config,
         'backbone_snapshot': str(snapshot.resolve()), 'backbone_files': hash_files(snapshot),
+        'backbone_cache_source': str(cache_snapshot.resolve()),
         'baseline': str(baseline), 'baseline_hashes': baseline_hashes, 'comparison': str(comparison),
         'comparison_hashes': test_hashes, 'code_hashes': code_hashes, 'files_sha256': files,
         'question_counts': baseline_state['question_counts'], 'dev160_excluded': True,
@@ -280,6 +299,8 @@ def prepare(repository, baseline, comparison, submission, download_model=False):
         'test_scope': 'Same saved greedy/ten-sample test95 pools; historically examined, exploratory',
         'labels': config['labels'], 'evidence_summary': audits}
     ev.write(submission / 'prepared.json', state)
+    # Exercise the exact worker integrity check before reserving GPU jobs.
+    validate_submission(submission)
     print('Prepared BiomedBERT: 1296 fitting / 144 validation; same frozen max-five logistic baseline.', flush=True)
     print('Evidence policy: entire question/candidate plus three lexical evidence windows, at most 512 tokens.', flush=True)
 

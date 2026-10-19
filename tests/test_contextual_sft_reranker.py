@@ -180,6 +180,60 @@ def test_prediction_alignment_is_verified(config):
         ce.split_predictions(encoded, [1.], pools)
 
 
+def test_frozen_backbone_is_independent_of_cache_and_detects_changes(tmp_path):
+    cache = tmp_path / 'cache'
+    cache.mkdir()
+    (cache / 'config.json').write_text('{"model_type":"bert"}')
+    (cache / 'pytorch_model.bin').write_bytes(b'pinned weights')
+    frozen = ce.freeze_backbone(cache, tmp_path / 'submission/backbone')
+    hashes = ce.hash_files(frozen)
+    assert hashes == ce.hash_files(cache)
+    (cache / 'config.json').write_text('changed cache')
+    (cache / 'pytorch_model.bin').write_bytes(b'changed weights')
+    ce.verify_files(frozen, hashes)
+    (frozen / 'config.json').write_text('changed frozen config')
+    with pytest.raises(ValueError, match='Frozen input changed: config.json'):
+        ce.verify_files(frozen, hashes)
+
+
+def test_huggingface_blob_links_are_materialized_not_rejected(tmp_path):
+    snapshot = tmp_path / 'hub/snapshots/pinned'
+    snapshot.mkdir(parents=True)
+    blobs = tmp_path / 'hub/blobs'
+    blobs.mkdir()
+    for name, contents in [('config.json', b'{}'), ('pytorch_model.bin', b'weights')]:
+        blob = blobs / (name + '-blob')
+        blob.write_bytes(contents)
+        try:
+            (snapshot / name).symlink_to(blob)
+        except OSError:
+            pytest.skip('Creating symlinks requires Windows Developer Mode or privilege')
+    expected = ce.hash_files(snapshot)
+    # The previous workflow incorrectly rejected matching HF files because their
+    # resolved paths leave the snapshot directory.
+    with pytest.raises(ValueError, match='Frozen input changed: config.json'):
+        ce.verify_files(snapshot, expected)
+    frozen = ce.freeze_backbone(snapshot, tmp_path / 'submission/backbone')
+    assert not any(p.is_symlink() for p in frozen.iterdir())
+    ce.verify_files(frozen, expected)
+    (blobs / 'config.json-blob').write_text('mutated shared blob')
+    ce.verify_files(frozen, expected)
+
+
+def test_cache_change_during_freeze_is_rejected(tmp_path, monkeypatch):
+    cache = tmp_path / 'cache'
+    cache.mkdir()
+    (cache / 'config.json').write_text('before')
+    original_copy = ce.shutil.copy2
+    def copy_then_mutate(source, target, **kwargs):
+        result = original_copy(source, target, **kwargs)
+        source.write_text('after')
+        return result
+    monkeypatch.setattr(ce.shutil, 'copy2', copy_then_mutate)
+    with pytest.raises(ValueError, match='cache changed while freezing'):
+        ce.freeze_backbone(cache, tmp_path / 'frozen')
+
+
 def test_partition_guard_rejects_dev_or_test_leakage():
     examples = {s: {f'{s}-{i}': {'question': f'Unique {s} {i}'} for i in range(n)}
                 for s, n in [('train', 1296), ('validation', 144)]}
@@ -275,6 +329,11 @@ def test_prepare_freezes_inputs_and_validates_before_gpu_jobs(tmp_path, monkeypa
     monkeypatch.setattr(ce.rr, 'snapshot_code', snapshot_code)
     submission = tmp_path / 'submission'
     ce.prepare(repository, baseline, tmp_path / 'comparison', submission)
+    prepared = ce.validate_submission(submission)
+    assert prepared['dev160_excluded'] is True
+    assert Path(prepared['backbone_snapshot']) == (submission / 'backbone').resolve()
+    # Shared HF cache content is no longer a live training dependency.
+    (snapshot / 'config.json').write_text('external cache subsequently changed')
     assert ce.validate_submission(submission)['dev160_excluded'] is True
     bytecode = submission / 'code/scripts/__pycache__/worker.pyc'
     bytecode.parent.mkdir()
