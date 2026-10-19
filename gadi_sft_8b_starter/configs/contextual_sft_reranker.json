@@ -1,0 +1,20 @@
+{
+  "schema": "contextual-max5-sft-v1",
+  "model_id": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+  "revision": "e1354b7a3a09615f6aba48dfad4b7a613eef7062",
+  "max_length": 512,
+  "evidence_snippets": 3,
+  "minimum_evidence_tokens": 32,
+  "epochs": 3,
+  "learning_rate": 0.00002,
+  "batch_size": 8,
+  "gradient_accumulation_steps": 4,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1,
+  "seed": 3407,
+  "blend_weights": [0.0, 0.25, 0.5, 0.75, 1.0],
+  "blend_rule": "(1-alpha)/logistic_rank + alpha/contextual_rank; fixed gold-blind ties",
+  "training_pools": ["max5_greedy", "max5_sampling4"],
+  "test_pools": ["max5_greedy", "max5_sampling10"],
+  "labels": "official acceptance only; nonacceptance is not scientific incorrectness"
+}

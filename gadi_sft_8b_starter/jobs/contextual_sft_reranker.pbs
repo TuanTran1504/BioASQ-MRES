@@ -1,0 +1,26 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=20GB
+#PBS -l walltime=08:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N max5-contextual
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache" HF_HUB_CACHE="/scratch/nl78/${USER}/hf_cache/hub"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false PYTHONUNBUFFERED=1
+export PYTHONDONTWRITEBYTECODE=1
+export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+args=(--mode "${CONTEXTUAL_STAGE:?}" --submission "${CONTEXTUAL_SUBMISSION:?}")
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then args+=(--smoke); fi
+if [[ "$CONTEXTUAL_STAGE" == evaluate ]]; then
+  args+=(--training "$CONTEXTUAL_SUBMISSION/train-${CONTEXTUAL_TRAIN_JOB:?}")
+fi
+python3 "$CONTEXTUAL_SUBMISSION/code/scripts/contextual_sft_reranker.py" "${args[@]}"
