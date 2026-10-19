@@ -144,7 +144,7 @@ def baseline_archives(comparison, state, sources, examples, pins):
             result[f"{model}_{mode}"] = str(run)
             pins[str(archive / "manifest.json")] = digest(archive / "manifest.json")
             pin_tree(run, {n: digest(run / n) for n in RUN_FILES}, pins)
-            load_generation(run, sources[model], panel, mode)
+            load_generation(run, sources[model], panel, mode, allow_legacy_fixed_top_k=True)
     return result
 
 

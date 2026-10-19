@@ -38,6 +38,12 @@ configuration both identify Llama. All completion, validation-size, source,
 selection and checkpoint-hash checks still apply. Missing companion identities
 or explicit conflicting identities are rejected; historical manifests are not edited.
 
+Historical SFT ten-sample configurations omitted `top_k`, while their inference
+worker hardcoded `top_k=0`. Baseline reading accepts that absent field only via
+an explicit compatibility option; a conflicting recorded value remains an error.
+New epoch-one DPO configurations must record `top_k=0`. Archived files are not
+rewritten, and all other decoding, source, evidence, draw and seed checks remain.
+
 The baseline response archives come from
 `outputs/sft_ensemble_test/comparison-181287698.gadi-pbs`.
 The reranker is `max5/reranker.joblib` from

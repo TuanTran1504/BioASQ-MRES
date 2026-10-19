@@ -118,7 +118,7 @@ def analyze(submission, output, resamples=10000, matcher=official_candidate_matc
         generation_hashes[str(generation / "manifest.json")] = digest(generation / "manifest.json")
         for mode in MODES:
             baseline[f"{model}_{mode}"] = load_generation(Path(prepared["baseline_runs"][f"{model}_{mode}"]),
-                prepared["sources"][model], panel, mode)
+                prepared["sources"][model], panel, mode, allow_legacy_fixed_top_k=True)
             run = (generation / state["runs"][mode]).resolve()
             if not run.is_relative_to(generation.resolve()):
                 raise ValueError("DPO generation escaped its output directory")

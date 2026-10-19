@@ -83,7 +83,7 @@ def load_selector(directory, hashes, examples, sources):
     return payload, state
 
 
-def load_generation(directory, source, examples, mode):
+def load_generation(directory, source, examples, mode, *, allow_legacy_fixed_top_k=False):
     """Reparse every draw; invalid draws and empty pools stay in denominators."""
     cfg = read(directory / "config.json")
     count = 1 if mode == "greedy" else 10
@@ -95,9 +95,23 @@ def load_generation(directory, source, examples, mode):
         "gold_blind_generation": True, "local_files_only": True}
     if count == 10:
         expected.update(top_p=.95, top_k=0)
-    if (any(cfg.get(k) != v for k, v in expected.items())
-            or cfg.get("execution_mode", "default") != source.get("execution_mode", "default")):
-        raise ValueError("Wrong source, decoding budget or evidence policy")
+    differences = []
+    for field, wanted_value in expected.items():
+        actual_value = cfg.get(field)
+        # Historical SFT test launchers omitted top_k. Their sampling worker
+        # fixes it to zero in generation_options(), independently of config.
+        # This opt-in is only used for already verified SFT baseline archives;
+        # new DPO generations must explicitly record top_k=0.
+        if (allow_legacy_fixed_top_k and count == 10 and field == "top_k"
+                and field not in cfg):
+            actual_value = 0
+        if actual_value != wanted_value:
+            differences.append(f"{field}: saved={cfg.get(field)!r}, expected={wanted_value!r}")
+    if cfg.get("execution_mode", "default") != source.get("execution_mode", "default"):
+        differences.append(f"execution_mode: saved={cfg.get('execution_mode', 'default')!r}, "
+                           f"expected={source.get('execution_mode', 'default')!r}")
+    if differences:
+        raise ValueError(f"Wrong source, decoding budget or evidence policy in {directory}: " + "; ".join(differences))
     prompt = Path(cfg["prompt"])
     if (digest(prompt) != cfg["prompt_sha256"]
             or prompt.read_text(encoding="utf-8").strip() != source["system_prompt"].strip()):

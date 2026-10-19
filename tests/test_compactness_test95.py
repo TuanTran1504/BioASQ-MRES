@@ -14,6 +14,36 @@ sys.path.insert(0, str(ROOT / "gadi_sft_8b_starter/scripts"))
 import run_compactness_test95 as run
 from scripts import analyze_compactness_test95 as score
 from test_generator_feedback_evaluation import archive, panel, source
+from run_single_answer_sampling import generation_options
+
+
+@pytest.mark.parametrize("allow", [False, True])
+@pytest.mark.parametrize("saved_top_k", ["absent", None, 0, 50])
+def test_historical_top_k_omission_only_is_compatible(tmp_path, allow, saved_top_k):
+    examples = panel(); ss = source()
+    path = tmp_path / "historical"
+    rows, cfg = archive(path, examples, ss, "sampling10")
+    if saved_top_k == "absent": cfg.pop("top_k")
+    else: cfg["top_k"] = saved_top_k
+    run.write(path / "config.json", cfg)
+    original_hash = run.digest(path / "config.json")
+    assert generation_options(cfg)["top_k"] == 0  # actual historical worker policy
+    if saved_top_k == 0 or (allow and saved_top_k == "absent"):
+        assert run.load_generation(path, ss, examples, "sampling10", allow_legacy_fixed_top_k=allow) == rows
+    else:
+        with pytest.raises(ValueError, match="top_k"):
+            run.load_generation(path, ss, examples, "sampling10", allow_legacy_fixed_top_k=allow)
+    assert run.digest(path / "config.json") == original_hash
+
+
+@pytest.mark.parametrize("field,value", [("temperature", .9), ("top_p", .8), ("num_generations", 4),
+    ("model_name", "wrong-adapter"), ("require_all_snippets", False), ("gold_blind_generation", False)])
+def test_legacy_top_k_flag_preserves_other_policy_checks(tmp_path, field, value):
+    examples = panel(); ss = source(); path = tmp_path / "historical"
+    _, cfg = archive(path, examples, ss, "sampling10")
+    cfg.pop("top_k"); cfg[field] = value; run.write(path / "config.json", cfg)
+    with pytest.raises(ValueError, match=field):
+        run.load_generation(path, ss, examples, "sampling10", allow_legacy_fixed_top_k=True)
 
 
 def banks(tmp_path, examples):
@@ -236,6 +266,8 @@ def test_complete_generate_and_score_pipeline_without_gpu(tmp_path, monkeypatch)
         for mode in run.MODES:
             path = tmp_path / f"sft-{model}-{mode}"
             baseline[f"{model}_{mode}"], cfg = archive(path, examples, sources[model], mode, lambda q: ["Core", "alias"])
+            if mode == "sampling10":
+                cfg.pop("top_k"); run.write(path / "config.json", cfg)
             baseline_paths[f"{model}_{mode}"] = str(path)
         plans[model] = {k: cfg[k] for k in ("max_seq_length", "expected_prompt_tokens", "expected_prompt_ids_sha256")}
     comparison = tmp_path / "comparison"; comparison.mkdir()
@@ -328,6 +360,8 @@ def test_preparation_reuses_six_archives_and_freezes_gold_blind_inputs(tmp_path,
         for mode in run.MODES:
             directory = starter / f"{model}-{mode}"
             rows, cfg = archive(directory / "max5", list(ee.values()), sources[model], mode)
+            if mode == "sampling10":
+                cfg.pop("top_k"); run.write(directory / "max5/config.json", cfg)
             saved = {"runs": {"max5": "max5"}}
             run.write(directory / "manifest.json", saved)
             loaded[str(directory)] = (saved, {"sources": {model: {"max5": {"source": sources[model]}}}},
