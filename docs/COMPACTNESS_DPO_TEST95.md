@@ -1,5 +1,10 @@
 # Three fixed compactness ensembles on test95
 
+The follow-up [ten-sample matching-reranker workflow](COMPACTNESS_MATCHED_RERANKERS.md)
+generates fitting/validation banks with one greedy plus ten sampled responses,
+trains two configuration-specific rerankers and reuses this experiment's fixed
+test95 pools. The results below continue to refer to the original frozen reranker.
+
 This experiment compares the existing max-five SFT ensemble against two fixed
 configurations on the same 95 factoid test questions from BioASQ 13B batches 1–4.
 Each configuration is scored under greedy and ten-sample generation, using the

@@ -69,7 +69,17 @@ def generation_options(config):
             raise ValueError("Expected one greedy generation")
         return {"max_new_tokens": config["max_new_tokens"], "do_sample": False,
                 "num_beams": 1, "repetition_penalty": 1.0, "use_cache": True}
-    if config["num_generations"] not in (4, 10) or config["temperature"] <= 0:
+    subset = config.get("sampled_draw_indices")
+    if subset is not None:
+        # A resumable bank may need only missing seed slots. Explicit indices
+        # prevent silently treating a partial request as a complete 10-draw bank.
+        count = config["num_generations"]
+        offset = config.get("sample_seed_offset", 0)
+        if (type(count) is not int or type(offset) is not int or not 1 <= count <= 10
+                or offset < 0 or offset + count > 10
+                or subset != list(range(offset + 1, offset + count + 1))):
+            raise ValueError("Invalid explicit stochastic draw subset")
+    if (subset is None and config["num_generations"] not in (4, 10)) or config["temperature"] <= 0:
         raise ValueError("Expected four or ten stochastic samples with positive temperature")
     return {"max_new_tokens": config["max_new_tokens"], "do_sample": True,
             "temperature": config["temperature"], "top_p": config["top_p"],
