@@ -1,0 +1,54 @@
+{
+  "unitor": {
+    "repository": "crux82/BioASQ2025-UNITOR",
+    "commit": "eea59cf1b3727584abc876acbcccb3ddf0b2a957",
+    "files": {
+      "data/dataset/answer_generation/dev_set_answGEN.json": {
+        "sha256": "a8dd67827adc5bfd1a039eab12cb41cc937bdbda0c08fa2cc1ace1abbc9954aa",
+        "bytes": 1737991
+      },
+      "data/dataset/answer_generation/train_set_answGEN.json": {
+        "sha256": "af1114d8f7b312ec428ab7658dc5f37e45dcc9762671f69dc6985dbd102368ab",
+        "bytes": 13529287
+      },
+      "fine-tuning/fine_tuning/answer_generation/answer_gen_ft.py": {
+        "sha256": "9b7c3e2b03cc0d2e3c91ca9036a41184f66f06706454598ac49141119db2ce5a",
+        "bytes": 5096
+      },
+      "fine-tuning/fine_tuning/answer_generation/answer_gen_ft_Phi4.py": {
+        "sha256": "1b2009999dbc434fa79a18b8fdbf14ef68373824eb61aaf7f290123779734217",
+        "bytes": 4804
+      },
+      "inference/answer_generation/answ_gen_inf_Phi4.py": {
+        "sha256": "cfd588988622909a755c68a136dd989da8a6258b7c4eabce8e39838426ef016f",
+        "bytes": 2746
+      },
+      "inference/answer_generation/answer_gen_inf.py": {
+        "sha256": "c28eadeb05340d8754e5e6df3e690af3d78cd88aa4d825059b336609502b310a",
+        "bytes": 2199
+      }
+    }
+  },
+  "gptprompt": {
+    "repository": "dsgt-arc/bioasq-2025-1b-1",
+    "commit": "6eb8d3bfdf526b44b598fe2c4546f2995cc9dd20",
+    "request_file": {
+      "path": "notebooks/xxue/PhaseB_submit/batch2/prompt_batch2_openaiBatch_gpt-4-turbo_1_shots_0.jsonl",
+      "sha256": "3bd028bbe60969b4923422e806bc977a5ad0b8ec7ac2640d8854c731b55c8741"
+    },
+    "notebook": {
+      "path": "notebooks/xxue/PhaseB_submit/batch3/PhaseB_batch3_system2_prompt-gpt-4o-turbo_add_exact.ipynb",
+      "sha256": "fe04c57e5377810241922ef4125f642eb130cd0ac52f62b03269b6c9ce26580c"
+    }
+  },
+  "models": {
+    "llama31": {
+      "model_id": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+      "revision": "f15c379fb32bb402fa06a7ae9aecb1febf4b79ec"
+    },
+    "phi4": {
+      "model_id": "unsloth/Phi-4-unsloth-bnb-4bit",
+      "revision": "26dd1bdcaaab6bf52793b1a09b259ceed592d092"
+    }
+  }
+}

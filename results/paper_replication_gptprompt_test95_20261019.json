@@ -1,0 +1,79 @@
+{
+  "experiment": "GPTPrompt released-code factoid replication; reconstructed Style-2 exact-answer path",
+  "date": "2026-10-19",
+  "status": "complete",
+  "source_pins": {
+    "repository": "dsgt-arc/bioasq-2025-1b-1",
+    "commit": "6eb8d3bfdf526b44b598fe2c4546f2995cc9dd20",
+    "request_file": {
+      "path": "notebooks/xxue/PhaseB_submit/batch2/prompt_batch2_openaiBatch_gpt-4-turbo_1_shots_0.jsonl",
+      "sha256": "3bd028bbe60969b4923422e806bc977a5ad0b8ec7ac2640d8854c731b55c8741"
+    },
+    "notebook": {
+      "path": "notebooks/xxue/PhaseB_submit/batch3/PhaseB_batch3_system2_prompt-gpt-4o-turbo_add_exact.ipynb",
+      "sha256": "fe04c57e5377810241922ef4125f642eb130cd0ac52f62b03269b6c9ce26580c"
+    }
+  },
+  "model_requested": "gpt-4-turbo",
+  "returned_models": {
+    "gpt-4-turbo-2024-04-09": 95
+  },
+  "nominal_shots": 1,
+  "actual_examples": 2,
+  "decoding": "Released Batch request defaults; no temperature override",
+  "maximum_output_tokens": 100,
+  "scoring": {
+    "metrics": {
+      "question_count": 95,
+      "mrr_at5": 0.487719298245614,
+      "coverage_at5": 0.5157894736842106,
+      "coverage_full_pool": 0.5157894736842106
+    },
+    "per_batch": {
+      "13B1_golden.json": {
+        "question_count": 26,
+        "mrr_at5": 0.3974358974358974,
+        "coverage_at5": 0.46153846153846156,
+        "coverage_full_pool": 0.46153846153846156
+      },
+      "13B2_golden.json": {
+        "question_count": 27,
+        "mrr_at5": 0.5925925925925926,
+        "coverage_at5": 0.5925925925925926,
+        "coverage_full_pool": 0.5925925925925926
+      },
+      "13B3_golden.json": {
+        "question_count": 20,
+        "mrr_at5": 0.375,
+        "coverage_at5": 0.4,
+        "coverage_full_pool": 0.4
+      },
+      "13B4_golden.json": {
+        "question_count": 22,
+        "mrr_at5": 0.5681818181818182,
+        "coverage_at5": 0.5909090909090909,
+        "coverage_full_pool": 0.5909090909090909
+      }
+    },
+    "macro_batch_mrr_at5": 0.48330257705257706,
+    "empty_parse_count": 0,
+    "output_ceiling_count": 0,
+    "scorer": "Existing official BioASQ Java candidate matcher; first five in generated order; no reranker",
+    "exposure": "Historically examined project test95, not a fresh untouched holdout"
+  },
+  "budget": {
+    "authorized_cap_usd": 10,
+    "charged_usd": 3.8872300000000015,
+    "input_tokens": 384241,
+    "output_tokens": 1494,
+    "api_requests": 95
+  },
+  "artifact_hashes": {
+    "generations.jsonl": "e801363a5d7cd3b3e9ccbecd055f8726e4a15f499a4a473f058dbf0a5299be24",
+    "comparison_summary.json": "b36f32a5835771bd07c23963ffcbc9127c2842979c0da520e57324e957090511",
+    "comparison_per_question.json": "d8cd5a0980bb03d66226a13e0872f18555d281ef4d45194dcd37ba404bfa6315",
+    "spend-ledger.json": "e3375e7f7868d115712975e1c44b0f9827dbbfa5baac1cb91681dc5c7ce2ef3a"
+  },
+  "limitations": "Batch-3 Style-2 notebook; no identifiable batch-4 submission checkpoint/request released. The two exact-answer examples are preserved from the released batch-2 request.",
+  "interpretation": "A reconstruction from released sources, not the exact published Batch-4 submission; no test-guided prompt tuning."
+}
