@@ -1,0 +1,29 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l ngpus=1
+#PBS -l mem=48GB
+#PBS -l jobfs=100GB
+#PBS -l walltime=12:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N answer-selector
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache" HF_HUB_CACHE="/scratch/nl78/${USER}/hf_cache/hub"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1
+export UNSLOTH_RETURN_LOGITS=1 UNSLOTH_DISABLE_STATISTICS=1
+cd "${PBS_O_WORKDIR}"
+args=(--mode train --submission "${SELECTOR_SUBMISSION:?}")
+if [[ "${SMOKE_TEST:-0}" == 1 ]]; then
+  args+=(--smoke --output "$SELECTOR_SUBMISSION/smoke-${PBS_JOBID}")
+else
+  args+=(--output "$SELECTOR_SUBMISSION/train-${PBS_JOBID}" \
+    --smoke-result "$SELECTOR_SUBMISSION/smoke-${SELECTOR_SMOKE_JOB:?}" \
+    --baseline "$SELECTOR_SUBMISSION/baseline-${SELECTOR_BASELINE_JOB:?}")
+fi
+python3 "$SELECTOR_SUBMISSION/code/scripts/run_answer_selector_pilot.py" "${args[@]}"

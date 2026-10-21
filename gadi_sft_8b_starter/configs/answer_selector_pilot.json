@@ -1,0 +1,23 @@
+{
+  "schema": "tie-aware-answer-selector-v1",
+  "model_key": "llama31",
+  "initialization": "fresh LoRA on the existing pinned instruction backbone; no answer-generation SFT adapter",
+  "epochs": 3,
+  "learning_rate": 0.0001,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 16,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1,
+  "max_grad_norm": 1.0,
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.0,
+  "max_seq_length": 8704,
+  "seed": 3407,
+  "logistic_C_grid": [0.1, 1.0, 10.0],
+  "checkpoint_selection": "mean greedy/sampling4 validation MRR@5 on all144; include epoch0; earliest epoch on ties",
+  "loss": "negative log total probability of remaining accepted IDs, normalized over remaining legal IDs; no arbitrary negative-tail loss",
+  "sampled_responses_per_model": 4,
+  "test_evaluation": false,
+  "DPO_training": false
+}

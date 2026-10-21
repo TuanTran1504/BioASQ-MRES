@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=2GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N answer-sel-base
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+python3 "${SELECTOR_SUBMISSION:?}/code/scripts/run_answer_selector_pilot.py" \
+  --mode baseline --submission "$SELECTOR_SUBMISSION" --output "$SELECTOR_SUBMISSION/baseline-${PBS_JOBID}"

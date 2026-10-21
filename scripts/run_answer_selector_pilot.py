@@ -1,0 +1,462 @@
+#!/usr/bin/env python3
+"""Supervised, tie-aware Llama answer selector; fitting/validation only, no DPO."""
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+from pathlib import Path
+import shutil
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(1, str(ROOT / "gadi_sft_8b_starter/scripts"))
+from scripts import prepare_answer_selector_data as data
+from scripts import answer_selector_core as core
+
+CONFIG = ROOT / "gadi_sft_8b_starter/configs/answer_selector_pilot.json"
+POOLS = ("max5_greedy", "max5_sampling4")
+
+
+def hashes(directory):
+    return {p.relative_to(directory).as_posix(): data.digest(p) for p in sorted(directory.rglob("*"))
+            if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"}
+
+
+def verify_backbone(directory, expected):
+    """Read-only HF blobs may be symlinks outside snapshots, inside their model cache."""
+    directory = directory.resolve()
+    cache_root = directory.parent.parent
+    for name, digest in expected.items():
+        relative = Path(name)
+        path = directory / relative
+        if (relative.is_absolute() or ".." in relative.parts
+                or not path.resolve().is_relative_to(cache_root) or data.digest(path) != digest):
+            raise ValueError("Pinned instruction backbone changed: " + name)
+
+
+def verify_export(directory):
+    state = data.read(directory / "manifest.json")
+    if (state.get("status") != "complete" or state.get("schema") != "max5-answer-selector-audit-v1"
+            or state.get("question_counts") != data.COUNTS or state.get("model_training")):
+        raise ValueError("Need the completed fitting1296/validation144 selector audit")
+    data.verify_files(directory, state["output_sha256"])
+    inputs, supervision, question_ids = {}, {}, {}
+    heldout = data.read(directory / "heldout_ids.json")
+    for split in data.SPLITS:
+        inputs[split] = data.records(directory / f"{split}_inputs.jsonl")
+        supervision[split] = data.records(directory / f"{split}_supervision.jsonl")
+        identity = lambda r: (r["question_id"], r["pool"])
+        expected = {(r["question_id"], p) for r in inputs[split] for p in POOLS}
+        if (len(inputs[split]) != 2 * data.COUNTS[split]
+                or {identity(r) for r in inputs[split]} != expected
+                or len(supervision[split]) != len(inputs[split])
+                or {identity(r) for r in supervision[split]} != expected):
+            raise ValueError("Missing, duplicate or unexpected question/pool view")
+        question_ids[split] = {r["question_id"] for r in inputs[split]}
+        if len(question_ids[split]) != data.COUNTS[split] or question_ids[split] & set(heldout["dev160"] + heldout["test95"]):
+            raise ValueError("Wrong panel membership or held-out overlap")
+        by_input = {identity(r): r for r in inputs[split]}
+        for row in supervision[split]:
+            payload = json.loads(by_input[identity(row)]["messages"][1]["content"])
+            if (set(payload) != {"question", "snippets", "candidates"}
+                    or row.get('split') != split or by_input[identity(row)].get('split') != split
+                    or payload["candidates"] != [{"id": r["id"], "answer": r["answer"]} for r in row["candidates"]]
+                    or len({r["id"] for r in row["candidates"]}) != len(row["candidates"])
+                    or set(row['accepted_ids']) != {r['id'] for r in row['candidates'] if r['official_accepted']}
+                    or any(type(r["official_accepted"]) is not bool for r in row["candidates"])):
+                raise ValueError("Gold-blind candidate input/official labels differ")
+    if question_ids["train"] & question_ids["validation"]:
+        raise ValueError("Fitting/validation question overlap")
+    return state, inputs, supervision
+
+
+def validate_config(config):
+    if (config.get("schema") != "tie-aware-answer-selector-v1" or config["model_key"] != "llama31"
+            or config["batch_size"] != 1 or config["epochs"] != 3 or config["sampled_responses_per_model"] != 4
+            or config["max_seq_length"] != 8704 or config["DPO_training"] or config["test_evaluation"]
+            or config["learning_rate"] <= 0 or config["gradient_accumulation_steps"] < 1):
+        raise ValueError("Unsupported supervised selector pilot configuration")
+
+
+def prepare(repository, audit, submission):
+    """CPU preflight: local tokenizer only; no model weights loaded or downloaded."""
+    config = data.read(repository / "gadi_sft_8b_starter/configs/answer_selector_pilot.json")
+    validate_config(config)
+    state, inputs, supervision = verify_export(audit)
+    from scripts.prepare_reranker_guided_dpo import configure_data_root
+    native = configure_data_root(repository)
+    generation = data.read(repository / "gadi_sft_8b_starter/configs/max5_dpo_banks_8b.json")
+    source = native.selected_source(generation, "llama31")
+    backbone = Path(source["base_snapshot"]).resolve()
+    if (source["model_loader"] != "fast_language_model" or backbone.name != source["base_revision"]
+            or not (backbone / "config.json").exists()
+            or data.read(backbone / "config.json")["model_type"] != "llama"):
+        raise ValueError("Need the already pinned cached Llama instruction backbone")
+    base_hashes = hashes(backbone)
+    verify_backbone(backbone, base_hashes)
+    # Set Transformers offline before importing the tokenizer stack on the login node.
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(str(backbone), local_files_only=True)
+    maximum = max(len(r["candidates"]) for rows in supervision.values() for r in rows)
+    spec = core.encoding_spec(tokenizer, maximum)
+    # Verify framing at the tokenizer boundary, not by estimating token counts.
+    import json
+    example_json = tokenizer.decode(spec["prefix"] + [spec["codes"]["001"]] + spec["closing"])
+    if json.loads(example_json) != ["001"]:
+        raise ValueError("Tokenizer does not preserve the forced JSON ID format")
+    submission.mkdir(parents=True, exist_ok=False)
+    tokenizer.save_pretrained(str(submission / "tokenizer"))
+    lengths = []
+    for split in data.SPLITS:
+        by_label = {(r["question_id"], r["pool"]): r for r in supervision[split]}
+        frozen = []
+        for item in inputs[split]:
+            case, _ = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], 0)
+            budget = core.check_budget(case, None, spec, config["max_seq_length"])
+            frozen.append(case)
+            lengths.append({"split": split, "question_id": item["question_id"], "pool": item["pool"],
+                            "input_tokens": len(case["input_ids"]), "input_plus_reserved_output": budget})
+        data.jsonl(submission / f"{split}_generation_inputs.jsonl", frozen)
+        data.jsonl(submission / f"{split}_inputs.jsonl", inputs[split])
+        data.jsonl(submission / f"{split}_supervision.jsonl", supervision[split])
+        if split == "train":
+            counts = []
+            for epoch in range(1, config["epochs"] + 1):
+                training = []
+                for item in inputs[split]:
+                    case, row = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], epoch)
+                    core.check_budget(case, row, spec, config["max_seq_length"])
+                    if row is not None:
+                        training.append(row)
+                data.jsonl(submission / f"train_epoch{epoch}.jsonl", training)
+                counts.append({"epoch": epoch, "views": len(training), "questions": len({r['question_id'] for r in training}),
+                               "maximum_training_tokens": max(len(r['input_ids']) for r in training)})
+    data.write(submission / "encoding_spec.json", spec)
+    data.write(submission / "configuration.json", config)
+    data.jsonl(submission / "length_audit.jsonl", lengths)
+    data.write(submission / "data_summary.json", {"question_counts": data.COUNTS, "training_epochs": counts,
+        "validation_views": len(inputs['validation']), "maximum_input_plus_output": max(r['input_plus_reserved_output'] for r in lengths),
+        "all_evidence_preserved": True, "candidate_surfaces_preserved": True, "tokenizer_sha256": hashes(submission / 'tokenizer')})
+    for filename in ("heldout_ids.json", "source_provenance.json", "manifest.json"):
+        shutil.copy2(audit / filename, submission / ("audit_manifest.json" if filename == "manifest.json" else filename))
+    from scripts.train_sft_ensemble_reranker import snapshot_code
+    snapshot_code(repository, submission / "code")
+    for name in ("baseline_answer_selector.pbs", "train_answer_selector.pbs", "report_answer_selector.pbs"):
+        shutil.copy2(repository / "gadi_sft_8b_starter/jobs" / name, submission / name)
+    verify_backbone(backbone, base_hashes)
+    data.write(submission / "prepared.json", {"schema": config['schema'], "configuration": config,
+        "audit_source": str(audit), "audit_manifest_sha256": data.digest(audit / 'manifest.json'),
+        "backbone_snapshot": str(backbone), "backbone_files": base_hashes,
+        "backbone_model_name": source['model_name'], "backbone_revision": source['base_revision'],
+        "initialization": "fresh selector LoRA; cached instruction backbone only; no generator SFT adapter",
+        "files_sha256": hashes(submission), "training": "supervised only", "DPO_training": False, "test_evaluation": False})
+    validate(submission)
+    print(f"Prepared tie-aware Llama selector: {counts[0]['views']} fitting views / {counts[0]['questions']} questions; "
+          f"all 144 validation questions, both pools. Maximum reserved context {max(r['input_plus_reserved_output'] for r in lengths)}.")
+
+
+def validate(submission, backbone=False):
+    state = data.read(submission / "prepared.json")
+    validate_config(state["configuration"])
+    data.verify_files(submission, state["files_sha256"])
+    if state["configuration"] != data.read(submission / "configuration.json"):
+        raise ValueError("Frozen selector configuration differs")
+    if backbone:
+        verify_backbone(Path(state["backbone_snapshot"]), state["backbone_files"])
+    return state
+
+
+def pools_for_baseline(submission):
+    import json
+    examples, pools = {}, {}
+    for split in data.SPLITS:
+        examples[split], pools[split] = {}, {p: [] for p in POOLS}
+        inputs = {(r['question_id'], r['pool']): r for r in data.records(submission / f"{split}_inputs.jsonl")}
+        for row in data.records(submission / f"{split}_supervision.jsonl"):
+            context = json.loads(inputs[(row['question_id'], row['pool'])]['messages'][1]['content'])
+            examples[split][row['question_id']] = {"question": context['question'], "snippets": context['snippets']}
+            pools[split][row['pool']].extend({**{k: v for k, v in c.items() if k not in ('id', 'official_accepted', 'occurrences', 'draw_support')},
+                                            'label': int(c['official_accepted'])} for c in row['candidates'])
+    return examples, pools
+
+
+def baseline(submission, output):
+    state = validate(submission)
+    from scripts import train_sft_ensemble_reranker as rr
+    import joblib
+    examples, pools = pools_for_baseline(submission)
+    output.mkdir(parents=True, exist_ok=False)
+    status = {'status': 'running', 'prepared_sha256': data.digest(submission / 'prepared.json')}
+    data.write(output / 'manifest.json', status)
+    try:
+        best, trials = rr.fit_selector(pools, examples, state['configuration']['logistic_C_grid'], ('max5',))
+        score, C, components, metrics, questions, rankings = best
+        joblib.dump({'components': components, 'selected_C': C}, output / 'logistic.joblib')
+        data.write(output / 'summary.json', {'selected_C': C, 'mean_validation_mrr_at5': score,
+            'conditions': {p: metrics[p + '_logistic'] for p in POOLS}, 'trials': trials,
+            'scope': 'fitting-only logistic; C selected on all144; identical prospective verbatim pools'})
+        data.write(output / 'per_question.json', {p: questions[p + '_logistic'] for p in POOLS})
+        data.jsonl(output / 'rankings.jsonl', rankings)
+        status.update(status='complete', artifacts_sha256=hashes(output))
+        # The status file changes in the finally block and is not self-hashed.
+        status['artifacts_sha256'].pop('manifest.json', None)
+    except BaseException as exc:
+        status.update(status='failed', error=f'{type(exc).__name__}: {exc}'); raise
+    finally:
+        data.write(output / 'manifest.json', status)
+
+
+def verify_result(directory, prepared_hash, smoke=None):
+    state = data.read(directory / 'manifest.json')
+    if state.get('status') != 'complete' or state.get('prepared_sha256') != prepared_hash:
+        raise ValueError('Need completed result from this frozen pilot: ' + str(directory))
+    if smoke is not None and state.get('smoke') != smoke:
+        raise ValueError('Wrong smoke/full result')
+    data.verify_files(directory, state['artifacts_sha256'])
+    return state
+
+
+def evaluate_model(model, cases, supervision, spec, device, torch):
+    model.eval()
+    predicted = []
+    for i, case in enumerate(cases, 1):
+        started = time.perf_counter()
+        codes, identities = core.generate_ids(model, case, spec, device, torch)
+        predicted.append({'question_id': case['question_id'], 'pool': case['pool'],
+                          'selected_codes': codes, 'selected_source_ids': identities,
+                          'generation_seconds': time.perf_counter() - started})
+        if i % 32 == 0:
+            print(f"Validated selector {i}/{len(cases)} views", flush=True)
+    metrics, scores = core.score_predictions(predicted, supervision)
+    return metrics, scores, predicted
+
+
+def load_model(state):
+    # Set before importing Unsloth/Torch; actual training workers only.
+    os.environ['UNSLOTH_RETURN_LOGITS'] = '1'
+    os.environ['UNSLOTH_DISABLE_STATISTICS'] = '1'
+    from run_extractive_expansion_8b import configure_job_local_compiler_cache
+    configure_job_local_compiler_cache()
+    import unsloth
+    import torch
+    if not torch.cuda.is_available():
+        raise RuntimeError('The Llama selector requires a GPU worker')
+    config = state['configuration']
+    torch.manual_seed(config['seed']); torch.cuda.manual_seed_all(config['seed'])
+    loader = unsloth.FastLanguageModel
+    model, _ = loader.from_pretrained(model_name=state['backbone_snapshot'], max_seq_length=config['max_seq_length'],
+                                      dtype=torch.float16, load_in_4bit=True, local_files_only=True)
+    if getattr(model, 'peft_config', None):
+        raise ValueError('Expected instruction backbone, not an existing SFT/DPO adapter')
+    model = loader.get_peft_model(model, r=config['lora_r'], lora_alpha=config['lora_alpha'],
+        lora_dropout=config['lora_dropout'], bias='none', random_state=config['seed'],
+        use_gradient_checkpointing='unsloth', target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'])
+    for name, parameter in model.named_parameters():
+        if parameter.requires_grad and 'lora_' not in name:
+            raise ValueError('Unexpected trainable backbone parameter: ' + name)
+        if parameter.requires_grad:
+            # GradScaler needs FP32 trainable gradients; base weights remain 4-bit.
+            parameter.data = parameter.data.float()
+    return model, loader, torch
+
+
+def train(submission, output, smoke=False, smoke_result=None, baseline_result=None):
+    state = validate(submission, backbone=True)
+    prepared_hash = data.digest(submission / 'prepared.json')
+    if not smoke:
+        if smoke_result is None or baseline_result is None:
+            raise ValueError('Full training requires this submission\'s successful smoke and CPU baseline')
+        verify_result(smoke_result, prepared_hash, smoke=True)
+        verify_result(baseline_result, prepared_hash)
+    config, spec = state['configuration'], data.read(submission / 'encoding_spec.json')
+    cases = data.records(submission / 'validation_generation_inputs.jsonl')
+    labels = data.records(submission / 'validation_supervision.jsonl')
+    keep = None
+    if smoke:
+        # Longest fitting and validation contexts catch memory/length problems early.
+        long = sorted(cases, key=lambda r: len(r['input_ids']), reverse=True)
+        keep = {r['question_id'] for r in long[:2]}
+        keep.update(sorted({r['question_id'] for r in cases})[:2])
+        cases = [r for r in cases if r['question_id'] in keep]
+        labels = [r for r in labels if r['question_id'] in keep]
+    output.mkdir(parents=True, exist_ok=False)
+    status = {'status': 'running', 'prepared_sha256': prepared_hash, 'smoke': smoke,
+              'DPO_training': False, 'test_evaluation': False}
+    data.write(output / 'manifest.json', status)
+    try:
+        model, loader, torch = load_model(state)
+        device = next(model.parameters()).device
+        trainable = [p for p in model.parameters() if p.requires_grad]
+        if not trainable:
+            raise ValueError('No trainable selector LoRA parameters')
+        optimizer = torch.optim.AdamW(trainable, lr=config['learning_rate'], weight_decay=config['weight_decay'])
+        epochs = 1 if smoke else config['epochs']
+        accumulation = 2 if smoke else config['gradient_accumulation_steps']
+        first = data.records(submission / 'train_epoch1.jsonl')
+        steps_per_epoch = 2 if smoke else math.ceil(len(first) / accumulation)
+        from transformers import get_linear_schedule_with_warmup
+        scheduler = get_linear_schedule_with_warmup(optimizer, 0 if smoke else math.ceil(steps_per_epoch * epochs * config['warmup_ratio']), steps_per_epoch * epochs)
+        scaler = torch.amp.GradScaler('cuda')
+        scores, global_steps, losses = [], 0, []
+
+        def checkpoint(epoch):
+            directory = output / f'epoch-{epoch}'
+            directory.mkdir()
+            adapter = directory / 'adapter'
+            model.save_pretrained(str(adapter), safe_serialization=True, save_embedding_layers=False)
+            shutil.copytree(submission / 'tokenizer', adapter, dirs_exist_ok=True)
+            if not (adapter / 'adapter_model.safetensors').exists():
+                raise ValueError('Selector adapter was not saved')
+            loader.for_inference(model)
+            metrics, perq, predictions = evaluate_model(model, cases, labels, spec, device, torch)
+            data.write(directory / 'validation_summary.json', metrics)
+            data.write(directory / 'validation_per_question.json', perq)
+            data.jsonl(directory / 'validation_predictions.jsonl', predictions)
+            scores.append({'epoch': epoch, **metrics, 'adapter': str(adapter), 'adapter_files': hashes(adapter)})
+            data.write(output / 'checkpoint_scores.json', scores)
+            print(f"Epoch {epoch}: validation mean MRR@5={metrics['mean_validation_mrr_at5']:.6f}", flush=True)
+            loader.for_training(model, use_gradient_checkpointing='unsloth')
+            for name, parameter in model.named_parameters():
+                parameter.requires_grad_('lora_' in name)
+            model.config.use_cache = False
+            model.train()
+            torch.cuda.empty_cache()
+
+        checkpoint(0)
+        for epoch in range(1, epochs + 1):
+            rows = data.records(submission / f'train_epoch{epoch}.jsonl')
+            if smoke:
+                rows = sorted(rows, key=lambda r: len(r['input_ids']), reverse=True)[:4]
+            data.rng(config['seed'], 'training_order', epoch).shuffle(rows)
+            for start in range(0, len(rows), accumulation):
+                group = rows[start:start + accumulation]
+                optimizer.zero_grad(set_to_none=True)
+                total_loss = 0.
+                for row in group:
+                    tokens = torch.tensor([row['input_ids']], dtype=torch.long, device=device)
+                    with torch.autocast('cuda', dtype=torch.float16):
+                        output_logits = model(input_ids=tokens, attention_mask=torch.ones_like(tokens), use_cache=False).logits
+                        loss = core.marginal_id_loss(output_logits, row['actions'])
+                    total_loss += float(loss.detach())
+                    scaler.scale(loss / len(group)).backward()
+                    del output_logits, loss, tokens
+                scaler.unscale_(optimizer)
+                norm = torch.nn.utils.clip_grad_norm_(trainable, config['max_grad_norm'])
+                old_scale = scaler.get_scale()
+                scaler.step(optimizer); scaler.update()
+                stepped = scaler.get_scale() >= old_scale
+                if stepped:
+                    scheduler.step(); global_steps += 1
+                losses.append({'epoch': epoch, 'start_view': start, 'loss': total_loss / len(group),
+                               'optimizer_stepped': stepped, 'global_steps': global_steps,
+                               'gradient_norm': float(norm) if math.isfinite(float(norm)) else None})
+                if len(losses) % 10 == 0 or smoke:
+                    print(f"Epoch {epoch}, views {min(start+len(group),len(rows))}/{len(rows)}; loss={total_loss/len(group):.6f}", flush=True)
+            if global_steps == 0:
+                raise ValueError('No optimizer steps completed')
+            data.jsonl(output / 'training_log.jsonl', losses)
+            checkpoint(epoch)
+        selected = core.choose_epoch(scores)
+        data.write(output / 'selection.json', {'status': 'frozen', 'selected_epoch': selected,
+            'checkpoint_scores': scores, 'selection_policy': config['checkpoint_selection'],
+            'validation_question_count': len({r['question_id'] for r in cases}),
+            'scope': 'Internal validation only; epoch0 included; all question pools retained', 'smoke': smoke})
+        validate(submission, backbone=True)
+        status.update(status='complete', selected_epoch=selected, global_steps=global_steps,
+            runtime={n: str(getattr(__import__(n), '__version__', 'unknown')) for n in ('torch', 'transformers', 'unsloth')},
+            device=torch.cuda.get_device_name(0), artifacts_sha256=hashes(output))
+        status['artifacts_sha256'].pop('manifest.json', None)
+        print('Selected selector epoch:', selected, '(0 = untrained instruction selector)', flush=True)
+    except BaseException as exc:
+        status.update(status='failed', error=f'{type(exc).__name__}: {exc}'); raise
+    finally:
+        data.write(output / 'manifest.json', status)
+
+
+def report(submission, training, baseline_result, output):
+    validate(submission)
+    pin = data.digest(submission / 'prepared.json')
+    verify_result(training, pin, smoke=False); verify_result(baseline_result, pin)
+    selected = data.read(training / 'selection.json')
+    epoch = selected['selected_epoch']
+    scores = data.read(training / f'epoch-{epoch}/validation_per_question.json')
+    base_scores = data.read(baseline_result / 'per_question.json')
+    summary = data.read(training / f'epoch-{epoch}/validation_summary.json')
+    baseline_summary = data.read(baseline_result / 'summary.json')
+    if any(len(scores[p]) != data.COUNTS['validation'] or len(base_scores[p]) != data.COUNTS['validation'] for p in POOLS):
+        raise ValueError('Report must retain the complete validation panel in each pool')
+    if any(summary['conditions'][p]['coverage_full_pool'] != baseline_summary['conditions'][p]['coverage_full_pool'] for p in POOLS):
+        raise ValueError('Selector or baseline changed fixed full-pool membership')
+    from scripts.analyze_matched_qwen_expansion import paired_contrast
+    contrasts = {p: paired_contrast(base_scores[p], scores[p], metrics=('mrr_at5','coverage_at5','coverage_full_pool')) for p in POOLS}
+    predictions = {(r['question_id'],r['pool']):r for r in data.records(training / f'epoch-{epoch}/validation_predictions.jsonl')}
+    inputs = {(r['question_id'],r['pool']):r for r in data.records(submission / 'validation_inputs.jsonl')}
+    import json
+    cases = []
+    for row in data.records(submission / 'validation_supervision.jsonl'):
+        identity = (row['question_id'],row['pool'])
+        by_id = {r['id']:r for r in row['candidates']}
+        chosen = predictions[identity]['selected_source_ids']
+        accepted = [r for r in row['candidates'] if r['official_accepted']]
+        hit = next((i for i,c in enumerate(chosen,1) if by_id[c]['official_accepted']),None)
+        if hit == 1:
+            continue
+        cases.append({'question_id':row['question_id'],'split':'validation','pool':row['pool'],
+            'context':json.loads(inputs[identity]['messages'][1]['content']),
+            'top_five':[by_id[c] for c in chosen], 'accepted_candidates':accepted, 'first_accepted_rank':hit,
+            'diagnosis':'pool_absence' if not accepted else 'accepted_outside_top5' if not hit else 'accepted_below_rank1',
+            'semantic_review':'unresolved; official nonacceptance is not factual error',
+            'DPO_training_eligible':False, 'reason':'Validation examples are diagnostic only; never training preferences'})
+    output.mkdir(parents=True,exist_ok=False)
+    result={'question_count':data.COUNTS['validation'],'selected_epoch':epoch,'checkpoint_scores':selected['checkpoint_scores'],
+        'conditions':{'logistic':baseline_summary['conditions'],'selector':summary['conditions']},
+        'paired_contrasts':contrasts,'test_evaluation':False,'DPO_pairs_created':0,
+        'interpretation':'Validation diagnostics used for model selection; not an independent test improvement'}
+    data.write(output/'comparison_summary.json',result)
+    data.jsonl(output/'validation_mistakes.jsonl',cases)
+    lines=['# Supervised answer-selector pilot: validation only','',f'Selected epoch: {epoch} (0 = instruction selector before supervised updates).',
+        '', '| Pool | Logistic MRR@5 | Selector MRR@5 | Difference | 95% paired interval |','|---|---:|---:|---:|---|']
+    for p in POOLS:
+        c=contrasts[p]['mrr_at5']
+        lines.append(f"| {p} | {baseline_summary['conditions'][p]['mrr_at5']:.6f} | {summary['conditions'][p]['mrr_at5']:.6f} | {c['sft_minus_base']:+.6f} | {c['paired_bootstrap_95ci']} |")
+    lines += ['', 'These are all144 validation questions, including uncovered pools. The intervals are descriptive because validation selects the checkpoint.',
+        'Same prospective verbatim pools; independently refitted fitting-only logistic baseline. Four stochastic draws/model, not ten.',
+        'Invalid/duplicate output IDs are prevented by constrained decoding; this does not guarantee correct biomedical answers.',
+        'Supervision optimizes official acceptance. Alternative supported wording can receive official label 0.',
+        'Mistake cases are validation-only diagnostics. No DPO pairs or training are created; fitting-only preference generation is a separate later stage.', '']
+    (output/'report.md').write_text('\n'.join(lines),encoding='utf-8')
+    data.write(output/'manifest.json',{'status':'complete','prepared_sha256':pin,'DPO_training':False,
+        'test_evaluation':False,'artifacts_sha256':hashes(output)})
+    print('\n'.join(lines),flush=True)
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--mode',required=True,choices=('prepare','baseline','train','report'))
+    parser.add_argument('--repository',type=Path,default=ROOT)
+    parser.add_argument('--audit',type=Path)
+    parser.add_argument('--submission',type=Path,required=True)
+    parser.add_argument('--output',type=Path)
+    parser.add_argument('--baseline',type=Path)
+    parser.add_argument('--training',type=Path)
+    parser.add_argument('--smoke-result',type=Path)
+    parser.add_argument('--smoke',action='store_true')
+    args=parser.parse_args()
+    sub=args.submission.resolve()
+    if args.mode=='prepare':
+        if args.audit is None:parser.error('--audit required')
+        prepare(args.repository.resolve(),args.audit.resolve(),sub)
+    elif args.output is None:parser.error('--output required')
+    elif args.mode=='baseline':baseline(sub,args.output.resolve())
+    elif args.mode=='train':train(sub,args.output.resolve(),args.smoke,args.smoke_result,args.baseline)
+    else:
+        if args.training is None or args.baseline is None:parser.error('--training and --baseline required')
+        report(sub,args.training.resolve(),args.baseline.resolve(),args.output.resolve())
+
+
+if __name__=='__main__':main()
