@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Supervised, tie-aware Llama answer selector; fitting/validation only, no DPO."""
+"""Supervised, tie-aware 8B answer selectors; fitting/validation only, no DPO."""
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import math
 import os
@@ -19,6 +20,19 @@ from scripts import answer_selector_core as core
 
 CONFIG = ROOT / "gadi_sft_8b_starter/configs/answer_selector_pilot.json"
 POOLS = ("max5_greedy", "max5_sampling4")
+MODELS = {
+    'llama31': ('fast_language_model', {'llama'}),
+    'qwen3': ('fast_language_model', {'qwen3'}),
+    'ministral3': ('fast_model', {'mistral3', 'ministral3'}),
+}
+
+
+def configuration(repository, model):
+    config = data.read(repository / 'gadi_sft_8b_starter/configs/answer_selector_pilot.json')
+    if model not in MODELS:
+        raise ValueError('Unknown selector backbone: ' + model)
+    config['model_key'] = model
+    return config
 
 
 def hashes(directory):
@@ -75,39 +89,43 @@ def verify_export(directory):
 
 
 def validate_config(config):
-    if (config.get("schema") != "tie-aware-answer-selector-v1" or config["model_key"] != "llama31"
+    if (config.get("schema") != "tie-aware-answer-selector-v1" or config["model_key"] not in MODELS
             or config["batch_size"] != 1 or config["epochs"] != 3 or config["sampled_responses_per_model"] != 4
             or config["max_seq_length"] != 8704 or config["DPO_training"] or config["test_evaluation"]
             or config["learning_rate"] <= 0 or config["gradient_accumulation_steps"] < 1):
         raise ValueError("Unsupported supervised selector pilot configuration")
 
 
-def prepare(repository, audit, submission):
+def prepare(repository, audit, submission, model_key='llama31'):
     """CPU preflight: local tokenizer only; no model weights loaded or downloaded."""
-    config = data.read(repository / "gadi_sft_8b_starter/configs/answer_selector_pilot.json")
+    config = configuration(repository, model_key)
     validate_config(config)
     state, inputs, supervision = verify_export(audit)
     from scripts.prepare_reranker_guided_dpo import configure_data_root
     native = configure_data_root(repository)
     generation = data.read(repository / "gadi_sft_8b_starter/configs/max5_dpo_banks_8b.json")
-    source = native.selected_source(generation, "llama31")
+    source = native.selected_source(generation, model_key)
     backbone = Path(source["base_snapshot"]).resolve()
-    if (source["model_loader"] != "fast_language_model" or backbone.name != source["base_revision"]
+    if (source["model_loader"] != MODELS[model_key][0] or backbone.name != source["base_revision"]
             or not (backbone / "config.json").exists()
-            or data.read(backbone / "config.json")["model_type"] != "llama"):
-        raise ValueError("Need the already pinned cached Llama instruction backbone")
+            or data.read(backbone / "config.json")["model_type"] not in MODELS[model_key][1]):
+        raise ValueError("Need the already pinned cached instruction backbone for " + model_key)
     base_hashes = hashes(backbone)
     verify_backbone(backbone, base_hashes)
     # Set Transformers offline before importing the tokenizer stack on the login node.
     os.environ["HF_HUB_OFFLINE"] = "1"
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained(str(backbone), local_files_only=True)
+    chat_kwargs = source.get('chat_template_kwargs', {})
+    if model_key == 'qwen3' and chat_kwargs.get('enable_thinking') is not False:
+        raise ValueError('Qwen selector requires explicit non-thinking chat rendering')
     maximum = max(len(r["candidates"]) for rows in supervision.values() for r in rows)
     spec = core.encoding_spec(tokenizer, maximum)
     # Verify framing at the tokenizer boundary, not by estimating token counts.
     import json
-    example_json = tokenizer.decode(spec["prefix"] + [spec["codes"]["001"]] + spec["closing"])
-    if json.loads(example_json) != ["001"]:
+    first_code = next(iter(spec['codes']))
+    example_json = tokenizer.decode(spec["prefix"] + [spec["codes"][first_code]] + spec["closing"])
+    if json.loads(example_json) != [first_code]:
         raise ValueError("Tokenizer does not preserve the forced JSON ID format")
     submission.mkdir(parents=True, exist_ok=False)
     tokenizer.save_pretrained(str(submission / "tokenizer"))
@@ -116,7 +134,7 @@ def prepare(repository, audit, submission):
         by_label = {(r["question_id"], r["pool"]): r for r in supervision[split]}
         frozen = []
         for item in inputs[split]:
-            case, _ = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], 0)
+            case, _ = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], 0, chat_kwargs)
             budget = core.check_budget(case, None, spec, config["max_seq_length"])
             frozen.append(case)
             lengths.append({"split": split, "question_id": item["question_id"], "pool": item["pool"],
@@ -129,7 +147,7 @@ def prepare(repository, audit, submission):
             for epoch in range(1, config["epochs"] + 1):
                 training = []
                 for item in inputs[split]:
-                    case, row = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], epoch)
+                    case, row = core.render_case(tokenizer, item, by_label[(item["question_id"], item["pool"])], spec, config["seed"], epoch, chat_kwargs)
                     core.check_budget(case, row, spec, config["max_seq_length"])
                     if row is not None:
                         training.append(row)
@@ -146,6 +164,12 @@ def prepare(repository, audit, submission):
         shutil.copy2(audit / filename, submission / ("audit_manifest.json" if filename == "manifest.json" else filename))
     from scripts.train_sft_ensemble_reranker import snapshot_code
     snapshot_code(repository, submission / "code")
+    for name in ('src/__init__.py', 'src/utility/__init__.py',
+                 'src/utility/training_execution.py', 'src/utility/ministral_generation.py'):
+        relative = Path('gadi_sft_8b_starter') / name
+        target = submission / 'code' / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(repository / relative, target)
     for name in ("baseline_answer_selector.pbs", "train_answer_selector.pbs", "report_answer_selector.pbs"):
         shutil.copy2(repository / "gadi_sft_8b_starter/jobs" / name, submission / name)
     verify_backbone(backbone, base_hashes)
@@ -153,10 +177,12 @@ def prepare(repository, audit, submission):
         "audit_source": str(audit), "audit_manifest_sha256": data.digest(audit / 'manifest.json'),
         "backbone_snapshot": str(backbone), "backbone_files": base_hashes,
         "backbone_model_name": source['model_name'], "backbone_revision": source['base_revision'],
+        "model_loader": source['model_loader'], "chat_template_kwargs": chat_kwargs,
+        "execution_mode": source.get('execution_mode', 'default'),
         "initialization": "fresh selector LoRA; cached instruction backbone only; no generator SFT adapter",
         "files_sha256": hashes(submission), "training": "supervised only", "DPO_training": False, "test_evaluation": False})
     validate(submission)
-    print(f"Prepared tie-aware Llama selector: {counts[0]['views']} fitting views / {counts[0]['questions']} questions; "
+    print(f"Prepared tie-aware {model_key} selector: {counts[0]['views']} fitting views / {counts[0]['questions']} questions; "
           f"all 144 validation questions, both pools. Maximum reserved context {max(r['input_plus_reserved_output'] for r in lengths)}.")
 
 
@@ -242,27 +268,55 @@ def load_model(state):
     os.environ['UNSLOTH_DISABLE_STATISTICS'] = '1'
     from run_extractive_expansion_8b import configure_job_local_compiler_cache
     configure_job_local_compiler_cache()
+    # Data tooling already imports the repository's src package. Load the small
+    # portable GPU helpers by exact path instead of replacing that shared package.
+    execution = gpu_helper('training_execution')
+    mode = state.get('execution_mode', 'default')
+    execution.prepare_execution(mode)
     import unsloth
     import torch
+    execution.activate_execution(mode, torch)
     if not torch.cuda.is_available():
-        raise RuntimeError('The Llama selector requires a GPU worker')
+        raise RuntimeError('The selector requires a GPU worker')
     config = state['configuration']
     torch.manual_seed(config['seed']); torch.cuda.manual_seed_all(config['seed'])
-    loader = unsloth.FastLanguageModel
-    model, _ = loader.from_pretrained(model_name=state['backbone_snapshot'], max_seq_length=config['max_seq_length'],
-                                      dtype=torch.float16, load_in_4bit=True, local_files_only=True)
+    loader_name = state.get('model_loader', MODELS[config['model_key']][0])
+    if loader_name != MODELS[config['model_key']][0]:
+        raise ValueError('Wrong selector loader')
+    loader = unsloth.FastModel if loader_name == 'fast_model' else unsloth.FastLanguageModel
+    options = dict(model_name=state['backbone_snapshot'], max_seq_length=config['max_seq_length'],
+                   dtype=torch.float16, load_in_4bit=True, local_files_only=True)
+    if loader_name == 'fast_model':
+        options['return_logits'] = True
+    model, _ = loader.from_pretrained(**options)
     if getattr(model, 'peft_config', None):
         raise ValueError('Expected instruction backbone, not an existing SFT/DPO adapter')
-    model = loader.get_peft_model(model, r=config['lora_r'], lora_alpha=config['lora_alpha'],
+    peft = dict(r=config['lora_r'], lora_alpha=config['lora_alpha'],
         lora_dropout=config['lora_dropout'], bias='none', random_state=config['seed'],
         use_gradient_checkpointing='unsloth', target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'])
+    if loader_name == 'fast_model':
+        peft.update(finetune_vision_layers=False, finetune_language_layers=True,
+                    finetune_attention_modules=True, finetune_mlp_modules=True)
+    model = loader.get_peft_model(model, **peft)
     for name, parameter in model.named_parameters():
         if parameter.requires_grad and 'lora_' not in name:
             raise ValueError('Unexpected trainable backbone parameter: ' + name)
+        if parameter.requires_grad and any(s in name.lower() for s in ('vision', 'visual', 'projector')):
+            raise ValueError('Only language LoRA parameters may be trained: ' + name)
         if parameter.requires_grad:
             # GradScaler needs FP32 trainable gradients; base weights remain 4-bit.
             parameter.data = parameter.data.float()
     return model, loader, torch
+
+
+def gpu_helper(name):
+    if name not in ('training_execution', 'ministral_generation'):
+        raise ValueError('Unexpected GPU helper')
+    path = ROOT / 'gadi_sft_8b_starter/src/utility' / (name + '.py')
+    spec = importlib.util.spec_from_file_location('selector_' + name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def train(submission, output, smoke=False, smoke_result=None, baseline_result=None):
@@ -286,7 +340,7 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
         labels = [r for r in labels if r['question_id'] in keep]
     output.mkdir(parents=True, exist_ok=False)
     status = {'status': 'running', 'prepared_sha256': prepared_hash, 'smoke': smoke,
-              'DPO_training': False, 'test_evaluation': False}
+              'model_key': config['model_key'], 'DPO_training': False, 'test_evaluation': False}
     data.write(output / 'manifest.json', status)
     try:
         model, loader, torch = load_model(state)
@@ -313,6 +367,8 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
             if not (adapter / 'adapter_model.safetensors').exists():
                 raise ValueError('Selector adapter was not saved')
             loader.for_inference(model)
+            if config['model_key'] == 'ministral3':
+                gpu_helper('ministral_generation').configure_ministral_generation(model)
             metrics, perq, predictions = evaluate_model(model, cases, labels, spec, device, torch)
             data.write(directory / 'validation_summary.json', metrics)
             data.write(directory / 'validation_per_question.json', perq)
@@ -322,7 +378,7 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
             print(f"Epoch {epoch}: validation mean MRR@5={metrics['mean_validation_mrr_at5']:.6f}", flush=True)
             loader.for_training(model, use_gradient_checkpointing='unsloth')
             for name, parameter in model.named_parameters():
-                parameter.requires_grad_('lora_' in name)
+                parameter.requires_grad_('lora_' in name and not any(s in name.lower() for s in ('vision', 'visual', 'projector')))
             model.config.use_cache = False
             model.train()
             torch.cuda.empty_cache()
@@ -413,7 +469,8 @@ def report(submission, training, baseline_result, output):
             'semantic_review':'unresolved; official nonacceptance is not factual error',
             'DPO_training_eligible':False, 'reason':'Validation examples are diagnostic only; never training preferences'})
     output.mkdir(parents=True,exist_ok=False)
-    result={'question_count':data.COUNTS['validation'],'selected_epoch':epoch,'checkpoint_scores':selected['checkpoint_scores'],
+    result={'question_count':data.COUNTS['validation'], 'model_key': data.read(submission/'configuration.json')['model_key'],
+        'selected_epoch':epoch,'checkpoint_scores':selected['checkpoint_scores'],
         'conditions':{'logistic':baseline_summary['conditions'],'selector':summary['conditions']},
         'paired_contrasts':contrasts,'test_evaluation':False,'DPO_pairs_created':0,
         'interpretation':'Validation diagnostics used for model selection; not an independent test improvement'}
@@ -446,11 +503,12 @@ def main():
     parser.add_argument('--training',type=Path)
     parser.add_argument('--smoke-result',type=Path)
     parser.add_argument('--smoke',action='store_true')
+    parser.add_argument('--model', choices=tuple(MODELS), default='llama31')
     args=parser.parse_args()
     sub=args.submission.resolve()
     if args.mode=='prepare':
         if args.audit is None:parser.error('--audit required')
-        prepare(args.repository.resolve(),args.audit.resolve(),sub)
+        prepare(args.repository.resolve(),args.audit.resolve(),sub,args.model)
     elif args.output is None:parser.error('--output required')
     elif args.mode=='baseline':baseline(sub,args.output.resolve())
     elif args.mode=='train':train(sub,args.output.resolve(),args.smoke,args.smoke_result,args.baseline)

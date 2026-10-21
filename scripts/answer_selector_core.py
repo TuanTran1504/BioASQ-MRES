@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import string
 
 from scripts.prepare_answer_selector_data import rng
 
@@ -24,13 +25,21 @@ def token_ids(tokenizer, text):
 def encoding_spec(tokenizer, maximum_candidates):
     if not 1 <= maximum_candidates <= 999 or type(tokenizer.eos_token_id) is not int:
         raise ValueError("Need one EOS ID and 1..999 candidate codes")
+    numeric = [f"{i:03d}" for i in range(1, maximum_candidates + 1)]
+    # Qwen splits multi-digit numbers. Keep historical numeric IDs for compatible
+    # tokenizers, otherwise choose reversible, single-token alphabetic codes.
+    candidates = numeric if all(len(token_ids(tokenizer, c)) == 1 for c in numeric) else (
+        list(string.ascii_uppercase) + [a+b for a in string.ascii_uppercase for b in string.ascii_uppercase])
     codes = {}
-    for i in range(1, maximum_candidates + 1):
-        code = f"{i:03d}"
+    for code in candidates:
         tokens = token_ids(tokenizer, code)
-        if len(tokens) != 1:
-            raise ValueError(f"Candidate code {code} is not one token; choose a compatible tokenizer")
-        codes[code] = tokens[0]
+        if (len(tokens) == 1 and tokens[0] not in codes.values() and tokens[0] != tokenizer.eos_token_id
+                and tokenizer.decode(tokens) == code):
+            codes[code] = tokens[0]
+        if len(codes) == maximum_candidates:
+            break
+    if len(codes) != maximum_candidates:
+        raise ValueError("Not enough reversible single-token candidate ID codes")
     spec = {"codes": codes, "prefix": token_ids(tokenizer, '["'),
             "separator": token_ids(tokenizer, '", "'), "closing": token_ids(tokenizer, '"]'),
             "eos_token_id": tokenizer.eos_token_id}
@@ -41,7 +50,7 @@ def encoding_spec(tokenizer, maximum_candidates):
     return spec
 
 
-def render_case(tokenizer, item, supervision, spec, seed=3407, epoch=0):
+def render_case(tokenizer, item, supervision, spec, seed=3407, epoch=0, chat_template_kwargs=None):
     """Remap IDs independently of labels; retain every answer and snippet.
 
     Only training teacher prefixes use accepted IDs. Validation generation fields
@@ -58,12 +67,16 @@ def render_case(tokenizer, item, supervision, spec, seed=3407, epoch=0):
         raise ValueError("Candidate surfaces or identities differ")
     candidates = list(payload["candidates"])
     rng(seed, item["question_id"], item["pool"], epoch, "selector_input").shuffle(candidates)
-    mapping = {f"{i:03d}": c["id"] for i, c in enumerate(candidates, 1)}
+    mapping = {code: c["id"] for code, c in zip(spec["codes"], candidates)}
+    if len(mapping) != len(candidates):
+        raise ValueError("Insufficient candidate codes")
     text = {"question": payload["question"], "snippets": payload["snippets"],
             "candidates": [{"id": code, "answer": by_id[identity]["answer"]} for code, identity in mapping.items()]}
-    messages = [{"role": "system", "content": SYSTEM},
+    system = SYSTEM if all(c.isdigit() for c in spec['codes']) else SYSTEM.replace('three-digit', 'alphabetic')
+    messages = [{"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(text, ensure_ascii=False)}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True,
+                                              **(chat_template_kwargs or {}))
     if not isinstance(rendered, str):
         raise ValueError("Expected a rendered chat string")
     prompt = token_ids(tokenizer, rendered) + spec["prefix"]

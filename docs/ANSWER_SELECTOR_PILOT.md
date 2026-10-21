@@ -1,7 +1,8 @@
 # Tie-aware supervised final-answer selector pilot
 
-The pilot trains a **new selector adapter** on the cached Llama-3.1-8B-Instruct
-four-bit backbone. It does not modify the three answer generators or initialize
+The pilot trains a **new selector adapter** on each requested cached instruction
+backbone: Llama-3.1-8B, Qwen3-8B or Ministral-3-8B, in four-bit mode.
+It does not modify the three answer generators or initialize
 from their answer-generation SFT/DPO adapters. There is no model download, paid
 judging, DPO training, new biomedical answer generation, or test95 evaluation.
 
@@ -14,11 +15,21 @@ git pull --ff-only
 bash scripts/submit_answer_selector_pilot.sh
 ```
 
+This retains the original Llama-only default. Add the other two selectors without
+resubmitting Llama with:
+
+```bash
+bash scripts/submit_answer_selector_pilot.sh qwen3 ministral3
+```
+
+Use `all` instead to start all three from scratch. Each model gets its own frozen
+submission and four-job chain. Optional `--audit PATH` selects another complete
+audit. The historical positional audit-path argument still works.
+
 Default input:
 `outputs/answer_selector_data/audit-181824213.gadi-pbs`.
-Pass another complete export of the same schema as the first argument if needed.
 All source hashes, question/pool membership and labels must validate. Preflight
-resolves the already pinned Llama instruction checkpoint using existing SFT
+resolves each already pinned instruction checkpoint using existing SFT
 lineage metadata. It reads checkpoint metadata, not dev answers or dev scores.
 
 Preparation tokenizes all input views with that exact cached tokenizer, including
@@ -26,7 +37,8 @@ all candidates and all supplied snippets. It separately reserves the precise
 number of constrained output tokens. The **8,704-token allocation** is checked for
 every input and every epoch's training sequence; overflow stops submission rather
 than truncating evidence, candidates or answer strings. Candidate codes must each
-be one token under this tokenizer; otherwise submission fails explicitly.
+be one reversible token under this tokenizer. Insufficient compatible ID codes
+stops submission explicitly.
 
 Four jobs are recorded in
 `outputs/answer_selector_pilot/submission-*/jobs.tsv`:
@@ -49,8 +61,12 @@ outputs up to five existing IDs. All candidate surfaces are preserved byte for b
 only their display IDs and positions are remapped. The model never receives gold
 aliases, official acceptance flags, relation tags or review annotations.
 
-Three-digit string codes (`"001"`, `"002"`, ...) let each candidate choice be a
-single token. JSON framing and selection without replacement are constrained at
+Three-digit codes (`"001"`, `"002"`, ...) are retained for compatible tokenizers.
+Tokenizers which split these numbers use single-token alphabetic codes (`"A"`,
+`"B"`, ..., then compatible two-letter codes). Candidate identity and input order
+use the same randomization seed independently of labels. Code spellings are
+model-specific display identifiers, not different answers. JSON framing and
+selection without replacement are constrained at
 inference, so the selector cannot fabricate an answer, duplicate an ID or change
 answer spelling. This is an ID-selection policy, not unconstrained free-text QA.
 
@@ -91,6 +107,9 @@ other expressions are medically wrong.
 - Three epochs, learning rate `1e-4`, batch size1, accumulation16, AdamW on LoRA
   parameters, weight decay0.01, linear schedule with 10% warmup, clipping1.0.
 - FP16 computation on V100; FP32 LoRA gradients/state; seed3407.
+- Qwen chat rendering explicitly disables thinking. Ministral uses FastModel with
+  language-only LoRA and the established dynamic FP16 generation-cache helper;
+  no vision/projector adapters are trained. Native templates are preserved.
 - All144 validation questions in each of greedy and sampling4 pools: **288 input
   views**, including uncovered pools. No filtering by answer correctness at inference.
 - Constrained greedy ID selection before training (epoch0) and after each epoch.
@@ -109,6 +128,14 @@ Four stochastic responses/model is the audited generation budget. Results do not
 establish transfer to ten-sample candidate pools. The generator fitting questions
 were seen by generator SFT; these are stacked-selector training inputs, not
 out-of-fold generator predictions.
+
+All selectors use the same training settings, questions, verbatim pools, tie-aware
+objective and checkpoint-selection rule. Token counts differ by tokenizer; all
+evidence and candidates remain intact. Local tokenizer-only checks passed on the
+downloaded Qwen/Ministral tokenizer assets: maximum reserved lengths 8,199/7,517,
+respectively, with the same 2,021 training views/1,100 questions. Gadi preparation
+rechecks its actual pinned cached revision before submission. Each GPU smoke job
+gates compatibility and memory; local tokenizer checks do not establish GPU success.
 
 ## Monitor and inspect results
 
@@ -138,6 +165,20 @@ predictions/per-question scores. The report contains `comparison_summary.json` a
 `validation_mistakes.jsonl`, separating absent-from-pool answers from missed top-five
 selections and lower-rank accepted answers. These are validation diagnostics used in
 selection, so bootstrap intervals are descriptive, not independent-test evidence.
+
+After all three report jobs finish, from `gadi_sft_8b_starter` run:
+
+```bash
+python3 ../scripts/compare_answer_selector_pilots.py
+```
+
+This chooses the newest prepared submission for each backbone and fails if any
+is unfinished or failed. It verifies frozen results and identical data/common
+training settings, then writes `outputs/answer_selector_pilot/comparison-TIMESTAMP/report.md`
+and JSON with paired comparisons against Llama. The table shows chosen epochs,
+greedy/sampling4 MRR and their mean. An earlier Llama submission remains valid if
+its data and configuration match. Highest validation score guides selection; it is
+not independent evidence that a backbone is best on unseen data.
 
 ## DPO is a later stage
 

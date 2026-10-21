@@ -24,7 +24,7 @@ class TinyTokenizer:
             ids = [ord(c) + 10 for c in text]
         return {'input_ids': ids}
 
-    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True, **kwargs):
         assert not tokenize
         return '\n'.join(r['content'] for r in messages) + '\nAssistant:'
 
@@ -120,8 +120,87 @@ def test_single_token_code_requirement_and_json_roundtrip():
     class SplitNumbers(TinyTokenizer):
         def __call__(self, text, **kwargs):
             return {'input_ids': [10, 20]}
-    with pytest.raises(ValueError, match='not one token'):
+    with pytest.raises(ValueError, match='Not enough'):
         core.encoding_spec(SplitNumbers(), 7)
+
+
+def test_alphabetic_fallback_and_non_thinking_template_keep_all_candidates():
+    class DigitSplitTokenizer(TinyTokenizer):
+        def __call__(self, text, **kwargs):
+            if text.isalpha() and text.isupper() and len(text) <= 2:
+                number = sum((ord(c)-64) * 26**i for i,c in enumerate(reversed(text)))
+                return {'input_ids': [1000+number]}
+            if text.isdigit():
+                return {'input_ids': [10+int(c) for c in text]}
+            return super().__call__(text, **kwargs)
+        def decode(self, ids):
+            if len(ids) == 1 and ids[0] > 1000:
+                n = ids[0]-1000
+                return chr(64+n) if n<=26 else chr(64+(n-1)//26)+chr(65+(n-1)%26)
+            return super().decode(ids)
+        def apply_chat_template(self, messages, **kwargs):
+            assert kwargs.pop('enable_thinking') is False
+            assert 'alphabetic candidate ID' in messages[0]['content']
+            return super().apply_chat_template(messages, **kwargs)
+    tok = DigitSplitTokenizer()
+    spec = core.encoding_spec(tok, 56)
+    assert list(spec['codes'])[:2] == ['A','B'] and len(spec['codes']) == 56
+    inp, labels = view(count=56)
+    case, row = core.render_case(tok, inp, labels, spec, chat_template_kwargs={'enable_thinking':False})
+    assert len(case['code_to_source_id']) == 56 and len(row['actions']) == 2
+    constraint = core.IDConstraint(case, spec)
+    assert len(constraint.scan([])[0]) == 56
+
+
+def test_gpu_helpers_resolve_without_overwriting_data_src_package():
+    import sys
+    old_src = sys.modules['src']
+    execution = pilot.gpu_helper('training_execution')
+    assert callable(execution.prepare_execution)
+    assert callable(pilot.gpu_helper('ministral_generation').configure_ministral_generation)
+    assert sys.modules['src'] is old_src
+    with pytest.raises(ValueError):
+        pilot.gpu_helper('../outside')
+
+
+@pytest.mark.parametrize('model_key', ['llama31', 'qwen3', 'ministral3'])
+def test_gpu_loader_dispatch_and_language_only_adapter_scope(monkeypatch, model_key):
+    import sys
+    import torch
+    import run_extractive_expansion_8b as expansion
+    calls = {}
+    parameter = torch.nn.Parameter(torch.ones(1))
+    class Model:
+        peft_config = None
+        def named_parameters(self):
+            return [('model.layers.0.lora_A.default.weight', parameter)]
+    model = Model()
+    def loader(name):
+        def load(**kwargs):
+            calls['loader'], calls['load_options'] = name, kwargs
+            return model, object()
+        def peft(m, **kwargs):
+            calls['peft'] = kwargs
+            return m
+        return SimpleNamespace(from_pretrained=load,get_peft_model=peft)
+    monkeypatch.setitem(sys.modules, 'unsloth', SimpleNamespace(FastModel=loader('fast_model'),
+        FastLanguageModel=loader('fast_language_model')))
+    monkeypatch.setattr(expansion,'configure_job_local_compiler_cache',lambda:None)
+    monkeypatch.setattr(torch.cuda,'is_available',lambda:True)
+    monkeypatch.setattr(torch.cuda,'manual_seed_all',lambda *a:None)
+    monkeypatch.setattr(pilot,'gpu_helper',lambda name:SimpleNamespace(
+        prepare_execution=lambda mode:None,activate_execution=lambda mode,t:None))
+    config = data.read(pilot.CONFIG); config['model_key'] = model_key
+    pilot.load_model({'configuration':config,'backbone_snapshot':'fixture','model_loader':pilot.MODELS[model_key][0]})
+    assert calls['loader'] == pilot.MODELS[model_key][0]
+    assert calls['load_options']['local_files_only'] and calls['load_options']['load_in_4bit']
+    if model_key == 'ministral3':
+        assert calls['load_options']['return_logits'] is True
+        assert calls['peft']['finetune_vision_layers'] is False
+        assert calls['peft']['finetune_language_layers'] is True
+        monkeypatch.setattr(model,'named_parameters',lambda:[('vision.lora_A.weight',parameter)])
+        with pytest.raises(ValueError,match='Only language'):
+            pilot.load_model({'configuration':config,'backbone_snapshot':'fixture'})
 
 
 def test_constraints_reject_repeated_invalid_or_incomplete_outputs():
@@ -213,7 +292,8 @@ def test_export_membership_and_changed_labels_fail_closed(tmp_path, monkeypatch)
         pilot.verify_export(directory)
 
 
-def test_preparation_snapshots_all_validation_and_never_loads_model_weights(tmp_path, monkeypatch):
+@pytest.mark.parametrize('model', ['llama31', 'qwen3', 'ministral3'])
+def test_preparation_snapshots_all_validation_and_never_loads_model_weights(tmp_path, monkeypatch, model):
     audit = tmp_path/'audit'
     export_fixture(audit, monkeypatch)
     repo = tmp_path/'repo'
@@ -222,12 +302,16 @@ def test_preparation_snapshots_all_validation_and_never_loads_model_weights(tmp_
     data.write(repo/'gadi_sft_8b_starter/configs/max5_dpo_banks_8b.json', {'fixture': True})
     revision = 'a'*40
     snapshot = repo/f'hf/models--llama/snapshots/{revision}'
-    data.write(snapshot/'config.json', {'model_type': 'llama'})
+    data.write(snapshot/'config.json', {'model_type': {'llama31':'llama','qwen3':'qwen3','ministral3':'mistral3'}[model]})
     (snapshot/'model.safetensors').write_bytes(b'fixture weights, never loaded')
     from scripts import prepare_reranker_guided_dpo as guided
     from scripts import train_sft_ensemble_reranker as rr
-    monkeypatch.setattr(guided,'configure_data_root',lambda p: SimpleNamespace(selected_source=lambda *a: {
-        'base_snapshot': str(snapshot), 'base_revision': revision, 'model_loader': 'fast_language_model', 'model_name': 'fixture llama'}))
+    def source(config, requested):
+        assert requested == model
+        return {
+        'base_snapshot': str(snapshot), 'base_revision': revision, 'model_loader': pilot.MODELS[model][0],
+        'model_name': 'fixture ' + model, 'chat_template_kwargs': {'enable_thinking': False} if model == 'qwen3' else {}}
+    monkeypatch.setattr(guided,'configure_data_root',lambda p: SimpleNamespace(selected_source=source))
     from transformers import AutoTokenizer
     monkeypatch.setattr(AutoTokenizer,'from_pretrained',lambda *a,**k: TinyTokenizer())
     monkeypatch.setattr(rr,'snapshot_code',lambda r,d: data.write(d/'code.json',{'fixture':True}))
@@ -235,8 +319,12 @@ def test_preparation_snapshots_all_validation_and_never_loads_model_weights(tmp_
         target=repo/'gadi_sft_8b_starter/jobs'/name
         target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(pilot.ROOT/'gadi_sft_8b_starter/jobs'/name,target)
+    for name in ('src/__init__.py', 'src/utility/__init__.py', 'src/utility/training_execution.py', 'src/utility/ministral_generation.py'):
+        target = repo/'gadi_sft_8b_starter'/name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(pilot.ROOT/'gadi_sft_8b_starter'/name, target)
     output=tmp_path/'submission'
-    pilot.prepare(repo,audit,output)
+    pilot.prepare(repo,audit,output,model)
     pilot.validate(output,backbone=True)
     val=data.records(output/'validation_generation_inputs.jsonl')
     assert len(val)==4 and len({r['question_id'] for r in val})==2
@@ -246,6 +334,9 @@ def test_preparation_snapshots_all_validation_and_never_loads_model_weights(tmp_
         assert len(rows)==2
         assert all(r['question_id']=='train-0' for r in rows)
     assert data.read(output/'prepared.json')['DPO_training'] is False
+    assert data.read(output/'prepared.json')['configuration']['model_key'] == model
+    assert data.read(output/'prepared.json')['model_loader'] == pilot.MODELS[model][0]
+    assert (output/'code/gadi_sft_8b_starter/src/utility/ministral_generation.py').exists()
     baseline_dir=output/'baseline-test'
     pilot.baseline(output,baseline_dir)
     assert data.read(baseline_dir/'manifest.json')['status']=='complete'
@@ -295,8 +386,8 @@ def test_full_training_requires_completed_smoke_and_baseline_before_loading_gpu(
     assert not (tmp_path/'out').exists()
 
 
-@pytest.mark.parametrize('failure', ['none','prepare','train'])
-def test_launcher_records_frozen_dependencies_and_never_submits_dpo(tmp_path, failure):
+@pytest.mark.parametrize('failure,args', [('none',[]),('prepare',[]),('train',[]),('none',['qwen3','ministral3'])])
+def test_launcher_records_frozen_dependencies_and_never_submits_dpo(tmp_path, failure, args):
     bash=Path('C:/Program Files/Git/bin/bash.exe')
     executable=str(bash) if bash.exists() else shutil.which('bash')
     if not executable:pytest.skip('Bash unavailable')
@@ -326,7 +417,7 @@ qsub() {
     text=(pilot.ROOT/'gadi_sft_8b_starter/scripts/submit_answer_selector_pilot.sh').read_text()
     shell.write_text(text.replace('${USER}','${TEST_USER}').replace('set -euo pipefail','set -euo pipefail\n'+stub),newline='\n')
     log=tmp_path/'calls.txt'
-    result=subprocess.run([executable,shell.as_posix()],capture_output=True,text=True,timeout=30,
+    result=subprocess.run([executable,shell.as_posix(),*args],capture_output=True,text=True,timeout=30,
         env={**os.environ,'TEST_USER':'fixture','TEST_LOG':log.as_posix(),'FAILURE':failure})
     if failure=='prepare':
         assert result.returncode!=0 and not log.exists()
@@ -335,7 +426,41 @@ qsub() {
     else:
         assert result.returncode==0,result.stderr
         calls=log.read_text().splitlines()
-        assert len(calls)==4 and 'afterok:1.gadi-pbs:2.gadi-pbs' in calls[2]
+        assert len(calls)==(8 if args else 4) and 'afterok:1.gadi-pbs:2.gadi-pbs' in calls[2]
         assert 'afterok:3.gadi-pbs' in calls[3] and 'DPO' not in log.read_text()
         record=next(tmp_path.glob('outputs/answer_selector_pilot/submission-*/jobs.tsv'))
         assert len(record.read_text().splitlines())==5
+        if args:
+            assert len(list(tmp_path.glob('outputs/answer_selector_pilot/submission-*/jobs.tsv'))) == 2
+            assert 'afterok:5.gadi-pbs:6.gadi-pbs' in calls[6]
+            assert 'Fresh qwen3 selector' in result.stdout and 'Fresh ministral3 selector' in result.stdout
+
+
+def test_three_backbone_comparison_requires_same_data_and_complete_frozen_results(tmp_path, monkeypatch):
+    from scripts import compare_answer_selector_pilots as comparison
+    monkeypatch.setattr(data, 'COUNTS', {'train':2, 'validation':2})
+    root = tmp_path/'runs'
+    for index, model in enumerate(pilot.MODELS):
+        sub = root/f'submission-{model}'
+        config = data.read(pilot.CONFIG); config['model_key'] = model
+        data.write(sub/'configuration.json', config)
+        data.write(sub/'prepared.json', {'configuration':config,'files_sha256':{}})
+        for name in ('train_inputs.jsonl','train_supervision.jsonl','validation_inputs.jsonl','validation_supervision.jsonl','heldout_ids.json'):
+            data.write(sub/name, {'same_fixture': True})
+        (sub/'jobs.tsv').write_text('stage\tjob_id\tdepends_on\nbaseline\tb\t\ntrain\tt\t\nreport\tr\t\n')
+        metrics = {p:{'mrr_at5':.5+index/10, 'coverage_at5':1., 'coverage_full_pool':1.} for p in pilot.POOLS}
+        perq = {p:[{'question_id':f'q{i}', **metrics[p]} for i in range(2)] for p in pilot.POOLS}
+        data.write(sub/'report-r/comparison_summary.json', {'selected_epoch':1, 'conditions':{'selector':metrics}})
+        data.write(sub/'train-t/epoch-1/validation_per_question.json', perq)
+        for stage in ('report-r','train-t','baseline-b'):
+            directory = sub/stage; directory.mkdir(exist_ok=True)
+            state = {'status':'complete', 'prepared_sha256':data.digest(sub/'prepared.json'),
+                     'artifacts_sha256':pilot.hashes(directory)}
+            if stage == 'train-t': state['smoke'] = False
+            data.write(directory/'manifest.json', state)
+    result = comparison.compare(root,tmp_path/'comparison')
+    assert result['highest_validation_models'] == ['ministral3']
+    assert result['test_evaluation'] is False and len(result['paired_contrasts']) == 4
+    data.write(root/'submission-qwen3/train_inputs.jsonl', {'changed':True})
+    with pytest.raises(ValueError,match='data or common'):
+        comparison.compare(root,tmp_path/'wrong')
