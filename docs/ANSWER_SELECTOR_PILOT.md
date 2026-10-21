@@ -107,6 +107,11 @@ other expressions are medically wrong.
 - Three epochs, learning rate `1e-4`, batch size1, accumulation16, AdamW on LoRA
   parameters, weight decay0.01, linear schedule with 10% warmup, clipping1.0.
 - FP16 computation on V100; FP32 LoRA gradients/state; seed3407.
+- AMP loss scaling starts at128. If an accumulation group overflows, the scaler
+  lowers its scale and training retries those same views before advancing the
+  data cursor or scheduler. At most12 retries are allowed; persistent nonfinite
+  gradients stop the run. Every attempt, gradient-finiteness flag and scale is
+  saved immediately to `optimizer_attempts.jsonl`, including on failure.
 - Qwen chat rendering explicitly disables thinking. Ministral uses FastModel with
   language-only LoRA and the established dynamic FP16 generation-cache helper;
   no vision/projector adapters are trained. Native templates are preserved.
@@ -189,3 +194,28 @@ ties, supported synonyms and repeated-question counts. Future DPO likelihoods mu
 match this constrained ID policy (including legal-ID normalization), rather than
 silently using unconstrained full-vocabulary sequence likelihoods. No such DPO
 trainer is part of this pilot.
+
+## Recovery from the first Llama smoke failure
+
+Job181866149 loaded the backbone and completed epoch-zero smoke predictions, but
+both training attempts were skipped by AMP, producing `No optimizer steps completed`.
+The old script used the default65,536 initial loss scale and consumed each smoke
+group once. Finite forward losses plus skipped scaler steps indicate nonfinite
+gradients, plausibly FP16 overflow. This is not an out-of-memory diagnosis.
+
+The fix starts with scale128, replays overflowed groups at the reduced scale and
+keeps failed attempts in the diagnostic log. The updated smoke must complete two
+actual optimizer updates and post-update prediction before full training runs.
+The exact V100 failure still needs confirmation by rerunning that smoke test.
+
+The original frozen submission is unchanged. Submit a fresh Llama chain:
+
+```bash
+git pull --ff-only
+bash scripts/submit_answer_selector_pilot.sh llama31
+```
+
+This creates a fresh CPU baseline and GPU smoke/train/report chain using the same
+audited data. Do not resubmit Qwen/Ministral while their earlier jobs are active.
+If their smoke jobs fail for this same reason, restart those failed chains with
+the updated script. All new selectors use the same declared AMP settings.

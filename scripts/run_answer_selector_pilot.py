@@ -92,6 +92,10 @@ def validate_config(config):
     if (config.get("schema") != "tie-aware-answer-selector-v1" or config["model_key"] not in MODELS
             or config["batch_size"] != 1 or config["epochs"] != 3 or config["sampled_responses_per_model"] != 4
             or config["max_seq_length"] != 8704 or config["DPO_training"] or config["test_evaluation"]
+            or not math.isfinite(config.get('gradient_scaler_initial_scale', 128.0))
+            or config.get('gradient_scaler_initial_scale', 128.0) <= 0
+            or type(config.get('max_overflow_retries', 12)) is not int
+            or not 0 <= config.get('max_overflow_retries', 12) <= 12
             or config["learning_rate"] <= 0 or config["gradient_accumulation_steps"] < 1):
         raise ValueError("Unsupported supervised selector pilot configuration")
 
@@ -319,6 +323,61 @@ def gpu_helper(name):
     return module
 
 
+def optimizer_group(model, group, optimizer, scaler, trainable, device, torch,
+                    max_grad_norm, max_overflow_retries=12, record_attempt=None):
+    """Replay the same accumulation group after AMP overflow, never dropping views.
+
+    GradScaler skips an update and lowers its scale on nonfinite gradients.
+    A retry does not advance the data cursor or learning-rate scheduler. Persistent
+    invalid gradients fail closed after a bounded number of attempts.
+    """
+    if not group or not 0 <= max_overflow_retries <= 12:
+        raise ValueError('Need a nonempty optimizer group and bounded overflow retries')
+    for attempt in range(1, max_overflow_retries + 2):
+        optimizer.zero_grad(set_to_none=True)
+        total_loss = 0.
+        for row in group:
+            tokens = torch.tensor([row['input_ids']], dtype=torch.long, device=device)
+            with torch.autocast(device.type if hasattr(device, 'type') else str(device), dtype=torch.float16):
+                logits = model(input_ids=tokens, attention_mask=torch.ones_like(tokens), use_cache=False).logits
+                loss = core.marginal_id_loss(logits, row['actions'])
+            total_loss += float(loss.detach())
+            scaler.scale(loss / len(group)).backward()
+            del logits, loss, tokens
+        scaler.unscale_(optimizer)
+        grads = [p.grad for p in trainable if p.grad is not None]
+        if not grads:
+            raise ValueError('Selector produced no trainable gradients')
+        norm = torch.linalg.vector_norm(torch.stack([torch.linalg.vector_norm(g.detach().float()) for g in grads]))
+        finite = math.isfinite(float(norm))
+        if finite:
+            torch.nn.utils.clip_grad_norm_(trainable, max_grad_norm, error_if_nonfinite=True)
+        elif all(bool(torch.isfinite(g).all()) for g in grads):
+            raise ValueError('Nonfinite aggregate gradient norm despite finite gradients; refusing update')
+        before = scaler.get_scale()
+        scaler.step(optimizer)
+        scaler.update()
+        after = scaler.get_scale()
+        stepped = after >= before
+        event = {'attempt': attempt, 'loss': total_loss / len(group),
+                 'gradient_norm': float(norm) if finite else None, 'gradients_finite': finite,
+                 'loss_scale_before': before, 'loss_scale_after': after, 'optimizer_stepped': stepped,
+                 'question_ids': [r['question_id'] for r in group]}
+        if record_attempt is not None:
+            record_attempt(event)
+        if stepped:
+            if not finite:
+                raise ValueError('AMP reported an update with nonfinite gradients')
+            return event
+        if finite:
+            raise ValueError('AMP skipped an update despite finite gradients')
+        if attempt <= max_overflow_retries:
+            print(f'AMP overflow: scale {before:g} -> {after:g}; retrying the same {len(group)} views', flush=True)
+    optimizer.zero_grad(set_to_none=True)
+    raise ValueError(f'Persistent nonfinite gradients after {max_overflow_retries + 1} attempts; '
+                     'inspect optimizer_attempts.jsonl; no data views were skipped')
+
+
 def train(submission, output, smoke=False, smoke_result=None, baseline_result=None):
     state = validate(submission, backbone=True)
     prepared_hash = data.digest(submission / 'prepared.json')
@@ -355,7 +414,7 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
         steps_per_epoch = 2 if smoke else math.ceil(len(first) / accumulation)
         from transformers import get_linear_schedule_with_warmup
         scheduler = get_linear_schedule_with_warmup(optimizer, 0 if smoke else math.ceil(steps_per_epoch * epochs * config['warmup_ratio']), steps_per_epoch * epochs)
-        scaler = torch.amp.GradScaler('cuda')
+        scaler = torch.amp.GradScaler('cuda', init_scale=config.get('gradient_scaler_initial_scale', 128.0))
         scores, global_steps, losses = [], 0, []
 
         def checkpoint(epoch):
@@ -379,6 +438,8 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
             loader.for_training(model, use_gradient_checkpointing='unsloth')
             for name, parameter in model.named_parameters():
                 parameter.requires_grad_('lora_' in name and not any(s in name.lower() for s in ('vision', 'visual', 'projector')))
+                if parameter.requires_grad:
+                    parameter.data = parameter.data.float()
             model.config.use_cache = False
             model.train()
             torch.cuda.empty_cache()
@@ -389,32 +450,22 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
             if smoke:
                 rows = sorted(rows, key=lambda r: len(r['input_ids']), reverse=True)[:4]
             data.rng(config['seed'], 'training_order', epoch).shuffle(rows)
+            epoch_start_steps = global_steps
             for start in range(0, len(rows), accumulation):
                 group = rows[start:start + accumulation]
-                optimizer.zero_grad(set_to_none=True)
-                total_loss = 0.
-                for row in group:
-                    tokens = torch.tensor([row['input_ids']], dtype=torch.long, device=device)
-                    with torch.autocast('cuda', dtype=torch.float16):
-                        output_logits = model(input_ids=tokens, attention_mask=torch.ones_like(tokens), use_cache=False).logits
-                        loss = core.marginal_id_loss(output_logits, row['actions'])
-                    total_loss += float(loss.detach())
-                    scaler.scale(loss / len(group)).backward()
-                    del output_logits, loss, tokens
-                scaler.unscale_(optimizer)
-                norm = torch.nn.utils.clip_grad_norm_(trainable, config['max_grad_norm'])
-                old_scale = scaler.get_scale()
-                scaler.step(optimizer); scaler.update()
-                stepped = scaler.get_scale() >= old_scale
-                if stepped:
-                    scheduler.step(); global_steps += 1
-                losses.append({'epoch': epoch, 'start_view': start, 'loss': total_loss / len(group),
-                               'optimizer_stepped': stepped, 'global_steps': global_steps,
-                               'gradient_norm': float(norm) if math.isfinite(float(norm)) else None})
+                def record_attempt(event):
+                    with (output / 'optimizer_attempts.jsonl').open('a', encoding='utf-8') as handle:
+                        handle.write(json.dumps({'epoch': epoch, 'start_view': start, **event}, allow_nan=False) + '\n')
+                event = optimizer_group(model, group, optimizer, scaler, trainable, device, torch,
+                    config['max_grad_norm'], config.get('max_overflow_retries', 12), record_attempt)
+                scheduler.step(); global_steps += 1
+                losses.append({'epoch': epoch, 'start_view': start, **event, 'global_steps': global_steps})
+                data.jsonl(output / 'training_log.jsonl', losses)
                 if len(losses) % 10 == 0 or smoke:
-                    print(f"Epoch {epoch}, views {min(start+len(group),len(rows))}/{len(rows)}; loss={total_loss/len(group):.6f}", flush=True)
-            if global_steps == 0:
-                raise ValueError('No optimizer steps completed')
+                    print(f"Epoch {epoch}, views {min(start+len(group),len(rows))}/{len(rows)}; "
+                          f"loss={event['loss']:.6f}; optimizer steps={global_steps}; scale={scaler.get_scale():g}", flush=True)
+            if global_steps - epoch_start_steps != math.ceil(len(rows) / accumulation):
+                raise ValueError('Optimizer update count differs from the complete epoch schedule')
             data.jsonl(output / 'training_log.jsonl', losses)
             checkpoint(epoch)
         selected = core.choose_epoch(scores)
@@ -429,6 +480,8 @@ def train(submission, output, smoke=False, smoke_result=None, baseline_result=No
         status['artifacts_sha256'].pop('manifest.json', None)
         print('Selected selector epoch:', selected, '(0 = untrained instruction selector)', flush=True)
     except BaseException as exc:
+        if 'global_steps' in locals():
+            status.update(global_steps=global_steps, loss_scale=scaler.get_scale())
         status.update(status='failed', error=f'{type(exc).__name__}: {exc}'); raise
     finally:
         data.write(output / 'manifest.json', status)

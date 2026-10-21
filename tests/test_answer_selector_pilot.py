@@ -246,6 +246,61 @@ def test_tiny_real_causal_lm_backward_and_constrained_generation():
     assert len(codes) == len(set(identities)) == 5
 
 
+def amp_fixture():
+    import torch
+    class HalfPath(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = torch.nn.Parameter(torch.tensor(1.))
+            self.forward_calls = 0
+        def forward(self, **kwargs):
+            self.forward_calls += 1
+            value = self.weight.half() * 2
+            return SimpleNamespace(logits=torch.stack((value * 0, value)).reshape(1,1,2))
+    return torch, HalfPath(), {'question_id':'q','input_ids':[1],
+        'actions':[{'position':0,'legal_token_ids':[0,1],'accepted_token_ids':[0]}]}
+
+
+def test_real_amp_overflow_retries_same_group_before_any_optimizer_update():
+    torch, model, row = amp_fixture()
+    optimizer = torch.optim.SGD(model.parameters(),lr=.1)
+    scaler = torch.amp.GradScaler('cpu',init_scale=65536.)
+    events = []
+    result = pilot.optimizer_group(model,[row],optimizer,scaler,list(model.parameters()),'cpu',torch,
+        max_grad_norm=1.,max_overflow_retries=4,record_attempt=events.append)
+    assert len(events) > 1 and events[0]['optimizer_stepped'] is False
+    assert events[0]['gradients_finite'] is False and events[0]['loss_scale_after'] < 65536.
+    assert result['optimizer_stepped'] and result['gradients_finite']
+    assert model.forward_calls == len(events)
+    assert all(r['question_ids'] == ['q'] for r in events)
+    # Exactly one clipped successful update, despite several forward/backward attempts.
+    assert model.weight.item() == pytest.approx(.9,abs=1e-5)
+
+
+def test_lower_initial_scale_and_accumulation_complete_without_losing_views():
+    torch, model, row = amp_fixture()
+    optimizer = torch.optim.SGD(model.parameters(),lr=.1)
+    scaler = torch.amp.GradScaler('cpu',init_scale=128.)
+    result = pilot.optimizer_group(model,[row,row],optimizer,scaler,list(model.parameters()),'cpu',torch,1.)
+    assert result['attempt'] == 1 and model.forward_calls == 2
+    assert result['question_ids'] == ['q','q']
+    assert model.weight.item() == pytest.approx(.9,abs=1e-5)
+
+
+def test_persistent_nonfinite_gradients_fail_with_diagnostics_without_updating_weights():
+    torch, model, row = amp_fixture()
+    model.weight.register_hook(lambda grad: torch.full_like(grad,float('inf')))
+    optimizer = torch.optim.SGD(model.parameters(),lr=.1)
+    scaler = torch.amp.GradScaler('cpu',init_scale=128.)
+    events = []
+    with pytest.raises(ValueError,match='Persistent nonfinite gradients after 3 attempts'):
+        pilot.optimizer_group(model,[row],optimizer,scaler,list(model.parameters()),'cpu',torch,
+            1.,max_overflow_retries=2,record_attempt=events.append)
+    assert len(events) == 3 and all(not r['optimizer_stepped'] for r in events)
+    assert model.weight.item() == 1. and model.weight.grad is None
+    assert [r['loss_scale_after'] for r in events] == [64.,32.,16.]
+
+
 def test_validation_denominator_includes_uncovered_questions():
     _, a = view('covered', count=3, positive=(2,))
     _, b = view('uncovered', count=3, positive=())
