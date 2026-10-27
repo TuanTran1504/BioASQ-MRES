@@ -1,0 +1,20 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q normal
+#PBS -l ncpus=1
+#PBS -l mem=16GB
+#PBS -l jobfs=2GB
+#PBS -l walltime=02:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N coverage-dpo-audit
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+cd "${PBS_O_WORKDIR}"
+python3 "${COVERAGE_SUBMISSION:?}/code/scripts/audit_generator_coverage_dpo.py" \
+  --mode audit --submission "$COVERAGE_SUBMISSION" \
+  --output "${PWD}/outputs/generator_coverage_dpo/audit-${PBS_JOBID}" \
+  --archive "/scratch/nl78/${USER}/generator-coverage-dpo-audit-${PBS_JOBID%%.*}.tar.gz"
