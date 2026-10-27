@@ -1,0 +1,79 @@
+{
+  "question_count": 144,
+  "split": "validation",
+  "conditions": {
+    "round_robin": {
+      "max5_greedy": {
+        "mrr_at5": 0.5557870370370371,
+        "coverage_at1": 0.4930555555555556,
+        "coverage_at5": 0.6458333333333334,
+        "coverage_full_pool": 0.6666666666666666
+      },
+      "max5_sampling4": {
+        "mrr_at5": 0.5386574074074075,
+        "coverage_at1": 0.4513888888888889,
+        "coverage_at5": 0.6597222222222222,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    },
+    "model_vote": {
+      "max5_greedy": {
+        "mrr_at5": 0.5459490740740741,
+        "coverage_at1": 0.5,
+        "coverage_at5": 0.6111111111111112,
+        "coverage_full_pool": 0.6666666666666666
+      },
+      "max5_sampling4": {
+        "mrr_at5": 0.5395833333333333,
+        "coverage_at1": 0.4722222222222222,
+        "coverage_at5": 0.6388888888888888,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    },
+    "rank_vote": {
+      "max5_greedy": {
+        "mrr_at5": 0.5725694444444446,
+        "coverage_at1": 0.5277777777777778,
+        "coverage_at5": 0.6458333333333334,
+        "coverage_full_pool": 0.6666666666666666
+      },
+      "max5_sampling4": {
+        "mrr_at5": 0.5806712962962962,
+        "coverage_at1": 0.5208333333333334,
+        "coverage_at5": 0.6736111111111112,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    },
+    "sample_frequency": {
+      "max5_greedy": {
+        "mrr_at5": 0.5459490740740741,
+        "coverage_at1": 0.5,
+        "coverage_at5": 0.6111111111111112,
+        "coverage_full_pool": 0.6666666666666666
+      },
+      "max5_sampling4": {
+        "mrr_at5": 0.5313657407407408,
+        "coverage_at1": 0.4444444444444444,
+        "coverage_at5": 0.6666666666666666,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    }
+  },
+  "source_audit_manifest_sha256": "4c6ec47b3429483be956a4331984e76456325da8294b9544445c48e1584c9aa2",
+  "source_audit": "C:\\Users\\Dustin\\Projects\\BioASQ-MRES\\Artifacts\\answer_selector_data_v1",
+  "validation_inputs_sha256": "311db12702635e5898360e61500e7b9e71a69a64bc391b375ba83629b32c7cc9",
+  "validation_supervision_sha256": "8f1a88778272b5fe8f6b2f0c98463e2e4fc0c45056ce5ba3990f50b84471deea",
+  "policy": {
+    "pool": "unchanged exact surfaces; no normalized deduplication",
+    "ties": "fixed model/source-rank priority, then exact answer",
+    "model_vote": "number of generators supporting candidate, not selector-list votes",
+    "rank_vote": "sum(1/source unique-candidate rank), not selector-list rank fusion",
+    "sample_frequency": "sum of distinct supporting draws; same draw budget per generator; failures stay in denominator"
+  },
+  "training": false,
+  "new_generation": false,
+  "paid_judging": false,
+  "test_evaluation": false,
+  "analysis_date": "2026-10-27",
+  "comparison_scope": "Current selector-pilot validation144 pools; SFT generation only; four samples/model"
+}
