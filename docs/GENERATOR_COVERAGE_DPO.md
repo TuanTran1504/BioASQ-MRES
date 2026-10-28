@@ -133,3 +133,116 @@ be disclosed. The existing larger matched banks can support a later extension.
 This audit produces no training-approved dataset or DPO checkpoint. Review the
 actual natural responses before constructing the training files, particularly
 where official acceptance differs only by wording.
+
+## Blinded semantic review
+
+The full Gadi export `audit-182367619.gadi-pbs` contains 2,739 pairs across 673
+fitting questions and 3,913 distinct natural responses. An offline inspection
+verified all artifact hashes, raw prompts/response parsing, accepted labels and
+the fixed-context coverage calculations against the original selector audit.
+Seven targeted evidence cases were recorded locally; this was not a semantic
+review of every pair or a prevalence estimate.
+
+The paid reviewer is `gpt-4.1-mini-2025-04-14`, with structured candidate-level
+correctness, evidence support, original/expansion equivalence and relation-label
+judgments. Requests contain the question, all supplied snippets, original and
+candidate strings and declared relation. Model identity, draw number, gold
+aliases, official acceptance and chosen/rejected direction are hidden. Identical
+candidate contexts are reviewed once across models/responses. The current plan
+has 9,756 unique contexts in 814 requests.
+
+The official model page lists US$0.40/million input and US$1.60/million output
+tokens, verified 28 October 2026:
+[OpenAI model documentation](https://developers.openai.com/api/docs/models/gpt-4.1-mini).
+The conservative whole-plan reserve is US$9.535421, allowing for maximum output
+tokens and input/framing overhead without cache discounts. One new authorized
+US$10 cumulative cap applies to this batch, including resumptions. Estimates do
+not guarantee all requests succeed. Model availability must not trigger silent
+substitution of another model.
+
+Prepare without calls, locally:
+
+```powershell
+.venv\Scripts\python.exe scripts/judge_generator_coverage_dpo.py `
+  Artifacts/generator_coverage_dpo_audit_182367619 `
+  --selector-audit Artifacts/answer_selector_data_v1 `
+  --output Artifacts/generator_coverage_dpo_judge_mini_20261028 `
+  --max-usd 10
+```
+
+When authorized and API credit is available, add `--run`. A small initial batch
+can use `--max-new-calls 8 --workers 2`. Resume with the exact same output
+directory and cap, without the small call limit. Saved successful requests are
+reused; partial failures remain unresolved. The shared exclusive session lock
+and conservative spending ledger prevent a new process from resetting the cap.
+Do not delete or replace the ledger to retry a failed batch. Credentials are
+read from the existing local key file at request time and never printed.
+
+The first attempted small batch was refused with `credit_balance_exhausted`:
+zero valid judgments were obtained, and queued calls stopped. No further calls
+were made until the user restored credit and explicitly requested a retry. The
+retry succeeded; the full review then resumed using the same ledger and cap.
+The ledger retains a conservative US$0.0146784 for two failed requests; this is
+not a claim that the provider billed that amount. Successful requests are cached.
+Concurrency can be 1..12 workers; a restart to increase throughput preserves
+completed caches and conservatively retains reservations for interrupted calls.
+
+Outputs keep raw text unchanged and separate provisional categories:
+
+- `semantic_coverage_repair_candidate`: every preferred expression is clean and
+  every rejected expression has a high-confidence incorrect/contradicted
+  judgment with a validated evidence quote; no supported correct rejected
+  answer remains.
+- `benchmark_form_preference`: both complete responses are clean supported
+  answers, distinguished by official acceptance; this is not a factual repair.
+- `rejected_contains_supported_answer`: a valid rejected answer remains, even
+  if other rejected expansions have problems.
+- `preferred_not_clean`, `evidence_support_review`, `unresolved`, `pending`:
+  not eligible for a clean semantic pilot.
+- `assistant_evidence_hold`: explicit question-level holds for numerical,
+  receptor/ligand, insufficient-popularity or conflicting-evidence examples.
+  These holds are applied after blind annotation, not shown to the judge.
+
+Repeated contradictory candidate judgments abstain, and quoted snippets are
+checked literally. Neither self-reported high confidence nor an official gold
+match establishes expert correctness. All reviewed files retain
+`training_ready: false`; no training job is submitted by this reviewer.
+
+### Completed automated review: 28 October 2026
+
+After API credit was restored, all 814 request groups and 9,756 unique candidate
+contexts were reviewed, covering the 3,913 natural responses and 2,739 pairs.
+One wrong-length indexed response was retried; successful caches were reused.
+Recorded estimated costs plus conservative failed/interrupted-call reservations
+total US$2.277577 under the original US$10 cap. This is not an account billing
+statement; successful-request token costs at the listed standard rates total
+US$2.217937, before any actual cache discounts.
+
+| Provisional category | Pairs |
+|---|---:|
+| Both complete responses judged correct/supported; official form differs | 825 |
+| Preferred response not fully clean | 377 |
+| Rejected response still contains a supported correct answer | 166 |
+| Unresolved, inconsistent or invalid judgments | 1,355 |
+| Assistant evidence hold | 12 |
+| Evidence-support review | 4 |
+| Meets strict automatic semantic-repair criterion | 0 |
+
+The benchmark-form subset spans 296 distinct fitting questions: 257 Llama pairs,
+282 Qwen pairs and 286 Ministral pairs. It contains 671 sampled-response pairs
+and 154 greedy-recovery pairs. Ninety-two pairs over 44 questions have a
+counterfactual saved-output official-coverage gain, not measured DPO improvement.
+
+Zero pairs passing the strict semantic-repair filter does not establish zero
+genuine errors. Full-response requirements, citation validation, unresolved
+attributes and model inconsistencies can exclude real corrections. The judge
+itself was too strict about rounding in the approximate-count example and
+sometimes confused self-equivalence with correctness. Those decisions remain
+recorded and held, rather than silently corrected or accepted.
+
+The 825 cases are a possible **official-answer-form coverage** arm, not 825
+scientific corrections. Inspect the subset and retain this objective distinction
+before training. The source audit, paid plan, ledger, reviewed responses and
+post-review files remain local under `Artifacts/`; aggregate reproducibility
+metadata are in `results/generator_coverage_dpo_review_20261028.json`. No GPU job,
+training-approved dataset or DPO model was produced by this review.

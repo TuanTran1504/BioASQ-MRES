@@ -1,0 +1,76 @@
+{
+  "model": "gpt-4.1-mini-2025-04-14",
+  "source_manifest_sha256": "0f6438ed1202bed1c57d43a8de74d9395fc206b19440e52da597ec5dd0ef5463",
+  "selector_manifest_sha256": "4c6ec47b3429483be956a4331984e76456325da8294b9544445c48e1584c9aa2",
+  "system_sha256": "a13a2ca851576f8757c876adf208bec380337fbf6c3da5bf57c3bd7b9b9633c7",
+  "plan_sha256": "edd9112d1c96f518bc8097eb308d1f7517468704798504ed745c95ca53ef67f2",
+  "max_usd": 10.0,
+  "response_count": 3913,
+  "pair_count": 2739,
+  "planned_requests": 814,
+  "unit_count": 9756,
+  "judged_units": 9756,
+  "charged_or_reserved_usd": 2.277576800000002,
+  "blocking_reason": null,
+  "pair_categories": {
+    "assistant_evidence_hold": 12,
+    "benchmark_form_preference": 825,
+    "unresolved": 1355,
+    "preferred_not_clean": 377,
+    "rejected_contains_supported_answer": 166,
+    "evidence_support_review": 4
+  },
+  "date": "2026-10-28",
+  "status": "complete",
+  "training": false,
+  "training_ready": false,
+  "successful_review_requests": 814,
+  "estimated_successful_request_token_cost_usd": 2.217937200000002,
+  "other_failed_or_interrupted_cost_or_reserve_usd": 0.0596396,
+  "benchmark_form_questions": 296,
+  "benchmark_form_pairs_by_objective": {
+    "sampled_response_coverage": 671,
+    "greedy_recovery": 154
+  },
+  "benchmark_form_counterfactual_gain_pairs": 92,
+  "benchmark_form_counterfactual_gain_questions": 44,
+  "strict_semantic_repair_pairs": 0,
+  "models": {
+    "llama31": {
+      "assistant_evidence_hold": 4,
+      "unresolved": 484,
+      "benchmark_form_preference": 257,
+      "preferred_not_clean": 118,
+      "rejected_contains_supported_answer": 65,
+      "evidence_support_review": 4
+    },
+    "qwen3": {
+      "benchmark_form_preference": 282,
+      "unresolved": 434,
+      "preferred_not_clean": 119,
+      "rejected_contains_supported_answer": 57
+    },
+    "ministral3": {
+      "unresolved": 437,
+      "preferred_not_clean": 140,
+      "rejected_contains_supported_answer": 44,
+      "benchmark_form_preference": 286,
+      "assistant_evidence_hold": 8
+    }
+  },
+  "initial_credit_failure_resolved_by_user": true,
+  "source_text_changed": false,
+  "interpretation": "Blinded model-only annotation and conservative filtering, not expert approval or evidence of DPO performance improvement.",
+  "billing_note": "Token-cost estimates and conservative reservations are retained; this is not an account billing statement.",
+  "reviewed_output_sha256": {
+    "plan.json": "3d9675044d3f8a2c9e7c0225d674e07e779d96b9c9f00127b42e97b98e2c71b8",
+    "units.json": "12fca94668428e20d86438cdbd6a005981a45a689b4a5da92183c7f60d36cf70",
+    "review_summary.json": "8f89eeb4eff768115448e18507cd2adb703dded62c72030479480501f9a275e3",
+    "reviewed_responses.jsonl": "c94b407a527aee660d7ea0f47fbefcbe30e8dd5878c736ccb034f3865d7268d0",
+    "pair_review.jsonl": "6ea8b1bc7e6880e00c0cacc0e952e92ae66744b2dbd420dba7e44046d3696193",
+    "semantic_coverage_repair_candidate.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "benchmark_form_preference.jsonl": "fab609cb02508889d91c234c98eedf9621f08d0452ed130e0be84af17d460ac1",
+    "report.md": "33fe779decda89202255ada5e8d0529a7f28ecd9caafc7c7066492da19ef63f6",
+    "spend-ledger.json": "f37826728cad8322bfcc01cb65f31215a757de571eb1b219a47e77f10915415e"
+  }
+}
