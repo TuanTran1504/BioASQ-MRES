@@ -393,3 +393,9 @@ remains false pending native Gadi source/adapter verification, tokenizer/context
 preflight and GPU smoke execution. First evaluate a single generator change at a
 time with the other two generators and reranker fixed; an all-DPO ensemble is a
 separate comparison. The previous sample export remains available unchanged.
+
+The next comparison is prepared in [GENERATOR_FORM_DESIGNS.md](GENERATOR_FORM_DESIGNS.md):
+six size/update-matched DPO pilots contrast model-specific versus identical shared
+preferences, with common fitting-only preference holdout and validation144
+generation. The data source and broader question coverage vary together; this is
+explicitly reported. Preparation has not launched Gadi training.

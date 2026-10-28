@@ -129,7 +129,8 @@ def verify_generated(path, examples, source, mode, plan):
     return rows
 
 
-def select(submission, training, output, smoke=False):
+def select(submission, training, output, smoke=False, *, native_validator=None,
+           checkpoint_chooser=None, pool_builder=None, preserve_surfaces=False, jar_path_override=None):
     if output.exists():
         raise FileExistsError(output)
     prepared = read(submission / "prepared.json")
@@ -137,9 +138,14 @@ def select(submission, training, output, smoke=False):
     repository = Path(prepared["repository"])
     config = prepared["configuration"]
     focal = focal_model(config)
-    if config.get("review_scope") != "all_compactness" or not config.get("retain_epoch_checkpoints"):
+    coverage_protocol = native_validator is not None
+    validator = native_validator or validate_native
+    chooser = checkpoint_chooser or choose
+    builder = pool_builder or build_pools
+    expected_scope = "official_form" if coverage_protocol else "all_compactness"
+    if config.get("review_scope") != expected_scope or not config.get("retain_epoch_checkpoints"):
         raise ValueError("Full validation selection requires the expanded retained-epoch protocol")
-    manifest, splits, source, feedback = validate_native(Path(prepared["preferences"]), config, repository)
+    manifest, splits, source, feedback = validator(Path(prepared["preferences"]), config, repository)
     state = read(training / "manifest.json")
     expected_counts = {s: min(4, len(rr)) if smoke else len(rr) for s, rr in splits.items()}
     if (state["status"] != "complete" or state["smoke_test"] != smoke or state["source"] != source
@@ -183,7 +189,9 @@ def select(submission, training, output, smoke=False):
         "training": str(training), "training_manifest_sha256": digest(training / "manifest.json"),
         "reranker_hashes": hashes, "question_ids": [e["question_id"] for e in examples],
         "focal_model": focal,
-        "selection_rule": f"sampling4: no ensemble/{focal} full-pool losses; MRR >= SFT; mean {focal} tokens <= SFT; no additional empty, ceiling or surplus responses; maximize MRR then minimize tokens then earliest epoch; epoch zero fallback"}
+        "selection_rule": (config["checkpoint_selection"] if coverage_protocol else
+            f"sampling4: no ensemble/{focal} full-pool losses; MRR >= SFT; mean {focal} tokens <= SFT; no additional empty, ceiling or surplus responses; maximize MRR then minimize tokens then earliest epoch; epoch zero fallback"),
+        "pool_policy": "verbatim surfaces" if preserve_surfaces else "historical normalized surfaces"}
     write(output / "manifest.json", selected_state)
     try:
         write_jsonl(output / "validation_inputs.jsonl", [{k: e[k] for k in ("question_id", "question", "snippets")} for e in examples])
@@ -198,6 +206,7 @@ def select(submission, training, output, smoke=False):
         generation_hashes = {}
         for checkpoint in checkpoints:
             epoch = checkpoint["epoch"]
+            print(f"Validation generation: {focal}, epoch {epoch}, greedy plus four samples/question", flush=True)
             root = output / f"epoch-{epoch}"
             root.mkdir()
             adapter = root / "adapter"
@@ -229,20 +238,20 @@ def select(submission, training, output, smoke=False):
         solo_prefix = "llama" if focal == "llama31" else focal
         pools = {}
         for epoch, rows in alternatives.items():
-            pp, _ = build_pools(rows, {"validation": contexts})
+            pp, _ = builder(rows, {"validation": contexts})
             for mode in ("greedy", "sampling4"):
                 pools[f"epoch{epoch}_{mode}"] = pp["validation"][f"max5_{mode}"]
-                solo, _ = build_pools([r for r in rows if r["model_key"] == focal], {"validation": contexts})
+                solo, _ = builder([r for r in rows if r["model_key"] == focal], {"validation": contexts})
                 pools[f"{solo_prefix}_epoch{epoch}_{mode}"] = solo["validation"][f"max5_{mode}"]
         distinct = {(r["question_id"], r["answer"]): r for rr in pools.values() for r in rr}
         (output / "official").mkdir()
-        jar = repository / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar"
+        jar = jar_path_override or repository / "third_party/Evaluation-Measures/flat/BioASQEvaluation/dist/BioASQEvaluation.jar"
         matches = official_candidate_matches(examples, list(distinct.values()), output / "official", jar_path=jar) if distinct else {}
         normalized = {}
         from scripts.train_candidate_reranker_pilot import key
         for (qid, answer), accepted in matches.items():
             identity = (qid, key(answer))
-            if identity in normalized and normalized[identity] != accepted:
+            if not preserve_surfaces and identity in normalized and normalized[identity] != accepted:
                 raise ValueError("Pool deduplication changes official acceptance")
             normalized[identity] = accepted
         for rr in pools.values():
@@ -271,25 +280,29 @@ def select(submission, training, output, smoke=False):
                 "mean_output_tokens": sum(r["output_tokens"] for r in calls)/len(calls),
                 "generation_quality": generation_quality(calls),
                 "ensemble_full_pool_lost": coverage_transitions(base, current, "coverage_full_pool")["lost"],
+                "ensemble_full_pool_coverage": conditions[f"epoch{epoch}_sampling4_max5_reranker"]["metrics"]["coverage_full_pool"],
+                "focal_full_pool_coverage": conditions[f"{solo_prefix}_epoch{epoch}_sampling4"]["metrics"]["coverage_full_pool"],
                 f"{solo_prefix}_full_pool_lost": coverage_transitions(solo_base, solo, "coverage_full_pool")["lost"],
                 "coverage_transitions": {k: coverage_transitions(base, current, k) for k in ("coverage_at5", "coverage_full_pool")}})
-        winner = choose(selection_rows, solo_prefix)
+        winner = chooser(selection_rows, solo_prefix)
         # An explicitly separate diagnostic does not replace the strict winner.
         relaxed_rows = [{**r, "generation_quality": dict(r["generation_quality"])} for r in selection_rows]
-        ensemble_candidate = choose(relaxed_rows, solo_prefix, require_individual_coverage=False)
+        ensemble_candidate = chooser(relaxed_rows, solo_prefix, require_individual_coverage=False)
         shutil.copytree(adapter_paths[winner["epoch"]], output / "selected_adapter")
         write(output / "comparison_summary.json", {"question_count": len(examples), "conditions": conditions,
             "checkpoint_scores": selection_rows, "selected_epoch": winner["epoch"], "selection_rule": selected_state["selection_rule"],
             "ensemble_only_candidate_epoch": ensemble_candidate["epoch"],
             "ensemble_only_candidate_is_selected": ensemble_candidate["epoch"] == winner["epoch"],
-            "ensemble_only_candidate_rule": "Diagnostic only: same guards except individual-model full-pool loss; selected_adapter remains strict winner.",
+            "ensemble_only_candidate_rule": ("Not applicable to coverage-primary selection; same winner." if coverage_protocol else
+                "Diagnostic only: same guards except individual-model full-pool loss; selected_adapter remains strict winner."),
+            "pool_policy": selected_state["pool_policy"],
             "limitations": ["Internal validation already selected the frozen reranker C; these are selection diagnostics, not held-out performance.",
                 "Four samples per model, matching the original feedback bank seed indices. One seed; no semantic judging of new generated answers."]})
         write(output / "comparison_per_question.json", scores)
         write_jsonl(output / "rankings.jsonl", rankings)
         verify_files(submission / "code", prepared["code_hashes"])
         verify_files(rerankers, hashes)
-        validate_native(Path(prepared["preferences"]), config, repository)
+        validator(Path(prepared["preferences"]), config, repository)
         if digest(training / "manifest.json") != selected_state["training_manifest_sha256"]:
             raise ValueError("Training metadata changed during validation selection")
         verify_files(training / "adapter", state["adapter_files_sha256"])

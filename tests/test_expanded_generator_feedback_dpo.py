@@ -102,7 +102,8 @@ def test_truncated_judgment_recovery_reuses_completed_requests(tmp_path):
 
 @pytest.mark.parametrize("tamper", [None, "seed", "top_p"])
 @pytest.mark.parametrize("focal", ["llama31", "qwen3", "ministral3"])
-def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_worker(tmp_path, monkeypatch, tamper, focal):
+@pytest.mark.parametrize("protocol", ["compactness", "coverage"])
+def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_worker(tmp_path, monkeypatch, tamper, focal, protocol):
     sub, train, out = tmp_path / "sub", tmp_path / "train", tmp_path / "out"
     sub.mkdir(); (train / "adapter").mkdir(parents=True)
     for name in ("adapter_config.json", "adapter_model.safetensors", "tokenizer_config.json"):
@@ -110,6 +111,8 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
     source = dict(adapter=str(train / "adapter"), system_prompt="Return up to FIVE answers.",
                   model_loader="fast_model" if focal == "ministral3" else "fast_language", chat_template_kwargs={}, base_snapshot="base")
     cfg = dict(review_scope="all_compactness", retain_epoch_checkpoints=True, num_train_epochs=3, model_key=focal)
+    if protocol == "coverage":
+        cfg.update(review_scope="official_form",checkpoint_selection="Coverage primary")
     metadata = dict(path="unused", manifest_sha256="hash", responses_sha256="raw")
     feedback = dict(banks={m: metadata for m in ("llama31", "qwen3", "ministral3")}, rerankers=str(tmp_path / "rr"), reranker_hashes={})
     prepared = dict(repository=str(tmp_path), configuration=cfg, code_hashes={}, preferences="reviewed", native_banks=feedback["banks"])
@@ -169,6 +172,7 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
     monkeypatch.setattr(selection.subprocess, "run", worker)
     def matcher(examples, candidates, directory, **kwargs):
         assert directory.is_dir() and len(examples) == 144
+        if protocol == "coverage": assert kwargs["jar_path"] == sub / "scorer.jar"
         return {(r["question_id"], r["answer"]): r["answer"] == "Core" for r in candidates}
     monkeypatch.setattr(selection, "official_candidate_matches", matcher)
     def rank(payload, pools, contexts):
@@ -186,22 +190,28 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
             conditions[name+"_max5_reranker"] = {"metrics": metrics}; scores[name+"_max5_reranker"] = perq
         return conditions, scores, []
     monkeypatch.setattr(selection, "rank_frozen", rank)
+    options = {}
+    if protocol == "coverage":
+        from scripts.evaluate_generator_form_designs import exact_pools, choose_coverage
+        options = dict(native_validator=lambda *a: ({}, {"train":[1],"validation":[2]},source,feedback),
+            checkpoint_chooser=choose_coverage,pool_builder=exact_pools,preserve_surfaces=True,jar_path_override=sub / "scorer.jar")
     if tamper:
         with pytest.raises(ValueError, match="seed"):
-            selection.select(sub, train, out)
+            selection.select(sub, train, out, **options)
         assert real_read(out / "manifest.json")["status"] == "failed"
         assert not (out / "selected_adapter").exists()
         return
-    selection.select(sub, train, out)
+    selection.select(sub, train, out, **options)
     summary = real_read(out / "comparison_summary.json")
     assert len(calls) == 6 and summary["question_count"] == 144
     assert [r["epoch"] for r in summary["checkpoint_scores"]] == [0,1,2,3]
-    assert summary["selected_epoch"] == 1
-    assert summary["ensemble_only_candidate_epoch"] == 1
+    chosen_epoch = 1 if protocol == "compactness" else 0
+    assert summary["selected_epoch"] == chosen_epoch
+    assert summary["ensemble_only_candidate_epoch"] == chosen_epoch
     solo_prefix = "llama" if focal == "llama31" else focal
     assert f"{solo_prefix}_epoch1_sampling4" in summary["conditions"]
     assert real_read(out / "manifest.json")["status"] == "complete"
-    assert (out / "selected_adapter/adapter_model.safetensors").read_text() == "1"
+    assert (out / "selected_adapter/adapter_model.safetensors").read_text() == ("1" if chosen_epoch == 1 else "saved")
 
 
 def test_fresh_selector_cli_imports():

@@ -1,0 +1,54 @@
+{
+  "training_pairs_per_run": 132,
+  "shared_train_questions": 106,
+  "model_specific_train_questions": {
+    "llama31": 75,
+    "qwen3": 73,
+    "ministral3": 81
+  },
+  "common_preference_holdout_pairs": 96,
+  "common_preference_holdout_questions": 40,
+  "shared_sampling_slots": {
+    "llama31": 44,
+    "qwen3": 44,
+    "ministral3": 44
+  },
+  "common_model_specific_training_questions": 14,
+  "optimizer_steps_per_run": 99,
+  "question_distribution_matched": false,
+  "training_launched": false,
+  "interpretation": "Size/update-matched practical pooling comparison; source diversity and question coverage vary together. This does not isolate response authorship alone.",
+  "experiment": "model-specific versus shared official-form generator DPO",
+  "status": "prepared_not_submitted",
+  "designs": [
+    "model_specific",
+    "shared"
+  ],
+  "models": [
+    "llama31",
+    "qwen3",
+    "ministral3"
+  ],
+  "dpo_runs": 6,
+  "preference_holdout_scope": "40 questions drawn only from fitting1296; separate from validation144",
+  "evaluation_questions": 144,
+  "evaluation_modes": [
+    "greedy",
+    "sampling4"
+  ],
+  "test95_evaluation": false,
+  "paid_api_calls_added": 0,
+  "objective": "Official-form acceptance coverage; neither semantic-error correction nor compactness",
+  "bundle_manifest_sha256": "fa8a717b38a8c3768891bb4c934613d3d5d85de90d7650baab3e342a07236e30",
+  "archive_sha256": "0720cc24901330da0bfba8b39398ee017b017765ee232f7cab6846b5b482f598",
+  "inspected_source_manifest_sha256": "2f16775360a9ef1f284c4a2c800901740583b5dd37d5be2f55aafa90f6ed903a",
+  "selector_manifest_sha256": "4c6ec47b3429483be956a4331984e76456325da8294b9544445c48e1584c9aa2",
+  "archive": "Artifacts/generator-form-designs-20261029-v2.tar.gz",
+  "validation": "71 targeted tests passed; archive file membership and all 36 pinned files verified independently",
+  "limitations": [
+    "Question distributions and response authorship vary together.",
+    "Equal record/update counts do not imply equal token/FLOP budgets.",
+    "Internal validation selects checkpoints/designs; descriptive intervals are not held-out evidence.",
+    "No GPU preflight or Gadi jobs executed locally."
+  ]
+}
