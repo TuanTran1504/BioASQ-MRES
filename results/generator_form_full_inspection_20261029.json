@@ -1,0 +1,117 @@
+{
+  "shortlist_pairs": 825,
+  "shortlist_questions": 296,
+  "shortlist_exact_duplicate_preferences": 28,
+  "inspection_scope": "all_pairs",
+  "inspected_questions": 296,
+  "inspected_pairs": 825,
+  "retained_questions": 202,
+  "retained_unique_pairs": 513,
+  "exclusion_counts": {
+    "pair_surface_scope_or_form_hold": 151,
+    "assistant_scope_or_evidence_hold": 137,
+    "different_or_unreviewed_equivalence_group": 3,
+    "duplicate_native_preference": 21
+  },
+  "models": {
+    "llama31": {
+      "train": {
+        "pairs": 138,
+        "questions": 75,
+        "objectives": {
+          "sampled_response_coverage": 121,
+          "greedy_recovery": 23
+        }
+      },
+      "inner_validation": {
+        "pairs": 29,
+        "questions": 17,
+        "objectives": {
+          "sampled_response_coverage": 26,
+          "greedy_recovery": 7
+        }
+      }
+    },
+    "qwen3": {
+      "train": {
+        "pairs": 132,
+        "questions": 73,
+        "objectives": {
+          "sampled_response_coverage": 115,
+          "greedy_recovery": 21
+        }
+      },
+      "inner_validation": {
+        "pairs": 28,
+        "questions": 16,
+        "objectives": {
+          "sampled_response_coverage": 25,
+          "greedy_recovery": 3
+        }
+      }
+    },
+    "ministral3": {
+      "train": {
+        "pairs": 144,
+        "questions": 81,
+        "objectives": {
+          "sampled_response_coverage": 123,
+          "greedy_recovery": 27
+        }
+      },
+      "inner_validation": {
+        "pairs": 42,
+        "questions": 23,
+        "objectives": {
+          "sampled_response_coverage": 36,
+          "greedy_recovery": 7
+        }
+      }
+    }
+  },
+  "training_ready": false,
+  "status": "prepared_for_tokenizer_and_native_source_preflight",
+  "objective": "official_answer_form_coverage",
+  "expert_review": false,
+  "semantic_error_correction_claim": false,
+  "training_launched": false,
+  "preferred_character_length": {
+    "shorter": 220,
+    "longer": 286,
+    "equal": 7
+  },
+  "preferred_candidate_count": {
+    "fewer": 117,
+    "more": 221,
+    "equal": 175
+  },
+  "representative_saved_swap_gain_pairs": 38,
+  "representative_saved_swap_gain_questions": 25,
+  "note": "All shortlisted pairs received decisions; holds are exclusions from this objective, not medical-error verdicts.",
+  "retained_pair_records": 534,
+  "held_pair_records": 291,
+  "retained_duplicate_records": 21,
+  "uninspected_pair_records": 0,
+  "answer_requirement_review_candidates": 2,
+  "answer_requirement_candidate_questions": 2,
+  "assistant_review_method": "All unique candidate surfaces and cited evidence excerpts across 296 questions; full snippets inspected for ambiguous cases; explicit pair-level surface/equivalence-group rules. Not expert certification.",
+  "unique_native_response_ids": 1250,
+  "fitting_only_training_questions": 162,
+  "fitting_only_inner_holdout_questions": 40,
+  "protected_panel_overlap": 0,
+  "paid_api_calls_added": 0,
+  "tests": "26 targeted tests passed; all 23 archive-pinned files independently verified; all pair decisions/datasets reconstructed",
+  "source_manifest_sha256": "0f6438ed1202bed1c57d43a8de74d9395fc206b19440e52da597ec5dd0ef5463",
+  "review_manifest_sha256": "3768ce07cae4b93ca21da9815f286ee89cd7418e8292b8ac460acad6c63a5677",
+  "selector_manifest_sha256": "4c6ec47b3429483be956a4331984e76456325da8294b9544445c48e1584c9aa2",
+  "inspection_sha256": "e9e3a7c30e0c8d5a7bbca393c4893e837fdb2dd73fb8b29b525064bc2015bb78",
+  "full_export_manifest_sha256": "2f16775360a9ef1f284c4a2c800901740583b5dd37d5be2f55aafa90f6ed903a",
+  "archive_sha256": "13773a33a9938512ac1b120ba9d4528b36e7c174a0b53964b463c9365637a4d0",
+  "preparer_sha256": "6ad388c0cc6edf78b651a34bfdf4e87b2dee5b416409695e705579e24a72137c",
+  "limits": [
+    "513 unique form preferences are not 513 medically false-answer corrections.",
+    "291 held records are excluded from this objective; holding is not an incorrectness verdict.",
+    "Saved-response counterfactual gains are fitting diagnostics, not improvement after training.",
+    "Native adapter/tokenizer preflight and GPU smoke remain before training."
+  ]
+}

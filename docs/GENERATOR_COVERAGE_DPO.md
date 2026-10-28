@@ -312,3 +312,84 @@ budget, companion models and reranker. Evaluate official full-pool coverage,
 MRR@5, top-five coverage, per-question changes and output costs on validation144,
 retaining epoch zero as an option. These unequal model-specific preference
 datasets cannot establish that one backbone is inherently better.
+
+## Full inspection of the 825 shortlisted pairs (29 October 2026)
+
+All **825 benchmark-form shortlist records across 296 fitting questions** now
+have assistant decisions. This scope is the entire previously sampled shortlist;
+it does not relabel all 2,739 original audit candidates. The assistant read every
+candidate surface and its cited evidence excerpts, opened full snippets for
+ambiguous cases, and recorded explicit question-specific surface/group rules.
+This is a documented inspection, not biomedical expert certification or a new
+paid model review.
+
+| Outcome | Original pair records |
+|---|---:|
+| Retained for the official-form pilot | 534 |
+| Held for scope, quantity, answer-type, completeness, nomenclature or evidence issues | 291 |
+| Uninspected | 0 |
+
+Twenty-one retained records duplicate an identical native prompt/chosen/rejected
+preference. Collapsing them leaves **513 unique preferences across 202 questions**.
+All original pair IDs/objectives remain attached. Unlike the first sample's
+question-level holds, a bad response now excludes only the pairs that contain
+it. Safe sibling comparisons can remain. The interval case also requires both
+complete candidate lists to stay within one reviewed equivalence group.
+
+| Generator | Training pairs / questions | Fitting-only inner holdout pairs / questions |
+|---|---:|---:|
+| Llama | 138 / 75 | 29 / 17 |
+| Qwen | 132 / 73 | 28 / 16 |
+| Ministral | 144 / 81 | 42 / 23 |
+
+The shared question split remains fitting-only. Validation144, dev160 and test95
+are excluded from preferences. These model-specific datasets differ in size;
+the appropriate experiment compares each model with its own starting SFT and
+matched preferred-only SFT control.
+
+Material findings include:
+
+- Some pairs change the quantity, boundary or precision: `10–15%` versus
+  `10–28%`, `exceeding 95%` versus `95%`, and `nearly 5,000` versus `5,000`.
+  Official acceptance does not make qualifier deletion a clean preference.
+- Some questions/evidence are misaligned: androsterone versus androstenone,
+  Southern versus Southeast Asians, GADD46 versus GADD45B, and a protein motif
+  versus an m6A modification site. These remain held rather than silently fixed.
+- Reading full context resolved the LiPS-A3/LiPS-A3S chromosome case: the same
+  source paragraph links the clone and locus. In contrast, the STARD4 snippet
+  identifies a basic patch for membrane interaction; a loop mutation affecting
+  transfer does not establish that loop as the membrane interface.
+- Two held pairs are separately saved as **answer-requirement repair candidates**:
+  TAILS acronym expansion versus a method description, and WAPL function versus
+  the timing word `prophase`. They are not part of the form-pilot data and are
+  not declarations that every rejected statement is medically false.
+
+The retained preferred responses are longer in 286 comparisons, shorter in 220
+and equal in seven. They contain more candidates in 221, fewer in 117 and the
+same count in 175. This objective does not reward compactness. Thirty-eight
+representative saved-response swaps across 25 questions improve fixed-companion
+official coverage. They are fitting diagnostics, not trained-model improvements
+or evidence that previously uncovered questions will be solved.
+
+The full export includes `pair_decisions.jsonl` and a readable
+`pair_decisions.md` with every chosen/rejected candidate list, reason and evidence;
+`inspection_cases.jsonl` preserves complete native records. The rules are in
+`configs/generator_form_full_inspection_20261029.json`, bound to the exact
+review/shortlist hashes and each question's surface inventory and pair IDs.
+All 825 decisions and selected datasets reconstruct from those frozen inputs.
+
+```powershell
+.venv\Scripts\python.exe scripts/prepare_generator_form_pilot.py `
+  --source Artifacts/generator_coverage_dpo_audit_182367619 `
+  --reviewed Artifacts/generator_coverage_dpo_judge_mini_20261028 `
+  --selector-audit Artifacts/answer_selector_data_v1 `
+  --inspection configs/generator_form_full_inspection_20261029.json `
+  --output Artifacts/generator_form_full_inspection_20261029_v2 `
+  --archive Artifacts/generator-form-full-inspection-20261029-v2.tar.gz
+```
+
+Preparation makes no API calls or training/job submissions. `training_ready`
+remains false pending native Gadi source/adapter verification, tokenizer/context
+preflight and GPU smoke execution. First evaluate a single generator change at a
+time with the other two generators and reranker fixed; an all-DPO ensemble is a
+separate comparison. The previous sample export remains available unchanged.
