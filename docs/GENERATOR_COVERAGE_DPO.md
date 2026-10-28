@@ -246,3 +246,69 @@ before training. The source audit, paid plan, ledger, reviewed responses and
 post-review files remain local under `Artifacts/`; aggregate reproducibility
 metadata are in `results/generator_coverage_dpo_review_20261028.json`. No GPU job,
 training-approved dataset or DPO model was produced by this review.
+
+## Inspected answer-form pilot (28 October 2026)
+
+The completed judge's 825 `benchmark_form_preference` pairs are a shortlist,
+not 825 verified factual corrections. The follow-up CPU inspection verifies
+the source/selector/review hashes and reconstructs the official-form category
+from the reviewed native responses. It samples questions deterministically
+without using preference gains or response length: the first 24 hash-ordered
+questions per model yield 49 distinct questions and 128 pair records. This is
+exploratory assistant inspection, not a preregistered study or expert review.
+
+The inspection retained 20 questions and 51 unique native preferences. It held
+76 sampled records for scope, quantity, precision, answer-type or evidence issues;
+one retained duplicate was collapsed. The other 697 records were outside the
+inspected sample and are excluded without claiming they are wrong. Remaining
+judge errors include treating `10–15%` and `10–28%`, or `NSCLC` and
+`EGFR-mutant NSCLC`, as pure wording alternatives.
+
+| Generator | Training pairs / questions | Fitting-only inner holdout pairs / questions |
+|---|---:|---:|
+| Llama | 14 / 8 | 9 / 5 |
+| Qwen | 9 / 5 | 4 / 2 |
+| Ministral | 11 / 6 | 4 / 2 |
+
+The shared inner holdout uses fitting question IDs only, consistently across
+models. It does **not** consume validation144. Prompts and full native responses
+are unchanged; gold aliases, acceptance labels and review notes do not enter
+model messages. Preferred-only SFT files have the same preferred-response
+exposure as DPO, including intentional repeats where one preferred completion
+participates in different comparisons. Identical native preferences collapse
+across draw/objective metadata with all original pair IDs retained.
+
+This is an **official-answer-form coverage** dataset. Preferred responses are
+shorter in 28 pairs, longer in 22 and equal in one; they have fewer candidates in
+12, more in 17 and the same count in 22. No compactness rule is applied.
+Only three representative saved-response swaps on one PAR2 question improve
+fixed-companion official coverage. That example changes `320 kbp` to accepted
+`320kbp`, not the quantity. These counts do not demonstrate new-question
+coverage or improvement after training.
+
+The local export includes model-specific DPO and matched additional-SFT files,
+the question split, full inspected cases, exclusions, source hashes and a pilot
+plan. It remains `training_ready=false`: native Gadi source/adapter verification,
+tokenizer/context preflight without silent truncation, and GPU smoke execution
+are not performed by this data-preparation command. Given the small question
+counts, expand the inspection before a substantive GPU experiment. No new
+generation, API calls, model training, job submission or test evaluation occurs.
+
+```powershell
+.venv\Scripts\python.exe scripts/prepare_generator_form_pilot.py `
+  --source Artifacts/generator_coverage_dpo_audit_182367619 `
+  --reviewed Artifacts/generator_coverage_dpo_judge_mini_20261028 `
+  --selector-audit Artifacts/answer_selector_data_v1 `
+  --output Artifacts/generator_form_pilot_20261028_v1 `
+  --archive Artifacts/generator-form-pilot-20261028-v1.tar.gz
+```
+
+The export is immutable: choose a new output name when rerunning. Inspection
+decisions and literal evidence quotes are tracked in
+`configs/generator_form_pilot_inspection.json`, bound to this exact review.
+Compare each generator's unchanged max-five SFT, additional preferred-only SFT
+and DPO from that same starting SFT/reference, with fixed prompts, decoding
+budget, companion models and reranker. Evaluate official full-pool coverage,
+MRR@5, top-five coverage, per-question changes and output costs on validation144,
+retaining epoch zero as an option. These unequal model-specific preference
+datasets cannot establish that one backbone is inherently better.

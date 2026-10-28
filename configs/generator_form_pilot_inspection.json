@@ -1,0 +1,286 @@
+{
+  "objective": "official_answer_form_coverage",
+  "seed": 3407,
+  "questions_per_model": 24,
+  "review_manifest_sha256": "3768ce07cae4b93ca21da9815f286ee89cd7418e8292b8ac460acad6c63a5677",
+  "shortlist_sha256": "fab609cb02508889d91c234c98eedf9621f08d0452ed130e0be84af17d460ac1",
+  "annotation_source": "Assistant triage of a deterministic model-stratified sample; not expert certification",
+  "decisions": {
+    "514c3fd7d24251bc05000062": {
+      "decision": "retain",
+      "reason": "Same molecular mass; equivalent unit/name expressions.",
+      "evidence": {
+        "snippet_id": "2.1",
+        "quote": "intact 2.3 MDa 70S ribosomes"
+      }
+    },
+    "52bf1d9e03868f1b06000010": {
+      "decision": "retain",
+      "reason": "RANKL name, expanded name and typography refer to the same ligand.",
+      "evidence": {
+        "snippet_id": "14.1",
+        "quote": "Receptor activator of nuclear factor kappa B ligand is an important cytokine involved in osteoclast activation; denosumab, a fully human monoclonal antibody to this molecule"
+      }
+    },
+    "5313058de3eabad02100000e": {
+      "decision": "retain",
+      "reason": "Lumbosacral region/junction wording answers the same anatomical-region question.",
+      "evidence": {
+        "snippet_id": "3.1",
+        "quote": "lumbosacral junction pseudarticulation"
+      }
+    },
+    "5543829fed966d112c000009": {
+      "decision": "retain",
+      "reason": "Snippet explicitly links medicarpin to the stereochemical names on both sides.",
+      "evidence": {
+        "snippet_id": "3.1",
+        "quote": "The major phytoalexin in alfalfa is the isoflavonoid (-)-medicarpin (or 6aR, 11aR)-medicarpin."
+      }
+    },
+    "56cb9b065795f9a73e000032": {
+      "decision": "retain",
+      "reason": "Aurora A kinase name and AURKA abbreviation preserve the target.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Tripolin A, a novel small-molecule inhibitor of aurora A kinase"
+      }
+    },
+    "5a6f98e6b750ff445500005d": {
+      "decision": "retain",
+      "reason": "PCL and posterior cruciate ligament are explicitly linked.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Posterior cruciate ligament (PCL) injuries"
+      }
+    },
+    "5a9acd921d1251d03b000016": {
+      "decision": "retain",
+      "reason": "III, Phase III and Phase 3 express the same trial phase in this dated question.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Ongoing Phase III clinical trials via passive immunotherapy against Aβ peptides (crenezumab, gantenerumab, and aducanumab)"
+      }
+    },
+    "5c011057133db5eb78000025": {
+      "decision": "retain",
+      "reason": "Phase II/2 expressions preserve the trial phase supplied in the evidence.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "sutezolid) have been evaluated in phase II clinical trials."
+      }
+    },
+    "5c73ad367c78d69471000099": {
+      "decision": "retain",
+      "reason": "PDGFR-alpha target names preserve the receptor and alpha subtype.",
+      "evidence": {
+        "snippet_id": "14.1",
+        "quote": "Olaratumab is a fully human IgG1 monoclonal antibody that binds to platelet-derived growth factor receptor α (PDGFR-α)"
+      }
+    },
+    "5d387f24a1e1595105000013": {
+      "decision": "retain",
+      "reason": "320 kb and 320,000 bp express the same genomic length.",
+      "evidence": {
+        "snippet_id": "3.1",
+        "quote": "The 320-kb human pseudoautosomal region 2 (PAR2)"
+      }
+    },
+    "602828b11cb411341a0000fc": {
+      "decision": "retain",
+      "reason": "Candidate names preserve programmed cell death protein 1 rather than its ligand.",
+      "evidence": {
+        "snippet_id": "15.1",
+        "quote": "Camrelizumab is a programmed cell death protein 1 inhibitor."
+      }
+    },
+    "603bc3181cb411341a00015c": {
+      "decision": "retain",
+      "reason": "Arginine vasopressin and AVP refer to the same mammalian homologue.",
+      "evidence": {
+        "snippet_id": "3.1",
+        "quote": "Arginine vasotocin (AVT) is the non-mammalian homolog of arginine vasopressin (AVP)"
+      }
+    },
+    "6053bd5194d57fd879000018": {
+      "decision": "retain",
+      "reason": "Short prodrug answer versus evidence-supported explanatory sentence; not a factual correction.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "FTY720 is a prodrug for FTY-phosphate"
+      }
+    },
+    "61f52f22882a024a10000002": {
+      "decision": "retain",
+      "reason": "Disease name and abbreviation are explicitly linked.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Bosch-Boonstra-Schaaf optic atrophy syndrome (BBSOAS)"
+      }
+    },
+    "61f7d683882a024a10000036": {
+      "decision": "retain",
+      "reason": "SCD1 names preserve the same isoenzyme; hepatic wording is supported.",
+      "evidence": {
+        "snippet_id": "2.1",
+        "quote": "Aramchol, a partial inhibitor of hepatic stearoyl-CoA desaturase (SCD1)"
+      }
+    },
+    "61f80e22882a024a1000003d": {
+      "decision": "retain",
+      "reason": "Same syndromic neurodevelopmental disorder; sentence repeats the question's causal context.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Bi-allelic loss-of-function variants in BCAS3 cause a syndromic neurodevelopmental disorder."
+      }
+    },
+    "6217da133a8413c653000026": {
+      "decision": "retain",
+      "reason": "Both sides retain secretory granules; the rejected text additionally states the host cell context.",
+      "evidence": {
+        "snippet_id": "3.1",
+        "quote": "Granzyme B and perforin are stored inside the leukocytes in secretory granules."
+      }
+    },
+    "626aed2fe764a53204000043": {
+      "decision": "retain",
+      "reason": "Both sides retain stage 1/2 and hereditary transthyretin amyloidosis polyneuropathy.",
+      "evidence": {
+        "snippet_id": "1.2",
+        "quote": "patients in stage 1 and stage 2 hATTR polyneuropathy."
+      }
+    },
+    "64121f44201352f04a000037": {
+      "decision": "retain",
+      "reason": "Singular/plural and hyphenated acronym expansions; no different biological concept.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "proteolysis targeting chimeras (PROTACs)"
+      }
+    },
+    "6415c8f1690f196b51000017": {
+      "decision": "retain",
+      "reason": "TNBC and triple-negative breast cancer name the same cancer form in the supplied evidence.",
+      "evidence": {
+        "snippet_id": "1.1",
+        "quote": "Food and Drug Administration (FDA)-approved therapies against TNBC."
+      }
+    },
+    "5156be17d24251bc05000086": {
+      "decision": "hold",
+      "reason": "Depression versus major depressive disorder changes diagnostic specificity; not a pure form pair."
+    },
+    "530cf4e0c8a0b4a00c000007": {
+      "decision": "hold",
+      "reason": "10-15% versus 10-28% changes the survival range."
+    },
+    "530cf4fe960c95ad0c00000b": {
+      "decision": "hold",
+      "reason": "NSCLC versus EGFR-mutant NSCLC changes subtype scope."
+    },
+    "530f900ee3eabad021000003": {
+      "decision": "hold",
+      "reason": "Thyroid alone can name the organ rather than the requested hormones; do not teach that shortening."
+    },
+    "531dd4af267d7dd05300000d": {
+      "decision": "hold",
+      "reason": "Aurora kinase without A loses the isoenzyme qualifier present in other candidates."
+    },
+    "55411d9f379ddf3f47000001": {
+      "decision": "hold",
+      "reason": "KDEL alone versus a C-terminal sequence changes positional specificity; keep separate from form-only supervision."
+    },
+    "570917bccf1c325851000015": {
+      "decision": "hold",
+      "reason": "Evidence of regulation/association is not automatically direct binding to both chromatin classes."
+    },
+    "57136a7e1174fb1755000006": {
+      "decision": "hold",
+      "reason": "First trimester and gestational weeks 6-10 have different temporal granularity."
+    },
+    "5880dba9c872c95565000009": {
+      "decision": "hold",
+      "reason": "Cyclin D-CDK4/6 complexes versus CDK4/6 enzymes require a scope check."
+    },
+    "58b6bd2622d300530900000c": {
+      "decision": "hold",
+      "reason": "Protein isoform versus gene allele are not literally interchangeable answer types."
+    },
+    "58dbb8968acda3452900001b": {
+      "decision": "hold",
+      "reason": "Bare SUDEP repeats the acronym requested for expansion; exclude under-answer candidates."
+    },
+    "5a6d08d5b750ff445500002c": {
+      "decision": "hold",
+      "reason": "Sld5 peptide versus specifically stapled Sld5/CIP peptide needs qualifier review."
+    },
+    "5a89800efcd1d6a10c00000c": {
+      "decision": "hold",
+      "reason": "Adipocytes versus UCP1-positive adipocytes changes the specified cell population."
+    },
+    "5a9ac4e81d1251d03b000011": {
+      "decision": "hold",
+      "reason": "Glioma versus high-grade glioma changes tumour scope."
+    },
+    "5d35be1cb3a6380763000005": {
+      "decision": "hold",
+      "reason": "Prophase is a cell-cycle stage, not WAPL's function; the form-only judge category is wrong for at least one pair."
+    },
+    "5e2daaa2fbd6abf43b00000e": {
+      "decision": "hold",
+      "reason": "Selective antagonist versus unqualified antagonist needs specificity review."
+    },
+    "5e5e50751af46fc13000000b": {
+      "decision": "hold",
+      "reason": "Antibiotic class and pleuromutilin subclass are different classification levels."
+    },
+    "5e6de3f21af46fc130000022": {
+      "decision": "hold",
+      "reason": "Supplied snippets establish polymerase inhibition but not every detailed RdRp expansion; also generic/specific target scope differs."
+    },
+    "602343051cb411341a00008d": {
+      "decision": "hold",
+      "reason": "Protein target names versus an antisense drug's mRNA target require explicit answer-type review."
+    },
+    "61f810a5882a024a1000003e": {
+      "decision": "hold",
+      "reason": "Some responses omit the syndrome-overlap qualifiers; not strictly form-only."
+    },
+    "622118a43a8413c65300006a": {
+      "decision": "hold",
+      "reason": "Species versus a named strain changes taxonomic specificity; do not automatically penalize the valid strain."
+    },
+    "6221209b3a8413c653000074": {
+      "decision": "hold",
+      "reason": "Nuclear transport includes more than nuclear import; directional scope differs."
+    },
+    "6237ab873a8413c6530000b6": {
+      "decision": "hold",
+      "reason": "Induction and increased secretion need not be the same mechanistic claim."
+    },
+    "623dfd2ef0baec9a1b000004": {
+      "decision": "hold",
+      "reason": "Short function labels omit the folding/ER explanation; completeness needs review."
+    },
+    "6412331b201352f04a000038": {
+      "decision": "hold",
+      "reason": "Acronym expansion alone versus functional definition gives different information for 'What are PROTACs?'."
+    },
+    "6415c7fb690f196b51000016": {
+      "decision": "hold",
+      "reason": "Year versus full calendar date changes precision; do not treat as interchangeable forms."
+    },
+    "6440420857b1c7a315000050": {
+      "decision": "hold",
+      "reason": "Unqualified PrEP omits HIV-1 prevention scope."
+    },
+    "65cec1fb1930410b13000005": {
+      "decision": "hold",
+      "reason": "Metastatic uveal melanoma versus uveal melanoma changes disease stage; mUM expansion is inconsistent."
+    },
+    "66302487187cba990d000031": {
+      "decision": "hold",
+      "reason": "PUL alone versus PUL version 2.0 loses the requested instrument version."
+    }
+  }
+}

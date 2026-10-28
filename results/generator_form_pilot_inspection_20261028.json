@@ -1,0 +1,95 @@
+{
+  "shortlist_pairs": 825,
+  "shortlist_questions": 296,
+  "shortlist_exact_duplicate_preferences": 28,
+  "sampled_questions": 49,
+  "sampled_pairs": 128,
+  "retained_questions": 20,
+  "retained_unique_pairs": 51,
+  "exclusion_counts": {
+    "outside_inspected_sample": 697,
+    "assistant_scope_or_evidence_hold": 76,
+    "duplicate_native_preference": 1
+  },
+  "models": {
+    "llama31": {
+      "train": {
+        "pairs": 14,
+        "questions": 8,
+        "objectives": {
+          "sampled_response_coverage": 12,
+          "greedy_recovery": 2
+        }
+      },
+      "inner_validation": {
+        "pairs": 9,
+        "questions": 5,
+        "objectives": {
+          "sampled_response_coverage": 9
+        }
+      }
+    },
+    "qwen3": {
+      "train": {
+        "pairs": 9,
+        "questions": 5,
+        "objectives": {
+          "sampled_response_coverage": 9,
+          "greedy_recovery": 1
+        }
+      },
+      "inner_validation": {
+        "pairs": 4,
+        "questions": 2,
+        "objectives": {
+          "sampled_response_coverage": 4
+        }
+      }
+    },
+    "ministral3": {
+      "train": {
+        "pairs": 11,
+        "questions": 6,
+        "objectives": {
+          "sampled_response_coverage": 9,
+          "greedy_recovery": 2
+        }
+      },
+      "inner_validation": {
+        "pairs": 4,
+        "questions": 2,
+        "objectives": {
+          "sampled_response_coverage": 4
+        }
+      }
+    }
+  },
+  "training_ready": false,
+  "status": "prepared_for_tokenizer_and_native_source_preflight",
+  "objective": "official_answer_form_coverage",
+  "expert_review": false,
+  "semantic_error_correction_claim": false,
+  "training_launched": false,
+  "preferred_character_length": {
+    "shorter": 28,
+    "longer": 22,
+    "equal": 1
+  },
+  "preferred_candidate_count": {
+    "fewer": 12,
+    "equal": 22,
+    "more": 17
+  },
+  "representative_saved_swap_gain_pairs": 3,
+  "representative_saved_swap_gain_questions": 1,
+  "note": "Small inspected pilot; unreviewed shortlist records are excluded, not presumed incorrect.",
+  "inspection_scope": "Programmatic integrity checks on all 825; assistant triage of a deterministic 49-question/128-pair sample, with literal evidence quotes for retained questions. Not expert certification.",
+  "source_manifest_sha256": "0f6438ed1202bed1c57d43a8de74d9395fc206b19440e52da597ec5dd0ef5463",
+  "review_manifest_sha256": "3768ce07cae4b93ca21da9815f286ee89cd7418e8292b8ac460acad6c63a5677",
+  "selector_manifest_sha256": "4c6ec47b3429483be956a4331984e76456325da8294b9544445c48e1584c9aa2",
+  "inspection_sha256": "cfa12a3311487d1ec8b8528aea3ea8e6efaf5ea95287c64d1406dce298190121",
+  "pilot_manifest_sha256": "b75fcabd4efdd15417cb38bd33e6609b9d22fe3ed010baaa5b55b2e1bfa4864f",
+  "archive_sha256": "88a10e91183d458c61dad3519ff1d8516fc4d1493e5d39af093ee88f74a06c5e",
+  "validation": "17 targeted integrity/reviewer tests passed; full real-data export and hash verification passed; no API or GPU calls",
+  "recommendation": "Continue inspecting unreviewed pairs before substantive GPU training. Keep official-form coverage separate from semantic correction, and include a matched additional-SFT control."
+}
