@@ -183,3 +183,61 @@ generation is preserved. A failed CPU comparison can be rerun alone using the
 frozen `compare.pbs` and `FORM_COMPARISON` pointing to the parent submission;
 this does not rerun generation or training. Repeating the main launcher creates
 a new six-run experiment.
+
+## Recover the missing-Gson validation failure
+
+The six smoke and training stages in
+`submission-20261029-002917-3822388` succeeded. Validation reached the official
+scorer, which failed with `NoClassDefFoundError: com/google/gson/stream/JsonReader`.
+The submission copied the evaluator as a standalone `scorer.jar`, omitting the
+sibling `lib` directory referenced by its JAR manifest. The generation warning
+about `max_new_tokens` taking precedence over `max_length` was not the exception.
+
+The fix preserves the complete audited evaluator distribution and verifies every
+library against the original selector-audit hashes. A real Java matching smoke
+now runs during preparation, before any future GPU jobs are submitted. The
+evaluator JAR, scoring labels, candidate-pool policy, reranker and selection rule
+are unchanged.
+
+For the failed existing submission, use **CPU-only recovery**, not the original
+six-pilot launcher:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_generator_form_rescore.sh \
+  outputs/generator_form_designs/submission-20261029-002917-3822388
+```
+
+This prepares one CPU job only after confirming all six original training runs
+and all **36 saved generation panels** (six model/design runs x three epochs x
+two decoding modes) are complete. Missing draws or a different failure cause
+stop preparation; there is no GPU fallback. Full saved-response configuration,
+seeds, evidence, question membership, parser output, staged adapters and tokenizer
+plans are checked again during scoring. Failed/ceiling responses remain in their
+original denominators.
+
+Recovery copies the original frozen code, with two explicitly recorded wrapper
+updates to load saved generations and collect their new scoring outputs. Pool
+construction, official matching, features and checkpoint selection retain their
+original implementations; code checks reject changes to those rules. The trained
+adapters, original submissions, failed manifests and raw saved outputs remain
+untouched. The recovery snapshots its own complete scorer runtime and input hashes.
+
+The CPU job scores all six saved validations, selects epochs, and runs the joint
+comparison. There is no model training, new generation, judging or API spending.
+The submission prints the job ID and the new report path. To monitor it:
+
+```bash
+record=$(ls -t outputs/generator_form_designs/scoring-recovery-*/jobs.tsv 2>/dev/null | head -n 1)
+cat "$record"
+job=$(awk -F '\t' 'NR==2 {print $4}' "$record")
+run=$(awk -F '\t' 'NR==2 {print $6}' "$record")
+qstat -swx "$job"
+qstat -fx "$job" | grep -E 'Job Id|job_state|Exit_status|comment'
+if [[ -f "$run/manifest.json" ]]; then cat "$run/manifest.json"; fi
+if [[ -f "$run/comparison/report.md" ]]; then cat "$run/comparison/report.md"; fi
+```
+
+The new result is `scoring-recovery-.../run-<job>/comparison/report.md`.
+The old comparison job is not revived, and the original `jobs.tsv` is unchanged.

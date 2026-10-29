@@ -1,0 +1,22 @@
+{
+  "failure": "NoClassDefFoundError: com/google/gson/stream/JsonReader after saved epoch generation",
+  "cause": "Only evaluator JAR copied; sibling libraries referenced in its manifest were omitted.",
+  "fix": "Freeze complete audited scorer distribution; verify dependencies and run actual Java matching before submission.",
+  "recovery": "One CPU job reuses six model/design runs, three epochs and two modes: 36 saved generation panels.",
+  "scoring_rules_changed": false,
+  "checkpoint_selection_changed": false,
+  "new_generation": false,
+  "training": false,
+  "paid_api_calls": 0,
+  "gadi_recovery_submitted_locally": false,
+  "original_submission": "outputs/generator_form_designs/submission-20261029-002917-3822388",
+  "original_code_commit": "84b5821",
+  "verification": [
+    "106 targeted tests passed, including real Java missing-library reproduction and recovery.",
+    "Final recovery-integrity tests: 10 passed after tightening provenance checks.",
+    "Pool and selection implementations checked against original submitted commit 84b5821.",
+    "Saved-generation reuse tests prevent GPU calls and verify originals remain unchanged."
+  ],
+  "evaluator_sha256": "40321d159d9770b42724967d9d401993d9c5bd052abf4d90da18e483472fa539",
+  "limitation": "Actual Gadi artifact completeness/native tokenizer verification is performed by recovery preparation and the CPU job; those remote artifacts are not available locally."
+}

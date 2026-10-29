@@ -130,7 +130,8 @@ def verify_generated(path, examples, source, mode, plan):
 
 
 def select(submission, training, output, smoke=False, *, native_validator=None,
-           checkpoint_chooser=None, pool_builder=None, preserve_surfaces=False, jar_path_override=None):
+           checkpoint_chooser=None, pool_builder=None, preserve_surfaces=False, jar_path_override=None,
+           saved_generation_root=None):
     if output.exists():
         raise FileExistsError(output)
     prepared = read(submission / "prepared.json")
@@ -189,6 +190,7 @@ def select(submission, training, output, smoke=False, *, native_validator=None,
         "training": str(training), "training_manifest_sha256": digest(training / "manifest.json"),
         "reranker_hashes": hashes, "question_ids": [e["question_id"] for e in examples],
         "focal_model": focal,
+        "saved_generation_root": str(saved_generation_root) if saved_generation_root else None,
         "selection_rule": (config["checkpoint_selection"] if coverage_protocol else
             f"sampling4: no ensemble/{focal} full-pool losses; MRR >= SFT; mean {focal} tokens <= SFT; no additional empty, ceiling or surplus responses; maximize MRR then minimize tokens then earliest epoch; epoch zero fallback"),
         "pool_policy": "verbatim surfaces" if preserve_surfaces else "historical normalized surfaces"}
@@ -206,11 +208,18 @@ def select(submission, training, output, smoke=False, *, native_validator=None,
         generation_hashes = {}
         for checkpoint in checkpoints:
             epoch = checkpoint["epoch"]
-            print(f"Validation generation: {focal}, epoch {epoch}, greedy plus four samples/question", flush=True)
+            action = "Reusing saved validation responses" if saved_generation_root else "Validation generation"
+            print(f"{action}: {focal}, epoch {epoch}, greedy plus four samples/question", flush=True)
             root = output / f"epoch-{epoch}"
             root.mkdir()
-            adapter = root / "adapter"
-            stage_adapter(checkpoint["path"], training / "adapter", adapter)
+            adapter = (saved_generation_root / f"epoch-{epoch}" / "adapter") if saved_generation_root else root / "adapter"
+            if saved_generation_root:
+                verify_files(adapter, checkpoint["adapter_sha256"])
+                for name, expected in state["adapter_files_sha256"].items():
+                    if name not in {"adapter_config.json", "adapter_model.safetensors", "training_complete.json"}:
+                        verify_files(adapter, {name: expected})
+            else:
+                stage_adapter(checkpoint["path"], training / "adapter", adapter)
             adapter_paths[epoch] = adapter
             current = {**source, "adapter": str(adapter)}
             candidate_plan = full_input_plan(current, examples, 512)
@@ -229,8 +238,13 @@ def select(submission, training, output, smoke=False, *, native_validator=None,
                     "model_loader": source["model_loader"], "chat_template_kwargs": source["chat_template_kwargs"],
                     "execution_mode": source.get("execution_mode", "default"), "prompt_version": "expanded-dpo-validation144-v1"}
                 cfg = root / f"{mode}_config.json"; write(cfg, settings)
-                subprocess.run([sys.executable, str(inference_worker(submission, prepared)), "--config", str(cfg),
-                    "--model-name", str(adapter), "--output-dir", str(root / mode), "--limit", str(len(examples)), "--preflight-all"], check=True)
+                if saved_generation_root:
+                    # Recovery copies saved response artifacts only; it cannot
+                    # launch the GPU worker or modify the original validation.
+                    shutil.copytree(saved_generation_root / f"epoch-{epoch}" / mode, root / mode)
+                else:
+                    subprocess.run([sys.executable, str(inference_worker(submission, prepared)), "--config", str(cfg),
+                        "--model-name", str(adapter), "--output-dir", str(root / mode), "--limit", str(len(examples)), "--preflight-all"], check=True)
                 rows[mode] = verify_generated(root / mode, examples, current, mode, plan)
                 generation_hashes[f"epoch-{epoch}/{mode}"] = {p.name: digest(p) for p in (root / mode).iterdir() if p.is_file()}
             alternatives[epoch] = [r for r in baseline if r["model_key"] != focal] + projected_rows(rows, focal)

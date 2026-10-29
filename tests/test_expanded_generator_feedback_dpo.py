@@ -102,7 +102,7 @@ def test_truncated_judgment_recovery_reuses_completed_requests(tmp_path):
 
 @pytest.mark.parametrize("tamper", [None, "seed", "top_p"])
 @pytest.mark.parametrize("focal", ["llama31", "qwen3", "ministral3"])
-@pytest.mark.parametrize("protocol", ["compactness", "coverage"])
+@pytest.mark.parametrize("protocol", ["compactness", "coverage", "coverage_reuse"])
 def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_worker(tmp_path, monkeypatch, tamper, focal, protocol):
     sub, train, out = tmp_path / "sub", tmp_path / "train", tmp_path / "out"
     sub.mkdir(); (train / "adapter").mkdir(parents=True)
@@ -111,7 +111,7 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
     source = dict(adapter=str(train / "adapter"), system_prompt="Return up to FIVE answers.",
                   model_loader="fast_model" if focal == "ministral3" else "fast_language", chat_template_kwargs={}, base_snapshot="base")
     cfg = dict(review_scope="all_compactness", retain_epoch_checkpoints=True, num_train_epochs=3, model_key=focal)
-    if protocol == "coverage":
+    if protocol.startswith("coverage"):
         cfg.update(review_scope="official_form",checkpoint_selection="Coverage primary")
     metadata = dict(path="unused", manifest_sha256="hash", responses_sha256="raw")
     feedback = dict(banks={m: metadata for m in ("llama31", "qwen3", "ministral3")}, rerankers=str(tmp_path / "rr"), reranker_hashes={})
@@ -172,7 +172,7 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
     monkeypatch.setattr(selection.subprocess, "run", worker)
     def matcher(examples, candidates, directory, **kwargs):
         assert directory.is_dir() and len(examples) == 144
-        if protocol == "coverage": assert kwargs["jar_path"] == sub / "scorer.jar"
+        if protocol.startswith("coverage"): assert kwargs["jar_path"] == sub / "scorer.jar"
         return {(r["question_id"], r["answer"]): r["answer"] == "Core" for r in candidates}
     monkeypatch.setattr(selection, "official_candidate_matches", matcher)
     def rank(payload, pools, contexts):
@@ -191,7 +191,7 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
         return conditions, scores, []
     monkeypatch.setattr(selection, "rank_frozen", rank)
     options = {}
-    if protocol == "coverage":
+    if protocol.startswith("coverage"):
         from scripts.evaluate_generator_form_designs import exact_pools, choose_coverage
         options = dict(native_validator=lambda *a: ({}, {"train":[1],"validation":[2]},source,feedback),
             checkpoint_chooser=choose_coverage,pool_builder=exact_pools,preserve_surfaces=True,jar_path_override=sub / "scorer.jar")
@@ -201,7 +201,22 @@ def test_three_epoch_selection_replaces_only_focal_and_never_supplies_gold_to_wo
         assert real_read(out / "manifest.json")["status"] == "failed"
         assert not (out / "selected_adapter").exists()
         return
-    selection.select(sub, train, out, **options)
+    if protocol == "coverage_reuse":
+        def missing_library(*a,**kw): raise RuntimeError("java.lang.NoClassDefFoundError: com/google/gson/stream/JsonReader")
+        monkeypatch.setattr(selection,"official_candidate_matches",missing_library)
+        with pytest.raises(RuntimeError,match="JsonReader"): selection.select(sub,train,out,**options)
+        assert len(calls)==6 and real_read(out/"manifest.json")["status"]=="failed"
+        original_hashes={p.relative_to(out).as_posix():data.digest(p) for p in out.rglob("*") if p.is_file()}
+        saved=out
+        monkeypatch.setattr(selection,"official_candidate_matches",matcher)
+        def no_gpu(*a,**kw): raise AssertionError("CPU recovery attempted generation")
+        monkeypatch.setattr(selection.subprocess,"run",no_gpu)
+        out=tmp_path/"recovered"
+        selection.select(sub,train,out,saved_generation_root=saved,**options)
+        assert all(data.digest(saved/name)==value for name,value in original_hashes.items())
+        assert real_read(out/"manifest.json")["saved_generation_root"]==str(saved)
+    else:
+        selection.select(sub, train, out, **options)
     summary = real_read(out / "comparison_summary.json")
     assert len(calls) == 6 and summary["question_count"] == 144
     assert [r["epoch"] for r in summary["checkpoint_scores"]] == [0,1,2,3]

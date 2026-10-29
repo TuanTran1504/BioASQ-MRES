@@ -15,6 +15,7 @@ from scripts import prepare_generator_form_designs as designs
 from scripts.prepare_reranker_guided_dpo import configure_data_root, load_inputs
 from scripts.train_sft_ensemble_reranker import snapshot_code
 from scripts.prepare_answer_selector_data import read, records, write, digest, verify_files
+from scripts import generator_form_scorer_runtime as scorer_runtime
 
 
 def preference_rows(bundle, model, design):
@@ -80,14 +81,7 @@ def preflight(tokenizer, splits, source, cap=16384):
 
 def scorer_source(bundle):
     """Bind inference labels to the exact JAR used for the audited preferences."""
-    audit = read(bundle / "selector_audit_manifest.json")
-    submission = Path(audit["submission"])
-    if digest(submission / "prepared.json") != audit["prepared_sha256"]:
-        raise ValueError("Original selector scorer preparation changed")
-    prepared = read(submission / "prepared.json")
-    relative = "scorer/BioASQEvaluation.jar"
-    verify_files(submission, {relative: prepared["files_sha256"][relative]})
-    return submission / relative
+    return scorer_runtime.source(bundle)
 
 
 def snapshot(repository, destination):
@@ -113,6 +107,7 @@ def prepare(repository, bundle, submission):
         raise ValueError("Wrong size-matched reviewed design package")
     protocol = read(bundle / "training_protocol.json")
     jar = scorer_source(bundle)
+    scorer_runtime.smoke(jar)
     if (protocol["training_pairs"] != 132 or protocol["num_train_epochs"] != 3 or
             protocol["gradient_accumulation_steps"] != 4 or protocol["review_scope"] != "official_form"):
         raise ValueError("Wrong size-matched six-run protocol")
@@ -148,23 +143,25 @@ def prepare(repository, bundle, submission):
         config = {**protocol, "model_key": model, "design": design, "max_seq_length": maximum}
         for stage in ("train", "validate"):
             shutil.copy2(repository / f"gadi_sft_8b_starter/jobs/{stage}_generator_form_designs.pbs", child / f"{stage}.pbs")
-        shutil.copy2(jar, child / "scorer.jar")
+        runtime_hashes = scorer_runtime.freeze(jar, child)
         write(child / "prepared.json", {"repository": str(repository), "bundle": str(bundle), "preferences": str(bundle),
             "bundle_manifest_sha256": digest(bundle / "manifest.json"), "configuration": config,
             "source": source, "feedback": feedback, "pair_counts": manifest["pair_counts"],
             "native_banks": feedback["banks"],
             "preflight_max_tokens": lengths, "code_hashes": code, "code_snapshot": inference,
             "worker_sha256": digest(child / inference["directory"] / "scripts/run_single_answer_sampling.py"),
-            "job_hashes": {name: digest(child / name) for name in ("train.pbs", "validate.pbs", "scorer.jar")}})
+            "scorer_relative": "scorer/BioASQEvaluation.jar",
+            "job_hashes": {**{name: digest(child / name) for name in ("train.pbs", "validate.pbs")}, **runtime_hashes}})
         children.append(str(child))
     code = snapshot(repository, submission / "code")
     shutil.copy2(repository / "gadi_sft_8b_starter/jobs/compare_generator_form_designs.pbs", submission / "compare.pbs")
-    shutil.copy2(jar, submission / "scorer.jar")
+    runtime_hashes = scorer_runtime.freeze(jar, submission)
     write(submission / "prepared.json", {"repository": str(repository), "bundle": str(bundle),
         "bundle_manifest_sha256": digest(bundle / "manifest.json"), "children": children,
         "child_prepared_sha256": {p: digest(Path(p) / "prepared.json") for p in children},
         "code_hashes": code, "common_context_allocation": maximum,
-        "scorer_sha256": digest(submission / "scorer.jar"),
+        "scorer_relative": "scorer/BioASQEvaluation.jar", "scorer_files_sha256": runtime_hashes,
+        "scorer_sha256": digest(submission / "scorer/BioASQEvaluation.jar"),
         "planned_steps_per_run": training_schedule(protocol, 132)[0],
         "comparison_job_sha256": digest(submission / "compare.pbs")})
     print(f"Prepared six DPO pilots: 132 train / 96 common preference holdout; 99 updates each; common context {maximum}.", flush=True)

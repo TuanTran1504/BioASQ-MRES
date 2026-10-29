@@ -71,15 +71,15 @@ def selector_native(directory, config, repository):
 
 
 def validate(submission, training, output):
-    validate_child(submission)
+    prepared, *_ = validate_child(submission)
     from select_generator_feedback_dpo import select
     select(submission, training, output, native_validator=selector_native,
            checkpoint_chooser=choose_coverage, pool_builder=exact_pools, preserve_surfaces=True,
-           jar_path_override=submission / "scorer.jar")
+           jar_path_override=submission / prepared.get("scorer_relative", "scorer.jar"))
     validate_child(submission)
 
 
-def joint_scores(submission, paths, summaries, output):
+def joint_scores(submission, paths, summaries, output, jar_path_override=None):
     """Combine saved focal outputs; no further model calls or fitting."""
     import joblib
     from scripts.prepare_reranker_guided_dpo import configure_data_root
@@ -116,7 +116,7 @@ def joint_scores(submission, paths, summaries, output):
     distinct = {(r["question_id"], r["answer"]): r for rr in pools.values() for r in rr}
     official = output / "official_joint"
     official.mkdir(parents=True)
-    jar = submission / "scorer.jar"
+    jar = jar_path_override or submission / parent.get("scorer_relative", "scorer.jar")
     if data.digest(jar) != parent["scorer_sha256"]:
         raise ValueError("Frozen comparison scorer changed")
     matches = official_candidate_matches(examples, list(distinct.values()), official, jar_path=jar) if distinct else {}
@@ -142,16 +142,19 @@ def contrast(before, after, perq):
                                  for k in ("coverage_at5", "coverage_full_pool")}}
 
 
-def _compare(submission, output):
+def _compare(submission, output, validation_paths=None, jar_path_override=None):
     if output.exists():
         raise FileExistsError(output)
     p = data.read(submission / "prepared.json")
     data.verify_files(submission / "code", p["code_hashes"])
+    data.verify_files(submission, p.get("scorer_files_sha256", {}))
     if data.digest(submission / "compare.pbs") != p["comparison_job_sha256"]:
         raise ValueError("Comparison job changed")
     with (submission / "jobs.tsv").open() as f:
         jobs = list(csv.DictReader(f, delimiter="\t"))
     paths = {(r["model"], r["design"]): Path(r["output"]) for r in jobs if r["stage"] == "validate"}
+    if validation_paths is not None:
+        paths = validation_paths
     expected = {(m, d) for m in data.MODELS for d in DESIGNS}
     if set(paths) != expected:
         raise ValueError("Need all six validation runs")
@@ -191,7 +194,10 @@ def _compare(submission, output):
                 for name in (a,b):
                     contrasts[name+"_minus_baseline"] = contrast("baseline_"+mode,name,perq)
     output.mkdir(parents=True)
-    joint_conditions, joint_perq = joint_scores(submission, paths, summaries, output)
+    if jar_path_override is None:
+        joint_conditions, joint_perq = joint_scores(submission, paths, summaries, output)
+    else:
+        joint_conditions, joint_perq = joint_scores(submission, paths, summaries, output, jar_path_override)
     conditions.update(joint_conditions)
     perq.update(joint_perq)
     for mode in ("greedy", "sampling4"):
@@ -232,11 +238,11 @@ def _compare(submission, output):
     print("Comparison report:", output / "report.md", flush=True)
 
 
-def compare(submission, output):
+def compare(submission, output, *, validation_paths=None, jar_path_override=None):
     if output.exists():
         raise FileExistsError(output)
     try:
-        _compare(submission, output)
+        _compare(submission, output, validation_paths, jar_path_override)
     except BaseException as exc:
         data.write(output / "manifest.json", {"status":"failed", "submission":str(submission),
             "error":f"{type(exc).__name__}: {exc}"})

@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import zipfile
 
 import pytest
 
@@ -117,7 +118,8 @@ def test_foreign_completions_render_with_target_tokenizer_without_truncation():
 def test_scorer_comes_from_original_audit_and_changed_jar_is_rejected(tmp_path):
     original, bundle = tmp_path / "original", tmp_path / "bundle"
     jar = original / "scorer/BioASQEvaluation.jar"
-    jar.parent.mkdir(parents=True); jar.write_bytes(b"official frozen scorer")
+    jar.parent.mkdir(parents=True)
+    with zipfile.ZipFile(jar,"w") as z: z.writestr("META-INF/MANIFEST.MF","Manifest-Version: 1.0\n\n")
     designs.data.write(original / "prepared.json", {"files_sha256": {"scorer/BioASQEvaluation.jar": designs.data.digest(jar)}})
     designs.data.write(bundle / "selector_audit_manifest.json", {"submission": str(original),
         "prepared_sha256": designs.data.digest(original / "prepared.json")})
@@ -138,9 +140,12 @@ def test_prepare_checks_all_six_target_contexts_before_freezing_common_allocatio
     for stage in ("train","validate","compare"):
         path=repo/f"gadi_sft_8b_starter/jobs/{stage}_generator_form_designs.pbs"
         path.parent.mkdir(parents=True,exist_ok=True);path.write_text(stage)
-    jar=repo/"original.jar";jar.write_bytes(b"frozen evaluator")
+    jar=repo/"runtime/BioASQEvaluation.jar";jar.parent.mkdir(parents=True)
+    with zipfile.ZipFile(jar,"w") as z: z.writestr("META-INF/MANIFEST.MF","Manifest-Version: 1.0\nClass-Path: lib/gson.jar\n\n")
+    (jar.parent/"lib").mkdir();(jar.parent/"lib/gson.jar").write_bytes(b"frozen dependency")
     monkeypatch.setattr(runner.designs,"validate",lambda _: {"inspection_manifest_sha256":"review"})
     monkeypatch.setattr(runner,"scorer_source",lambda _:jar)
+    monkeypatch.setattr(runner.scorer_runtime,"smoke",lambda _:None)
     calls=[]
     def native(repository,package,model,design):
         calls.append((model,design))
@@ -166,8 +171,9 @@ def test_prepare_checks_all_six_target_contexts_before_freezing_common_allocatio
         p=designs.data.read(child/"prepared.json")
         assert p["configuration"]["max_seq_length"]==9216
         assert p["source"]["adapter"]==p["configuration"]["model_key"]
-        assert p["job_hashes"]["scorer.jar"]==designs.data.digest(jar)
-    child=Path(state["children"][0]);(child/"scorer.jar").write_bytes(b"changed")
+        assert p["job_hashes"]["scorer/BioASQEvaluation.jar"]==designs.data.digest(jar)
+        assert "scorer/lib/gson.jar" in p["job_hashes"]
+    child=Path(state["children"][0]);(child/"scorer/lib/gson.jar").write_bytes(b"changed")
     with pytest.raises(ValueError): runner.validate_child(child)
 
 
