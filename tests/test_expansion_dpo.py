@@ -109,7 +109,8 @@ def test_pair_cap_and_question_separation():
 
 
 class Tokenizer:
-    def apply_chat_template(self, messages, tokenize, add_generation_prompt, **kwargs):
+    def apply_chat_template(self, messages, tokenize, add_generation_prompt, return_dict, **kwargs):
+        assert return_dict is False
         assert kwargs == {"enable_thinking": False}
         return [1, 2] if add_generation_prompt else [1, 2, 3, 4]
 
@@ -120,6 +121,50 @@ def test_native_template_masks_evidence_and_keeps_completion():
     assert tokenized["chosen_labels"] == [-100, -100, 3, 4]
     with pytest.raises(ValueError, match="refusing truncation"):
         render_preference(Tokenizer(), row, {"enable_thinking": False}, 3)
+
+
+def test_real_fast_tokenizer_accepts_explicit_ids_with_dictionary_default():
+    from tokenizers import Tokenizer as Backend
+    from tokenizers.models import WordLevel
+    from tokenizers.pre_tokenizers import Whitespace
+    from transformers import PreTrainedTokenizerFast
+    backend = Backend(WordLevel({"<unk>":0,"<s>":1,"</s>":2,"user":3,"assistant":4,
+                                  "question":5,"accepted":6,"other":7},unk_token="<unk>"))
+    backend.pre_tokenizer = Whitespace()
+    tok = PreTrainedTokenizerFast(tokenizer_object=backend,unk_token="<unk>",bos_token="<s>",eos_token="</s>")
+    tok.chat_template = ("{{ bos_token }}{% for m in messages %}{{ m.role }} {{ m.content }} {{ eos_token }} "
+                         "{% endfor %}{% if add_generation_prompt %}assistant {% endif %}")
+    calls=[]
+    class RecordingTokenizer:
+        def apply_chat_template(self,*args,**kwargs):
+            calls.append(kwargs)
+            return tok.apply_chat_template(*args,**kwargs)
+    row=dict(prompt=[{"role":"user","content":"question"}],chosen="accepted",rejected="other",
+             question_id="q",chosen_id="a",rejected_id="b")
+    # This reproduces the changed Transformers default independently of downloads.
+    wrapped = tok.apply_chat_template(row["prompt"],tokenize=True,add_generation_prompt=True,return_dict=True)
+    assert "input_ids" in wrapped
+    result=render_preference(RecordingTokenizer(),row,{},100)
+    prefix=tok.apply_chat_template(row["prompt"],tokenize=True,add_generation_prompt=True,return_dict=False)
+    for side,target in (("chosen",6),("rejected",7)):
+        assert result[side+"_input_ids"][:len(prefix)]==prefix
+        assert result[side+"_labels"][:len(prefix)]==[-100]*len(prefix)
+        assert target in result[side+"_labels"][len(prefix):]
+        assert 2 in result[side+"_labels"][len(prefix):]  # native end-of-turn retained
+    assert len(calls)==3 and all(c["return_dict"] is False for c in calls)
+
+
+@pytest.mark.parametrize("kind",["prompt_mapping","completion_mapping","batched","mismatch"])
+def test_unexpected_token_structures_and_genuine_prefix_mismatch_still_fail(kind):
+    class BadTokenizer:
+        def apply_chat_template(self,messages,tokenize,add_generation_prompt,return_dict,**kwargs):
+            assert return_dict is False
+            if kind=="batched": return [[1,2]]
+            if add_generation_prompt: return {"input_ids":[1,2]} if kind=="prompt_mapping" else [1,2]
+            return {"input_ids":[1,2,3]} if kind=="completion_mapping" else [1,9,3]
+    row=dict(prompt=[],chosen="x",rejected="y",question_id="q",chosen_id="a",rejected_id="b")
+    with pytest.raises(ValueError,match="token IDs|do not extend"):
+        render_preference(BadTokenizer(),row,{},100)
 
 
 def test_completion_logps_ignore_prompt_padding_and_backpropagate():

@@ -1,0 +1,45 @@
+{
+  "question_id": "6206b5a8c9dfcb9c0900003a",
+  "default_return_type": "BatchEncoding",
+  "prompt_ids_type": "list",
+  "model_id": "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit",
+  "tokenizer_revision": "f15c379fb32bb402fa06a7ae9aecb1febf4b79ec",
+  "failing_pair_after_fix": {
+    "chosen": 719,
+    "rejected": 698
+  },
+  "preflight": {
+    "specific": {
+      "pairs": 132,
+      "maximum_tokens": 3800
+    },
+    "shared": {
+      "pairs": 132,
+      "maximum_tokens": 3793
+    },
+    "holdout": {
+      "pairs": 96,
+      "maximum_tokens": 2079
+    }
+  },
+  "status": "fixed_and_locally_verified",
+  "tests": "106 targeted tests passed",
+  "transformers_version": "5.5.0",
+  "tokenizers_version": "0.22.2",
+  "diagnosis": "Default BatchEncoding return rejected by a list-only prefix guard; underlying input_ids are a valid prefix.",
+  "fix": "Explicit return_dict=False for prompt and full-conversation apply_chat_template calls; reject unexpected shapes before checking prefix.",
+  "prompt_masking_changed": false,
+  "data_package_changed": false,
+  "checkpoint_selection_changed": false,
+  "gpu_training_launched": false,
+  "paid_api_calls": 0,
+  "model_weights_downloaded": false,
+  "native_gadi_adapter_checked_locally": false,
+  "limitation": "Public upstream tokenizer reproduction; the actual saved SFT tokenizer is verified during Gadi preparation.",
+  "files_sha256": {
+    "config.json": "4a1f6ac044b8d8d419d7ef3840aa463c225915857e4848bc66fcb1a3fd5a56ed",
+    "special_tokens_map.json": "94e708c3f5e64acf85bbe5ad01467a1248faadb73e83b41793087ecced586e8f",
+    "tokenizer.json": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b",
+    "tokenizer_config.json": "4d18eae3017839b17cb3598f589b62ec212652d183582ee0fc33a4f1e8b3da67"
+  }
+}

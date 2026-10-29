@@ -121,6 +121,26 @@ It may be quiet while reading and hashing native banks or loading a tokenizer.
 If it fails, no jobs have been submitted by that invocation. Do not repeatedly
 launch while preparation is still running.
 
+### Tokenizer return-format compatibility
+
+The first Gadi preparation stopped on question `6206b5a8c9dfcb9c0900003a`
+with `native assistant tokens do not extend the generation prompt`. The
+underlying check also rejected non-list results, making its message ambiguous.
+Local reproduction with the public Llama tokenizer showed that the prompt and
+completion prefixes match, but Transformers returns `BatchEncoding` by default.
+Its `input_ids` are the expected token list.
+
+The DPO renderer now passes `return_dict=False` explicitly for both prompt and
+completed conversations. It still rejects unexpected structures, genuine prefix
+mismatches and overlength inputs. Completion masking, raw responses, preferences
+and checkpoint selection are unchanged. Regression tests include a real fast
+tokenizer and deliberately invalid return structures/prefixes. Public-tokenizer
+checks are supplementary; Gadi still verifies its actual saved SFT tokenizers.
+
+This failure occurred before submission creation/qsub. After pulling the fix,
+rerun the same launcher with `reviewed-20261029-v2`. The existing extracted data
+package can be reused; no new archive upload or paid review is needed.
+
 ## Monitor and read results
 
 On Gadi, from the starter directory:

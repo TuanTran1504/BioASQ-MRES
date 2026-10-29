@@ -38,13 +38,19 @@ def training_schedule(config, pair_count, smoke=False):
 
 def render_preference(tokenizer, row, kwargs, maximum):
     """Native chat serialization, exact prefix check, and no silent truncation."""
+    # Transformers versions differ in the default return_dict value. Request
+    # token IDs explicitly; a BatchEncoding is not itself a list of token IDs.
     prompt = tokenizer.apply_chat_template(row["prompt"], tokenize=True,
-                                          add_generation_prompt=True, **kwargs)
+                                          add_generation_prompt=True, return_dict=False, **kwargs)
+    if not isinstance(prompt, list) or not all(isinstance(t, int) for t in prompt):
+        raise ValueError(f"{row['question_id']}: expected a single list of prompt token IDs, got {type(prompt).__name__}")
     result = {}
     for side in ("chosen", "rejected"):
         ids = tokenizer.apply_chat_template(row["prompt"] + [{"role": "assistant", "content": row[side]}],
-                                            tokenize=True, add_generation_prompt=False, **kwargs)
-        if not isinstance(ids, list) or ids[:len(prompt)] != prompt:
+                                            tokenize=True, add_generation_prompt=False, return_dict=False, **kwargs)
+        if not isinstance(ids, list) or not all(isinstance(t, int) for t in ids):
+            raise ValueError(f"{row['question_id']}: expected a single list of {side} token IDs, got {type(ids).__name__}")
+        if ids[:len(prompt)] != prompt:
             raise ValueError(f"{row['question_id']}: native assistant tokens do not extend the generation prompt")
         if len(ids) > maximum or len(ids) <= len(prompt):
             raise ValueError(f"{row['question_id']}: completion missing or sequence exceeds {maximum}; refusing truncation")
