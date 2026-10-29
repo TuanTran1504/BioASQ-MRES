@@ -1,0 +1,53 @@
+{
+  "status": "prepared_not_submitted",
+  "objective": "Prompt-only recovery of official accepted answers at a fixed response/output-allowance budget",
+  "conditions": [
+    "independent",
+    "repair_no_pool",
+    "repair_with_pool"
+  ],
+  "models": [
+    "llama31",
+    "qwen3",
+    "ministral3"
+  ],
+  "source_generators": "Original loss-selected max-five SFTs, frozen; no compactness/form DPO checkpoints",
+  "fitting_questions": 192,
+  "discovery_questions": 160,
+  "audit_questions": 32,
+  "prior_preference_holdout_excluded": 40,
+  "question_selection": "Question-ID hash only; validation144/dev160/test95 excluded; no outcome selection",
+  "ordered_question_ids_sha256": "9645b47d4e0ef4decf95d9810efc7d0fc7ad15c7d46735c4296b20b5c5c9c72b",
+  "source_package_manifest_sha256": "fa8a717b38a8c3768891bb4c934613d3d5d85de90d7650baab3e342a07236e30",
+  "responses_per_question_per_condition": 12,
+  "common_prefix_responses": 9,
+  "replacement_responses_per_condition": 3,
+  "max_candidates_per_response": 5,
+  "max_output_tokens_per_response": 512,
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "seed": 3407,
+  "fresh_full_generation_responses": 1152,
+  "additional_smoke_responses": 12,
+  "planned_jobs": 7,
+  "primary_metric": "Full-pool official-answer coverage versus all 12 independent responses",
+  "secondary_metrics": [
+    "coverage_at5",
+    "MRR@5",
+    "input/output tokens",
+    "pool size",
+    "failed/recovered/capped/ceiling diagnostics"
+  ],
+  "input_tokens_matched": false,
+  "DPO_training": false,
+  "paid_api_calls": 0,
+  "held_out_generation": false,
+  "GPU_jobs_submitted_locally": 0,
+  "tests": "86 targeted tests passed, including real official Java scoring, gold-blind input checks, gain/loss accounting and the seven-job dependency graph",
+  "limitations": [
+    "Fitting-only feasibility diagnostics; original SFTs saw these questions.",
+    "Native Gadi adapter/tokenizer and GPU smoke checks remain before execution.",
+    "Archived independent draws reused; hardware/runtime drift can affect exact replay.",
+    "No DPO pairs are approved or training-ready; evidence/scope review is required."
+  ]
+}

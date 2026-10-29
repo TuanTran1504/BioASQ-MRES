@@ -1,0 +1,22 @@
+{
+  "seed": 3407,
+  "questions": 192,
+  "discovery_questions": 160,
+  "audit_questions": 32,
+  "prefix_draws_per_model": 3,
+  "total_draws_per_model": 4,
+  "new_draws_per_model_per_arm": 1,
+  "new_arms": ["repair_no_pool", "repair_with_pool"],
+  "temperature": 0.8,
+  "top_p": 0.95,
+  "max_new_tokens": 512,
+  "max_candidates": 5,
+  "minimum_allocation": 8704,
+  "maximum_allocation": 16384,
+  "smoke_questions": 2,
+  "future_dpo_training": false,
+  "paid_judging": false,
+  "selection": "question-ID hash only; exclude protected panels and existing preference holdout",
+  "primary_metric": "full-pool official-answer coverage at 12 responses/question",
+  "output_root": "outputs/pool_aware_fitting_pilot"
+}

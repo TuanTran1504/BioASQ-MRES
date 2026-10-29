@@ -1,0 +1,22 @@
+#!/bin/bash
+#PBS -P nl78
+#PBS -q gpuvolta
+#PBS -l ncpus=12
+#PBS -l mem=48GB
+#PBS -l ngpus=1
+#PBS -l jobfs=100GB
+#PBS -l walltime=06:00:00
+#PBS -l storage=scratch/nl78
+#PBS -l wd
+#PBS -N pool-aware-fit
+set -euo pipefail
+module purge
+module load "${PYTHON_MODULE:-python3/3.12.13}"
+source "/scratch/nl78/${USER}/venvs/bioasq-8b/bin/activate"
+export HF_HOME="/scratch/nl78/${USER}/hf_cache" HF_HUB_CACHE="/scratch/nl78/${USER}/hf_cache/hub"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false PYTHONUNBUFFERED=1
+cd "${PBS_O_WORKDIR}"
+args=(--submission "${POOL_SUBMISSION:?}" --model "${POOL_MODEL:?}")
+if [[ "${POOL_SMOKE:-0}" == 1 ]]; then args+=(--smoke-test); fi
+if [[ -n "${POOL_RESUME_OUTPUT:-}" ]]; then args+=(--resume-output "$POOL_RESUME_OUTPUT"); fi
+python3 "$POOL_SUBMISSION/code/gadi_sft_8b_starter/scripts/run_pool_aware_fitting_pilot.py" "${args[@]}"
