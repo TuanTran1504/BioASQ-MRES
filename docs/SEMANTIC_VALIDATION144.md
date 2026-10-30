@@ -155,3 +155,36 @@ question-level metric uncertainty and paired changes from the SFT baseline;
 `review_holds.jsonl` preserves every abstention and the original GPT class.
 These are post-hoc validation diagnostics. Resolving the retained uncertainty
 requires further adjudication, not silently treating it as C1.
+
+## Strict nonmatch policy, version 3
+
+For semantic evaluation, a confirmed change of meaning or substantive scope is
+**C1 (nonmatch)** even if the candidate is medically valid. This evaluation label
+must not be confused with the earlier training taxonomy's scientifically
+incorrect C1. Raw GPT decisions and their separate correctness/support fields
+are preserved. C3 and C2 still count as matches; C1 and unresolved do not.
+
+```powershell
+.venv\Scripts\python.exe scripts/review_semantic_pool_annotations.py `
+  Artifacts/semantic_val144_pools `
+  --judge Artifacts/semantic_val144_judge_full `
+  --output Artifacts/semantic_val144_strict_v3 `
+  --holds Artifacts/semantic_val144_manual_holds.jsonl `
+  --strict-nonmatches `
+  --nonmatches Artifacts/semantic_val144_confirmed_nonmatches.jsonl
+```
+
+Version 3 resolves consistent, high-confidence non-equivalence judgments with
+explicit broader/narrower/different scope and bidirectional non-equivalence as
+C1. Contradictory case/spacing variants with a retained positive, lower-confidence
+judgments and validation failures remain unresolved. Additional explicit
+adjudications identify concrete bound/range, anatomical-set or answer-type
+differences. A mechanical review flag alone is not sufficient for C1, and an
+unknown alias/identifier remains unknown rather than being declared false.
+
+This policy reclassified 554 of the 1,102 previously unresolved candidates as
+semantic C1: 537 consistent GPT scope judgments and 17 additional adjudications.
+The remaining 548 require further review. Official scores, C2/C3 labels and all
+confirmed semantic MRR/coverage values are unchanged. Only nonmatch counts and
+optimistic uncertainty bounds change. `resolved_semantic_nonmatches.jsonl`
+records each resolution; the previous reviewed output remains separate.

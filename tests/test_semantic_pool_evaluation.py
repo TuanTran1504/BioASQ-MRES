@@ -269,6 +269,33 @@ def test_numerical_review_flags_changed_bounds_ranges_units_without_inventing_po
     assert bool(reviewer.numerical_holds(candidate,question,aliases))is held
 
 
+def test_confirmed_changed_scope_is_c1_even_if_medically_valid_and_confirmed_scores_stay_fixed(package,tmp_path):
+    _,source=package;_,_,_,units=data.load_package(source)
+    annotations={uid:{"class":"C1"} for uid,u in units.items() if not u["official_accepted"]}
+    scope=next(uid for uid,u in units.items() if u["question_id"]=="q1" and u["answer"]=="Wrong1")
+    unclear=next(uid for uid,u in units.items() if u["answer"]=="At least 54,000")
+    d=decision(equivalence="not_equivalent",answers="yes");d.update(scope_relation="broader",validation_issues=[])
+    annotations[scope]={"class":"uncertain","judge_decision":d}
+    medium={**d,"confidence":"medium"}
+    annotations[unclear]={"class":"uncertain","judge_decision":medium}
+    judged=tmp_path/"judge";baseline=data.evaluate(source,judged/"evaluation",annotations,"mock GPT")
+    data.write(judged/"manifest.json",dict(status="complete",source_manifest_sha256=data.digest(source/"manifest.json"),
+        model="test",charged_or_reserved_usd=0,judged_candidates=len(annotations),candidates_to_judge=len(annotations),
+        output_sha256={p.relative_to(judged).as_posix():data.digest(p) for p in judged.rglob("*") if p.is_file()}))
+    summary,audit=reviewer.review(source,judged,tmp_path/"strict",strict_nonmatches=True)
+    labels={r["unit_id"]:r for r in data.records(tmp_path/"strict/annotated_candidates.jsonl")}
+    assert labels[scope]["class"]=="C1" and labels[scope]["judge_decision"]["answers_question"]=="yes"
+    assert labels[unclear]["class"]=="uncertain" and audit["resolved_from_uncertain_as_C1"]==1
+    assert summary["official"]==baseline["official"] and summary["semantic_confirmed"]==baseline["semantic_confirmed"]
+    assert summary["evaluation_label_policy"]=="strict-equivalence-v3"
+    explicit=tmp_path/"nonmatches.jsonl";data.jsonl(explicit,[dict(unit_id=unclear,reason="Verified strict/inclusive bound difference at the same threshold.")])
+    summary,audit=reviewer.review(source,judged,tmp_path/"adjudicated",strict_nonmatches=True,nonmatches_file=explicit)
+    assert audit["resolved_from_uncertain_as_C1"]==2
+    assert summary["semantic_confirmed"]==baseline["semantic_confirmed"] and summary["class_counts"].get("uncertain",0)==0
+    with pytest.raises(ValueError,match="require"):
+        reviewer.review(source,judged,tmp_path/"invalid",nonmatches_file=explicit)
+
+
 @pytest.mark.parametrize("fault",["rank_gap","official_label_conflict","missing_question","changed_reference"])
 def test_export_rejects_corrupt_or_mismatched_saved_results(package,tmp_path,fault):
     source,_=package

@@ -84,7 +84,7 @@ def numerical_holds(answer,question,aliases):
     return reasons
 
 
-def review(source,judge_directory,output,holds_file=None):
+def review(source,judge_directory,output,holds_file=None,strict_nonmatches=False,nonmatches_file=None):
     if output.resolve().is_relative_to(source.resolve()) or output.resolve().is_relative_to(judge_directory.resolve()):
         raise ValueError("Write review results separately from the frozen source and raw GPT outputs")
     p,questions,_,units=data.load_package(source)
@@ -136,8 +136,41 @@ def review(source,judge_directory,output,holds_file=None):
             "judge_decision":a.get("judge_decision"),"question":questions[units[uid]["question_id"]]["question"],
             "gold_aliases":questions[units[uid]["question_id"]]["gold_aliases"]})
         annotations[uid]={**a,"original_GPT_class":a["class"],"class":"uncertain","review_holds":reasons}
+    resolved=[]
+    if nonmatches_file is not None and not strict_nonmatches:
+        raise ValueError("Explicit semantic nonmatches require the strict-equivalence evaluation policy")
+    if strict_nonmatches:
+        variants=defaultdict(set)
+        for uid,u in units.items():
+            variants[u["question_id"]," ".join(u["answer"].casefold().split())].add(annotations[uid]["class"])
+        for uid,a in annotations.items():
+            if a["class"]!="uncertain": continue
+            d=a.get("judge_decision",{})
+            if (d.get("equivalence")=="not_equivalent" and d.get("scope_relation")in("broader","narrower","different")
+                    and d.get("bidirectional_equivalence")=="no" and d.get("confidence")=="high" and not d.get("validation_issues")
+                    and not variants[units[uid]["question_id"]," ".join(units[uid]["answer"].casefold().split())]&{"C2","C3"}):
+                reason="High-confidence, internally consistent non-equivalence with changed "+d["scope_relation"]+" scope. C1 means semantic nonmatch, not a claim of medical falsity."
+                a.update(previous_review_class="uncertain",**{"class":"C1"},semantic_nonmatch_reason=reason)
+                resolved.append({**units[uid],"resolution_source":"consistent_GPT_scope_judgment","reason":reason})
+        explicit=data.records(nonmatches_file) if nonmatches_file else []
+        seen=set()
+        for row in explicit:
+            uid=row["unit_id"]
+            if (uid in seen or uid not in units or units[uid]["official_accepted"] or not row["reason"].strip()
+                    or annotations[uid]["class"]=="C2"):
+                raise ValueError("Explicit nonmatch must adjudicate a unique unresolved/C1 candidate, preserving C2/C3")
+            seen.add(uid)
+            a=annotations[uid];prior=a["class"]
+            a.update(previous_review_class=a.get("previous_review_class",prior),**{"class":"C1"},semantic_nonmatch_reason=row["reason"])
+            if prior!="C1": resolved.append({**units[uid],"resolution_source":"explicit_scope_or_bound_adjudication","reason":row["reason"]})
+    for row in held: row["final_evaluation_class"]=annotations[row["unit_id"]]["class"]
+    policy="strict-equivalence-v3" if strict_nonmatches else "conservative-equivalence-v2"
     summary=data.evaluate(source,output,annotations,
-        state["model"]+" with assistant/diagnostic abstentions; not independent biomedical expert review")
+        state["model"]+" with assistant/diagnostic review; "+policy+"; not independent biomedical expert review")
+    summary["evaluation_label_policy"]=policy
+    summary["C1_definition"]=("Definite non-equivalence as an answer to this question; medical/factual correctness is a separate attribute."
+        if strict_nonmatches else "Original incorrect-answer labels; valid but non-equivalent answers may remain unresolved.")
+    data.write(output/"semantic_summary.json",summary)
     perq=data.read(output/"comparison_per_question.json")
     paired={};uncertainty={}
     for name,rr in perq["semantic_confirmed"].items():
@@ -154,16 +187,21 @@ def review(source,judge_directory,output,holds_file=None):
             "coverage_transitions":{k:{"gained_ids":[q for q in lo if not before[q][k] and lo[q][k]],
                 "lost_ids":[q for q in lo if before[q][k] and not lo[q][k]]} for k in data.METRICS if k!="mrr_at5"}}
     data.jsonl(output/"review_holds.jsonl",held)
+    data.jsonl(output/"resolved_semantic_nonmatches.jsonl",resolved)
     audit=dict(judge_manifest_sha256=data.digest(judge_directory/"manifest.json"),source_manifest_sha256=data.digest(source/"manifest.json"),
         code_sha256=data.digest(Path(__file__)),manual_holds_sha256=data.digest(holds_file) if holds_file else None,
+        explicit_nonmatches_sha256=data.digest(nonmatches_file) if nonmatches_file else None,evaluation_label_policy=policy,
+        resolved_from_uncertain_as_C1=len(resolved),resolution_reason_counts=dict(Counter(r["resolution_source"] for r in resolved)),
         model=state["model"],cumulative_charged_or_reserved_usd=state["charged_or_reserved_usd"],
         GPT_candidates_received=state["judged_candidates"],GPT_candidates_expected=state["candidates_to_judge"],
         assistant_or_diagnostic_held_candidates=len(held),hold_reason_counts=dict(Counter(r for row in held for r in row["review_reasons"])),
         unresolved_question_counts=uncertainty,paired_confirmed_semantic_changes=paired,
-        interpretation="All holds abstain; none establishes factual incorrectness or manufactures a positive. Same labels/rankings across conditions. Validation diagnostics, not independent test evidence.")
+        interpretation="C1 under strict-equivalence-v3 means definite semantic nonmatch, even for medically valid answers with changed scope. Scientific correctness/support remain separate. Ambiguous/conflicting judgments stay unresolved; no positives or official labels are manufactured. Validation diagnostics, not independent test evidence.")
     data.write(output/"review_audit.json",audit)
     with (output/"report.md").open("a",encoding="utf-8") as f:
-        f.write(f"\nReviewed with conservative abstentions: {len(held)} candidates held. Mechanical hints are not proof of incorrectness.\n")
+        remaining=sum(annotations[r["unit_id"]]["class"]=="uncertain" for r in held)
+        f.write(f"\nEvaluation label policy: {policy}. Review flags: {len(held)} candidates; {remaining} remain unresolved. Mechanical hints alone are not proof of non-equivalence.\n")
+        if strict_nonmatches: f.write(f"Resolved as C1 semantic nonmatches: {len(resolved)}. A C1 evaluation label does not itself assert medical falsity.\n")
         f.write(f"GPT candidate judgments received: {state['judged_candidates']}/{state['candidates_to_judge']}. Total batch charged/reserved: US${state['charged_or_reserved_usd']:.4f}.\n")
     data.write(output/"manifest.json",dict(status="complete",source_manifest_sha256=audit["source_manifest_sha256"],
         judge_manifest_sha256=audit["judge_manifest_sha256"],code_sha256=audit["code_sha256"],
@@ -177,5 +215,8 @@ if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("source",type=Path);p.add_argument("--judge",type=Path,required=True);p.add_argument("--output",type=Path,required=True)
     p.add_argument("--holds",type=Path)
+    p.add_argument("--strict-nonmatches",action="store_true",help="Treat consistent high-confidence scope non-equivalence as C1, even when medically valid")
+    p.add_argument("--nonmatches",type=Path,help="Explicit reviewed nonmatch adjudications; requires --strict-nonmatches")
     a=p.parse_args()
-    review(a.source.resolve(),a.judge.resolve(),a.output.resolve(),a.holds.resolve() if a.holds else None)
+    review(a.source.resolve(),a.judge.resolve(),a.output.resolve(),a.holds.resolve() if a.holds else None,
+        a.strict_nonmatches,a.nonmatches.resolve() if a.nonmatches else None)

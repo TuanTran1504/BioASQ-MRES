@@ -8,7 +8,7 @@
   "rubric_version": 2,
   "source_manifest_sha256": "968457775ee615800211eaffc2e7991581b4ebe5ac0d534521febdd99f3750a9",
   "judge_manifest_sha256": "cbac359ef712776bb7e24f5056fa6765ffb63f1e8fb51cf09a35249c6a245a7b",
-  "review_manifest_sha256": "61fff02d1b24a33189292a16b92b89049e7241680e21e06ebe7407681881e84e",
+  "review_manifest_sha256": "18d6b51ba428afab459127c0705eefa31f6ff975a788bd458f6863e964f99cba",
   "unique_candidates": 3097,
   "official_C3": 179,
   "GPT_candidates_received": 2918,
@@ -20,9 +20,9 @@
   },
   "reviewed_class_counts": {
     "C3": 179,
-    "C1": 495,
+    "C1": 1049,
     "C2": 1321,
-    "uncertain": 1102
+    "uncertain": 548
   },
   "review_held_candidates": 265,
   "cumulative_recorded_cost_usd": 4.8054688,
@@ -185,89 +185,89 @@
   "unresolved_optimistic_bound": {
     "joint_baseline_greedy_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.973611111111111,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8949074074074073,
+        "coverage_at5": 0.9375,
+        "coverage_at10": 0.9583333333333334,
+        "coverage_full_pool": 0.9583333333333334
       }
     },
     "joint_baseline_sampling4_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.9583333333333334,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8923611111111112,
+        "coverage_at5": 0.9583333333333334,
+        "coverage_at10": 0.9722222222222222,
+        "coverage_full_pool": 0.9861111111111112
       }
     },
     "joint_model_specific_selected_greedy_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.9722222222222222,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8987268518518517,
+        "coverage_at5": 0.9444444444444444,
+        "coverage_at10": 0.9652777777777778,
+        "coverage_full_pool": 0.9722222222222222
       }
     },
     "joint_model_specific_selected_sampling4_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.9537037037037036,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8879629629629628,
+        "coverage_at5": 0.9652777777777778,
+        "coverage_at10": 0.9791666666666666,
+        "coverage_full_pool": 0.9861111111111112
       }
     },
     "joint_shared_selected_greedy_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.9722222222222222,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8966435185185184,
+        "coverage_at5": 0.9513888888888888,
+        "coverage_at10": 0.9722222222222222,
+        "coverage_full_pool": 0.9722222222222222
       }
     },
     "joint_shared_selected_sampling4_max5_reranker": {
       "metrics": {
-        "mrr_at5": 0.9571759259259258,
-        "coverage_at5": 0.9930555555555556,
-        "coverage_at10": 0.9930555555555556,
-        "coverage_full_pool": 0.9930555555555556
+        "mrr_at5": 0.8908564814814812,
+        "coverage_at5": 0.9652777777777778,
+        "coverage_at10": 0.9791666666666666,
+        "coverage_full_pool": 0.9861111111111112
       }
     }
   },
   "unresolved_question_counts": {
     "joint_baseline_greedy_max5_reranker": {
-      "mrr_at5": 27,
-      "coverage_at5": 12,
-      "coverage_at10": 9,
-      "coverage_full_pool": 9
+      "mrr_at5": 13,
+      "coverage_at5": 4,
+      "coverage_at10": 4,
+      "coverage_full_pool": 4
     },
     "joint_baseline_sampling4_max5_reranker": {
-      "mrr_at5": 27,
-      "coverage_at5": 11,
-      "coverage_at10": 8,
-      "coverage_full_pool": 7
+      "mrr_at5": 13,
+      "coverage_at5": 6,
+      "coverage_at10": 5,
+      "coverage_full_pool": 6
     },
     "joint_model_specific_selected_greedy_max5_reranker": {
-      "mrr_at5": 26,
-      "coverage_at5": 12,
-      "coverage_at10": 11,
-      "coverage_full_pool": 10
+      "mrr_at5": 14,
+      "coverage_at5": 5,
+      "coverage_at10": 7,
+      "coverage_full_pool": 7
     },
     "joint_model_specific_selected_sampling4_max5_reranker": {
-      "mrr_at5": 27,
-      "coverage_at5": 10,
-      "coverage_at10": 8,
-      "coverage_full_pool": 7
+      "mrr_at5": 13,
+      "coverage_at5": 6,
+      "coverage_at10": 6,
+      "coverage_full_pool": 6
     },
     "joint_shared_selected_greedy_max5_reranker": {
-      "mrr_at5": 27,
-      "coverage_at5": 12,
-      "coverage_at10": 9,
-      "coverage_full_pool": 9
+      "mrr_at5": 15,
+      "coverage_at5": 6,
+      "coverage_at10": 6,
+      "coverage_full_pool": 6
     },
     "joint_shared_selected_sampling4_max5_reranker": {
-      "mrr_at5": 27,
-      "coverage_at5": 10,
-      "coverage_at10": 8,
-      "coverage_full_pool": 7
+      "mrr_at5": 13,
+      "coverage_at5": 6,
+      "coverage_at10": 6,
+      "coverage_full_pool": 6
     }
   },
   "paired_reviewed_semantic_changes": {
@@ -377,18 +377,36 @@
       }
     }
   },
-  "validation": "39 focused checks passed: export provenance, all144 denominators, unchanged rankings, cached/capped annotation, numeric/scope abstentions and preservation of unheld C2/C3.",
+  "validation": "40 focused checks passed, including strict-scope nonmatches that are medically valid, preservation of low-confidence uncertainty, and unchanged official/confirmed semantic scores.",
   "limitations": [
     "GPT judgments plus assistant/diagnostic abstentions are not independent biomedical expert labels.",
     "Unresolved candidates are not counted as confirmed matches and are not relabelled C1. Optimistic bounds are conditional on resolved labels being correct.",
     "Post-hoc validation after checkpoint/design selection; no independent held-out improvement claim.",
-    "No generator, reranker or DPO training. These validation annotations must not become training preferences."
+    "No generator, reranker or DPO training. These validation annotations must not become training preferences.",
+    "Evaluation C1 denotes semantic non-equivalence, not necessarily medical/factual incorrectness; do not reuse this policy as a training correctness label."
   ],
   "artifacts": {
-    "report": "Artifacts\\semantic_val144_reviewed\\report.md",
-    "labels": "Artifacts\\semantic_val144_reviewed\\annotated_candidates.jsonl",
-    "uncertainty": "Artifacts\\semantic_val144_reviewed\\uncertain_candidates.jsonl",
-    "review_holds": "Artifacts\\semantic_val144_reviewed\\review_holds.jsonl",
-    "audit": "Artifacts\\semantic_val144_reviewed\\review_audit.json"
+    "report": "Artifacts\\semantic_val144_strict_v3\\report.md",
+    "labels": "Artifacts\\semantic_val144_strict_v3\\annotated_candidates.jsonl",
+    "uncertainty": "Artifacts\\semantic_val144_strict_v3\\uncertain_candidates.jsonl",
+    "review_holds": "Artifacts\\semantic_val144_strict_v3\\review_holds.jsonl",
+    "audit": "Artifacts\\semantic_val144_strict_v3\\review_audit.json",
+    "previous_conservative_report": "Artifacts\\semantic_val144_reviewed\\report.md",
+    "resolved_nonmatches": "Artifacts\\semantic_val144_strict_v3\\resolved_semantic_nonmatches.jsonl"
+  },
+  "evaluation_label_policy": "strict-equivalence-v3",
+  "C1_definition": "Definite non-equivalence as an answer to this question; medical/factual correctness is a separate attribute.",
+  "previous_conservative_class_counts": {
+    "C3": 179,
+    "C1": 495,
+    "C2": 1321,
+    "uncertain": 1102
+  },
+  "strict_nonmatch_resolutions": {
+    "resolved_from_uncertain_as_C1": 554,
+    "reason_counts": {
+      "consistent_GPT_scope_judgment": 537,
+      "explicit_scope_or_bound_adjudication": 17
+    }
   }
 }
