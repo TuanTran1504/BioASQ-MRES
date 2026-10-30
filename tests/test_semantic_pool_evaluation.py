@@ -11,6 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from scripts import semantic_pool_evaluation as data
 from scripts import judge_semantic_answer_equivalence as judge
+from scripts import review_semantic_pool_annotations as reviewer
 
 
 def questions():
@@ -24,7 +25,7 @@ def ranked(conditions):
     for name in conditions:
         for q in range(144):
             if q==2: continue  # Empty pools must remain in the denominator.
-            answers=([("At least 54,000",0),("Greater than 54000",0),(">54000",1)] if q==0 else
+            answers=([("At least 54,000",0),("Greater than 54000",0),(">54000",1),("more than 54,000",0)] if q==0 else
                 [(f"Wrong{i}",0) for i in range(1,6)]+[("Accepted",1)] if q==1 else [("Accepted",1)])
             rows.extend(dict(condition=name,question_id=f"q{q}",rank=i,answer=a,label=label) for i,(a,label) in enumerate(answers,1))
     return rows
@@ -213,6 +214,59 @@ def test_model_specific_payloads_prices_and_caches_are_distinct():
     reserve=(len(json.dumps(full["payload"],ensure_ascii=False).encode())+2048)*2e-6+full["payload"]["max_tokens"]*8e-6
     assert full["maximum_cost_reserve_usd"]==pytest.approx(reserve)
     assert full["maximum_cost_reserve_usd"]>mini["maximum_cost_reserve_usd"]*4.9
+
+
+def test_review_holds_only_abstain_preserve_raw_scores_and_keep_official_c3(package,tmp_path):
+    _,source=package
+    _,_,_,units=data.load_package(source)
+    annotations={uid:{"class":"C1"} for uid,u in units.items() if not u["official_accepted"]}
+    alias=next(uid for uid,u in units.items() if u["answer"]=="Greater than 54000")
+    unknown_code=next(uid for uid,u in units.items() if u["question_id"]=="q1" and u["answer"]=="Wrong1")
+    annotations[alias]={"class":"C2","judge_decision":{"rationale":"Same bound."}}
+    annotations[unknown_code]={"class":"C2","judge_decision":{"rationale":"A narrower subset, potentially relevant."}}
+    retained=next(uid for uid,u in units.items() if u["answer"]=="more than 54,000")
+    annotations[retained]={"class":"C2","judge_decision":{"rationale":"Equivalent strict lower bound."}}
+    judged=tmp_path/"judge"
+    before=data.evaluate(source,judged/"evaluation",annotations,"mock GPT")
+    pins={p.relative_to(judged).as_posix():data.digest(p) for p in judged.rglob("*") if p.is_file()}
+    data.write(judged/"manifest.json",dict(status="complete",source_manifest_sha256=data.digest(source/"manifest.json"),
+        output_sha256=pins,model="test",charged_or_reserved_usd=.1,judged_candidates=len(annotations),candidates_to_judge=len(annotations)))
+    holds=tmp_path/"holds.jsonl";data.jsonl(holds,[dict(unit_id=alias,reason="Needs an independent scope check.")])
+    summary,audit=reviewer.review(source,judged,tmp_path/"reviewed",holds)
+    assert audit["assistant_or_diagnostic_held_candidates"]==2
+    assert summary["official"]==before["official"]
+    assert summary["class_counts"]["C3"]==before["class_counts"]["C3"]
+    assert summary["class_counts"]["uncertain"]==2
+    assert summary["class_counts"]["C2"]==1
+    review_state=data.read(tmp_path/"reviewed/manifest.json")
+    assert review_state["status"]=="complete" and review_state["semantic_scores_provisional"]
+    data.verify(tmp_path/"reviewed",review_state["output_sha256"])
+    assert data.read(judged/"evaluation/semantic_summary.json")==before
+    for name in summary["official"]:
+        assert summary["semantic_confirmed"][name]["metrics"]["mrr_at5"]<=before["semantic_confirmed"][name]["metrics"]["mrr_at5"]
+    official=next(uid for uid,u in units.items() if u["official_accepted"])
+    data.jsonl(holds,[dict(unit_id=official,reason="Cannot change official acceptance.")])
+    with pytest.raises(ValueError,match="C3"): reviewer.review(source,judged,tmp_path/"bad",holds)
+    with pytest.raises(ValueError,match="separately"): reviewer.review(source,judged,judged/"evaluation")
+
+
+@pytest.mark.parametrize("question,aliases,candidate,held",[
+    ("How many genes?",["fewer than 100"],"less than a hundred",False),
+    ("How many genes?",["fewer than 100"],"at most 100",True),
+    ("How many exomes?",[">54,000"],"greater than 54000",False),
+    ("How many exomes?",[">54,000"],"at least 54000",True),
+    ("What is the number of genes?",["Between 20,000 and 25,000"],"20 thousand to 25 thousand",False),
+    ("What is the number of genes?",["Between 20,000 and 25,000"],"between twenty thousand and twenty-five thousand",False),
+    ("What is the number of genes?",["Between 20,000 and 25,000"],"between twenty thousand and twenty-four thousand five hundred",True),
+    ("How many genes?",["55"],"fifty-five",False),
+    ("How many genes?",["55"],"around fifty-five",True),
+    ("How long?",["14 cell divisions"],"Until interphase 14",True),
+    ("How many nucleotides long?",["32"],"32 nucleotide",False),
+    ("How many nucleotides long?",["32"],"32 base pairs",True),
+    ("Which gene?",["JAK1"],"Janus kinase 1",False),
+])
+def test_numerical_review_flags_changed_bounds_ranges_units_without_inventing_positive_labels(question,aliases,candidate,held):
+    assert bool(reviewer.numerical_holds(candidate,question,aliases))is held
 
 
 @pytest.mark.parametrize("fault",["rank_gap","official_label_conflict","missing_question","changed_reference"])

@@ -122,3 +122,36 @@ Successful execution writes `evaluation/report.md`, `semantic_summary.json`,
 per-question metrics, all annotated candidates, uncertainty cases and official
 versus semantic gain cases. Confirmed semantic matching is C3 or strict C2.
 No generator, reranker or DPO training is run.
+
+## Conservative post-annotation review
+
+Keep the raw GPT outputs unchanged and write reviewed results to a separate
+directory. The review layer only changes questionable C1/C2 decisions to
+`uncertain`; it never invents positive labels or changes C3. All six conditions
+share the same candidate-level judgments and review holds.
+
+```powershell
+.venv\Scripts\python.exe scripts/review_semantic_pool_annotations.py `
+  Artifacts/semantic_val144_pools `
+  --judge Artifacts/semantic_val144_judge_full `
+  --output Artifacts/semantic_val144_reviewed `
+  --holds Artifacts/semantic_val144_manual_holds.jsonl
+```
+
+Review hints flag contradictory C1/C2 labels for case/spacing variants, positive
+rationales admitting scope differences, identifiers absent from the supplied
+references/evidence, replacement characters and quantitative mismatches. The
+numerical hint recognizes common digit/word forms and flags changed bounds,
+ranges, approximation or units. It is not a general mathematical-equivalence
+solver: valid conversions or contextual answers may also be withheld for review.
+None of these mechanical hints proves an answer incorrect. Assistant holds
+record specific scope/type/completeness concerns with explicit reasons; they
+are not independent expert labels. The original GPT scores remain available
+alongside the conservative reviewed scores. Do not report either as official
+BioASQ scores or as validated clinical correctness.
+
+The reviewed report includes all 144 questions. `review_audit.json` gives
+question-level metric uncertainty and paired changes from the SFT baseline;
+`review_holds.jsonl` preserves every abstention and the original GPT class.
+These are post-hoc validation diagnostics. Resolving the retained uncertainty
+requires further adjudication, not silently treating it as C1.

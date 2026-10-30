@@ -1,0 +1,394 @@
+{
+  "status": "annotation_complete_semantic_scores_provisional",
+  "date": "2026-10-30",
+  "split": "validation",
+  "question_count": 144,
+  "scope": "Max-five SFT ensemble baseline and selected model-specific/shared generator DPO; greedy and four-sample generation; frozen logistic and unchanged full rankings.",
+  "model": "gpt-4.1-2025-04-14",
+  "rubric_version": 2,
+  "source_manifest_sha256": "968457775ee615800211eaffc2e7991581b4ebe5ac0d534521febdd99f3750a9",
+  "judge_manifest_sha256": "cbac359ef712776bb7e24f5056fa6765ffb63f1e8fb51cf09a35249c6a245a7b",
+  "review_manifest_sha256": "61fff02d1b24a33189292a16b92b89049e7241680e21e06ebe7407681881e84e",
+  "unique_candidates": 3097,
+  "official_C3": 179,
+  "GPT_candidates_received": 2918,
+  "raw_GPT_class_counts": {
+    "C3": 179,
+    "C1": 500,
+    "C2": 1578,
+    "uncertain": 840
+  },
+  "reviewed_class_counts": {
+    "C3": 179,
+    "C1": 495,
+    "C2": 1321,
+    "uncertain": 1102
+  },
+  "review_held_candidates": 265,
+  "cumulative_recorded_cost_usd": 4.8054688,
+  "approved_total_cap_usd": 10,
+  "API_attempts_including_mini_pilots": 458,
+  "request_status_counts": {
+    "complete": 457,
+    "error": 1
+  },
+  "official": {
+    "joint_baseline_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.5945601851851853,
+        "coverage_at5": 0.6597222222222222,
+        "coverage_at10": 0.6666666666666666,
+        "coverage_full_pool": 0.6666666666666666
+      }
+    },
+    "joint_baseline_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.6046296296296296,
+        "coverage_at5": 0.7152777777777778,
+        "coverage_at10": 0.7361111111111112,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    },
+    "joint_model_specific_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.587962962962963,
+        "coverage_at5": 0.6458333333333334,
+        "coverage_at10": 0.6597222222222222,
+        "coverage_full_pool": 0.6597222222222222
+      }
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.608449074074074,
+        "coverage_at5": 0.7222222222222222,
+        "coverage_at10": 0.7361111111111112,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    },
+    "joint_shared_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.587962962962963,
+        "coverage_at5": 0.6458333333333334,
+        "coverage_at10": 0.6597222222222222,
+        "coverage_full_pool": 0.6597222222222222
+      }
+    },
+    "joint_shared_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.6119212962962962,
+        "coverage_at5": 0.7222222222222222,
+        "coverage_at10": 0.7361111111111112,
+        "coverage_full_pool": 0.7430555555555556
+      }
+    }
+  },
+  "raw_GPT_semantic": {
+    "joint_baseline_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8836805555555555,
+        "coverage_at5": 0.9305555555555556,
+        "coverage_at10": 0.9513888888888888,
+        "coverage_full_pool": 0.9513888888888888
+      }
+    },
+    "joint_baseline_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8802083333333331,
+        "coverage_at5": 0.9583333333333334,
+        "coverage_at10": 0.9583333333333334,
+        "coverage_full_pool": 0.9722222222222222
+      }
+    },
+    "joint_model_specific_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8836805555555555,
+        "coverage_at5": 0.9305555555555556,
+        "coverage_at10": 0.9444444444444444,
+        "coverage_full_pool": 0.9513888888888888
+      }
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8778935185185183,
+        "coverage_at5": 0.9583333333333334,
+        "coverage_at10": 0.9583333333333334,
+        "coverage_full_pool": 0.9722222222222222
+      }
+    },
+    "joint_shared_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8802083333333333,
+        "coverage_at5": 0.9305555555555556,
+        "coverage_at10": 0.9513888888888888,
+        "coverage_full_pool": 0.9513888888888888
+      }
+    },
+    "joint_shared_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8807870370370368,
+        "coverage_at5": 0.9583333333333334,
+        "coverage_at10": 0.9583333333333334,
+        "coverage_full_pool": 0.9722222222222222
+      }
+    }
+  },
+  "reviewed_semantic": {
+    "joint_baseline_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8390046296296297,
+        "coverage_at5": 0.9097222222222222,
+        "coverage_at10": 0.9305555555555556,
+        "coverage_full_pool": 0.9305555555555556
+      }
+    },
+    "joint_baseline_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.831597222222222,
+        "coverage_at5": 0.9166666666666666,
+        "coverage_at10": 0.9375,
+        "coverage_full_pool": 0.9444444444444444
+      }
+    },
+    "joint_model_specific_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8393518518518518,
+        "coverage_at5": 0.9097222222222222,
+        "coverage_at10": 0.9166666666666666,
+        "coverage_full_pool": 0.9236111111111112
+      }
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8306712962962961,
+        "coverage_at5": 0.9236111111111112,
+        "coverage_at10": 0.9375,
+        "coverage_full_pool": 0.9444444444444444
+      }
+    },
+    "joint_shared_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8355324074074075,
+        "coverage_at5": 0.9097222222222222,
+        "coverage_at10": 0.9305555555555556,
+        "coverage_full_pool": 0.9305555555555556
+      }
+    },
+    "joint_shared_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.8335648148148146,
+        "coverage_at5": 0.9236111111111112,
+        "coverage_at10": 0.9375,
+        "coverage_full_pool": 0.9444444444444444
+      }
+    }
+  },
+  "unresolved_optimistic_bound": {
+    "joint_baseline_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.973611111111111,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    },
+    "joint_baseline_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.9583333333333334,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    },
+    "joint_model_specific_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.9722222222222222,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.9537037037037036,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    },
+    "joint_shared_selected_greedy_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.9722222222222222,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    },
+    "joint_shared_selected_sampling4_max5_reranker": {
+      "metrics": {
+        "mrr_at5": 0.9571759259259258,
+        "coverage_at5": 0.9930555555555556,
+        "coverage_at10": 0.9930555555555556,
+        "coverage_full_pool": 0.9930555555555556
+      }
+    }
+  },
+  "unresolved_question_counts": {
+    "joint_baseline_greedy_max5_reranker": {
+      "mrr_at5": 27,
+      "coverage_at5": 12,
+      "coverage_at10": 9,
+      "coverage_full_pool": 9
+    },
+    "joint_baseline_sampling4_max5_reranker": {
+      "mrr_at5": 27,
+      "coverage_at5": 11,
+      "coverage_at10": 8,
+      "coverage_full_pool": 7
+    },
+    "joint_model_specific_selected_greedy_max5_reranker": {
+      "mrr_at5": 26,
+      "coverage_at5": 12,
+      "coverage_at10": 11,
+      "coverage_full_pool": 10
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker": {
+      "mrr_at5": 27,
+      "coverage_at5": 10,
+      "coverage_at10": 8,
+      "coverage_full_pool": 7
+    },
+    "joint_shared_selected_greedy_max5_reranker": {
+      "mrr_at5": 27,
+      "coverage_at5": 12,
+      "coverage_at10": 9,
+      "coverage_full_pool": 9
+    },
+    "joint_shared_selected_sampling4_max5_reranker": {
+      "mrr_at5": 27,
+      "coverage_at5": 10,
+      "coverage_at10": 8,
+      "coverage_full_pool": 7
+    }
+  },
+  "paired_reviewed_semantic_changes": {
+    "joint_model_specific_selected_greedy_max5_reranker_minus_baseline": {
+      "mrr_at5_difference": 0.0003472222222222221,
+      "mrr_improved_ids": [
+        "5c8cd26a0101eac870000003",
+        "5ad4dd93133db5eb78000008"
+      ],
+      "mrr_worsened_ids": [
+        "572096c90fd6f91b6800000e"
+      ],
+      "coverage_transitions": {
+        "coverage_at5": {
+          "gained_ids": [],
+          "lost_ids": []
+        },
+        "coverage_at10": {
+          "gained_ids": [],
+          "lost_ids": [
+            "54d662113706e8952800000d",
+            "535d3c069a4572de6f000006"
+          ]
+        },
+        "coverage_full_pool": {
+          "gained_ids": [],
+          "lost_ids": [
+            "535d3c069a4572de6f000006"
+          ]
+        }
+      }
+    },
+    "joint_model_specific_selected_sampling4_max5_reranker_minus_baseline": {
+      "mrr_at5_difference": -0.0009259259259259268,
+      "mrr_improved_ids": [
+        "5ad35d01133db5eb78000003",
+        "621b4a223a8413c65300003a"
+      ],
+      "mrr_worsened_ids": [
+        "56cdf3e55795f9a73e00003c",
+        "662cfc88187cba990d000008"
+      ],
+      "coverage_transitions": {
+        "coverage_at5": {
+          "gained_ids": [
+            "621b4a223a8413c65300003a"
+          ],
+          "lost_ids": []
+        },
+        "coverage_at10": {
+          "gained_ids": [],
+          "lost_ids": []
+        },
+        "coverage_full_pool": {
+          "gained_ids": [],
+          "lost_ids": []
+        }
+      }
+    },
+    "joint_shared_selected_greedy_max5_reranker_minus_baseline": {
+      "mrr_at5_difference": -0.003472222222222222,
+      "mrr_improved_ids": [],
+      "mrr_worsened_ids": [
+        "572096c90fd6f91b6800000e"
+      ],
+      "coverage_transitions": {
+        "coverage_at5": {
+          "gained_ids": [],
+          "lost_ids": []
+        },
+        "coverage_at10": {
+          "gained_ids": [],
+          "lost_ids": []
+        },
+        "coverage_full_pool": {
+          "gained_ids": [],
+          "lost_ids": []
+        }
+      }
+    },
+    "joint_shared_selected_sampling4_max5_reranker_minus_baseline": {
+      "mrr_at5_difference": 0.0019675925925925924,
+      "mrr_improved_ids": [
+        "5a74eaa50384be955100000b",
+        "5ad35d01133db5eb78000003",
+        "621b4a223a8413c65300003a"
+      ],
+      "mrr_worsened_ids": [
+        "56cdf3e55795f9a73e00003c",
+        "662cfc88187cba990d000008"
+      ],
+      "coverage_transitions": {
+        "coverage_at5": {
+          "gained_ids": [
+            "621b4a223a8413c65300003a"
+          ],
+          "lost_ids": []
+        },
+        "coverage_at10": {
+          "gained_ids": [],
+          "lost_ids": []
+        },
+        "coverage_full_pool": {
+          "gained_ids": [],
+          "lost_ids": []
+        }
+      }
+    }
+  },
+  "validation": "39 focused checks passed: export provenance, all144 denominators, unchanged rankings, cached/capped annotation, numeric/scope abstentions and preservation of unheld C2/C3.",
+  "limitations": [
+    "GPT judgments plus assistant/diagnostic abstentions are not independent biomedical expert labels.",
+    "Unresolved candidates are not counted as confirmed matches and are not relabelled C1. Optimistic bounds are conditional on resolved labels being correct.",
+    "Post-hoc validation after checkpoint/design selection; no independent held-out improvement claim.",
+    "No generator, reranker or DPO training. These validation annotations must not become training preferences."
+  ],
+  "artifacts": {
+    "report": "Artifacts\\semantic_val144_reviewed\\report.md",
+    "labels": "Artifacts\\semantic_val144_reviewed\\annotated_candidates.jsonl",
+    "uncertainty": "Artifacts\\semantic_val144_reviewed\\uncertain_candidates.jsonl",
+    "review_holds": "Artifacts\\semantic_val144_reviewed\\review_holds.jsonl",
+    "audit": "Artifacts\\semantic_val144_reviewed\\review_audit.json"
+  }
+}

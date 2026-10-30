@@ -1,5 +1,5 @@
 {
-  "status": "pilot_quality_gate_failed",
+  "status": "mini_pilot_quality_gate_failed_superseded_by_full_GPT_evaluation",
   "questions": 144,
   "conditions": 6,
   "unique_candidates": 3097,
@@ -16,11 +16,12 @@
   },
   "cumulative_charged_or_reserved_usd": 0.08477280000000001,
   "approved_batch_cap_usd": 10.0,
-  "full_model_api_calls": 0,
-  "full_model_switch": "Automatic approval review requires explicit approval for GPT-4.1 rather than the approved GPT-4.1-mini.",
+  "full_model_switch": "Subsequently explicitly approved within the original US$10 total cap; see completed evaluation record.",
   "pilot_manifests": {
     "Artifacts\\semantic_val144_judge": "3b90a91e4ea98cdae35c29b3ee913756ed7b182584636923f1138cd8fd31766b",
     "Artifacts\\semantic_val144_judge_v2": "e600e4d4a3b9db25e091403a928ea3c7aa871d055d989a6782bad5337dfcf031"
   },
-  "interpretation": "No final semantic score. Pilot decisions exposed unsupported-extra-identifier and scope/case inconsistencies. No training or new generation."
+  "interpretation": "No final semantic score. Pilot decisions exposed unsupported-extra-identifier and scope/case inconsistencies. No training or new generation.",
+  "full_model_api_calls_at_initial_pilot_inspection": 0,
+  "completed_evaluation": "results/semantic_validation144_20261030.json"
 }
