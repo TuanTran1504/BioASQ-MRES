@@ -87,6 +87,28 @@ def test_failed_draws_count_and_pool_frequency_uses_four_requested_draws():
     with pytest.raises(ValueError,match="Incomplete"): pilot.check_baseline(rr[:-1],{"q"},config())
 
 
+@pytest.mark.parametrize("metadata",[{}, {"relation_type":None}, {"relation_type":""}, {"relation_type":17}])
+def test_recovered_duplicate_without_valid_relation_preserves_surfaces_and_draw_frequency(metadata):
+    rr=baseline(["q"])
+    rr[0]["raw_response"]=json.dumps({"answers":[
+        {"answer":"HER2","relation_type":"original"},
+        {"answer":"her2",**metadata},
+        {"answer":"her2",**metadata},
+        {"answer":" HER2 ","relation_type":"synonym"},
+        {"answer":"HER-2","relation_type":"nomenclature_variant"},
+        {"answer":"SIXTH","relation_type":"synonym"}]})
+    candidates,warnings,_=pilot.parse_surfaces(rr[0]["raw_response"])
+    assert "duplicate_answer_surface" in warnings
+    assert {c["answer"] for c in candidates}=={"HER2","her2"," HER2 ","HER-2"}
+    pooled={r["answer"]:r for r in pilot.pool_rows(rr,{"q"})}
+    assert set(pooled)=={"HER2","her2"," HER2 ","HER-2","Other-A"}
+    assert pooled["her2"]["relation_types"]==[str(metadata.get("relation_type") or "unrecognized")]
+    assert pooled["her2"]["sample_frequencies"]=={"llama31":.25}
+    assert pooled["HER2"]["relation_types"]==["original"]
+    assert pooled[" HER2 "]["relation_types"]==["synonym"]
+    assert pooled["Other-A"]["sample_frequencies"]["llama31"]==.75
+
+
 def test_collect_never_resamples_parse_failures_and_resume_preserves_saved_draws():
     requests=pilot.make_requests(examples(["q"]),baseline(["q"]),config(),"repair")
     pp=plan(requests);calls=[]

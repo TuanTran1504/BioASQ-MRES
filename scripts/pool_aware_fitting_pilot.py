@@ -199,7 +199,8 @@ def pool_rows(rows,ids):
                                          surface_operations=[],is_format_variant=False))
             if m not in t["sources"]:
                 t["sources"].append(m);ranks[q,m]+=1;t["source_ranks"][m]=ranks[q,m]
-            if c["relation_type"] not in t["relation_types"]: t["relation_types"].append(c["relation_type"])
+            relation=str(c.get("relation_type") or "unrecognized")
+            if relation not in t["relation_types"]: t["relation_types"].append(relation)
             if a not in emitted:
                 t["sample_frequencies"][m]=t["sample_frequencies"].get(m,0)+.25;emitted.add(a)
     if seen!={(q,m,d) for q in ids for m in MODELS for d in range(1,5)}: raise ValueError("Missing evaluation draws")

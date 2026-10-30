@@ -154,3 +154,34 @@ The methodological ingredients are inspired by
 and [system-level DPO](https://papers.nips.cc/paper_files/paper/2025/hash/a5299935ef5fff4e33630ebc70babd30-Abstract-Conference.html).
 This is our biomedical adaptation and an untested hypothesis, not a replication
 or an established improvement from either paper.
+
+## CPU-only recovery for missing relation metadata
+
+Scoring job 182599758 stopped with `KeyError: 'relation_type'` after all three
+generation jobs completed. The parser retains exact case/spacing variants of
+duplicate answers. A recovered duplicate can lack relation metadata, although
+ordinary parsed candidates already use `unrecognized` for a missing or empty
+relation. The scorer now applies that same convention to recovered duplicates.
+It preserves the exact answer surfaces, raw-position cap, source ranks, frequency
+denominators and parser warnings. It does not invent a recognised relation,
+discard failed draws, refit the logistic model or generate replacements.
+
+For an existing frozen submission, use the recovery rather than restarting the
+generation launcher:
+
+```bash
+cd /scratch/nl78/$USER/BioASQ-MRES/gadi_sft_8b_starter
+git pull --ff-only
+bash scripts/submit_pool_aware_rescore.sh \
+  outputs/pool_aware_fitting_pilot/submission-20261030-000120-3606291
+```
+
+Preparation verifies all three completed generation outputs, every request and
+seed, all rebuilt condition pools and a real Java evaluator smoke before qsub.
+The recovery copies the original submitted code and permits only the declared
+missing-relation correction. Hashes bind the original inputs and raw outputs;
+the original submission is left unchanged. One CPU job writes a new comparison
+under `outputs/pool_aware_fitting_pilot/scoring-recovery-.../comparison-<job>/`.
+The command prints its job ID, submission record and report path. No GPU jobs,
+training or paid judging run. Use `qstat -fx JOB_ID` and the printed report path
+to check this recovery separately from the original failed scoring record.
