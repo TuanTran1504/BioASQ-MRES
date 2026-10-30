@@ -54,6 +54,8 @@ def package(tmp_path):
 
 def decision(index=0,equivalence="equivalent",answers="yes",support="supported"):
     return dict(index=index,equivalence=equivalence,answers_question=answers,matched_alias_indices=[0] if equivalence=="equivalent" else [],
+        scope_relation="same" if equivalence=="equivalent" else "different",
+        bidirectional_equivalence="yes" if equivalence=="equivalent" else "no",unverified_additions=[],
         error_kind="none" if equivalence=="equivalent" else "numeric_or_unit",evidence_support=support,confidence="high",
         evidence=[{"snippet_id":"S001","quote":"greater than 54,000 exomes"}] if support=="supported" else [],
         rationale="Same strict numerical bound and requested quantity.")
@@ -115,6 +117,8 @@ def test_judge_plan_is_blind_deduplicated_and_sends_all_aliases_and_complete_evi
 
 @pytest.mark.parametrize("change,expected",[
     ({},"C2"),({"confidence":"medium"},"uncertain"),({"evidence_support":"contradicted","evidence":[]},"uncertain"),
+    ({"scope_relation":"broader"},"uncertain"),({"bidirectional_equivalence":"no"},"uncertain"),
+    ({"unverified_additions":["54000"]},"uncertain"),
     ({"equivalence":"not_equivalent","answers_question":"no","matched_alias_indices":[],"error_kind":"numeric_or_unit"},"C1"),
     ({"equivalence":"not_equivalent","answers_question":"yes","matched_alias_indices":[],"error_kind":"other"},"uncertain"),
     ({"matched_alias_indices":[]},"uncertain"),({"evidence":[]},"uncertain")])
@@ -184,6 +188,31 @@ def test_real_spending_client_honours_cap_and_persists_usage_with_mocked_transpo
         assert len(ledger["attempts"])==len(calls) and all(a["status"]=="complete" for a in ledger["attempts"])
         assert state["charged_or_reserved_usd"]==pytest.approx(len(calls)*.00002)
         assert (output/"responses").exists()
+
+
+@pytest.mark.parametrize("model",tuple(judge.MODEL_RATES))
+def test_revised_rubric_keeps_the_original_cumulative_budget_instead_of_resetting_it(package,tmp_path,monkeypatch,model):
+    _,source=package;prior=tmp_path/"prior_pilot";revised=tmp_path/"revised"
+    data.write(prior/"manifest.json",dict(source_manifest_sha256=data.digest(source/"manifest.json"),model=judge.MODEL,max_usd=10.))
+    data.write(prior/"spend-ledger.json",{"attempts":[{"status":"complete","charged_or_reserved_usd":9.999999}]})
+    from scripts import judge_expansion_dpo_annotations as shared
+    monkeypatch.setattr(shared,"read_api_key",lambda _:pytest.fail("Insufficient shared reserve must not call GPT"))
+    state=judge.run(source,revised,True,10.,100,budget_directory=prior,model=model)
+    assert state["status"]=="incomplete" and state["charged_or_reserved_usd"]==9.999999
+    assert state["budget_directory"]==str(prior.resolve())
+    with pytest.raises(ValueError,match="Shared budget"):
+        judge.run(source,tmp_path/"wrong_budget",True,1.,100,budget_directory=prior)
+
+
+def test_model_specific_payloads_prices_and_caches_are_distinct():
+    qq={"q0":questions()["q0"]}
+    units={"a":dict(question_id="q0",answer="Greater than 54000",official_accepted=False)}
+    mini=judge.prepare_jobs(qq,units)[0]
+    full=judge.prepare_jobs(qq,units,model="gpt-4.1-2025-04-14")[0]
+    assert mini["request_sha256"]!=full["request_sha256"] and mini["unit_ids"]==full["unit_ids"]
+    reserve=(len(json.dumps(full["payload"],ensure_ascii=False).encode())+2048)*2e-6+full["payload"]["max_tokens"]*8e-6
+    assert full["maximum_cost_reserve_usd"]==pytest.approx(reserve)
+    assert full["maximum_cost_reserve_usd"]>mini["maximum_cost_reserve_usd"]*4.9
 
 
 @pytest.mark.parametrize("fault",["rank_gap","official_label_conflict","missing_question","changed_reference"])

@@ -99,6 +99,25 @@ The pipeline does not silently switch models. [Structured outputs](https://devel
 constrain the schema, not the factual correctness of judgments. Requests, raw
 responses, usage, validation issues and charged/reserved costs are retained.
 
+The first 20-request pilot and a separate revised-rubric mini pilot exposed
+over-acceptance of unverified identifiers and inconsistent handling of reference
+scope. These partial outputs are diagnostic pilots, not final semantic scores.
+Rubric version 2 additionally requires an explicit same-scope/bidirectional
+equivalence decision and identification of unverified added text. Invalid or
+unverified whole-answer equivalence remains uncertain even if a correct core
+name appears in the candidate.
+
+A stronger-model comparison can be planned with `--model gpt-4.1-2025-04-14`.
+Its [official model page](https://developers.openai.com/api/docs/models/gpt-4.1)
+lists US$2/M input and US$8/M output tokens. This is a separate explicit model
+choice, not an automatic fallback, and requires authorization for that model.
+Use a new versioned output directory and `--budget-directory ORIGINAL_JUDGE_DIR`
+to preserve the original cumulative batch cap across rubric/model pilots.
+This directory must have the original source/model metadata, approved cap and
+spending ledger. All prior charges/reserves count against the same limit.
+The report identifies the chosen model and hashes its exact rubric and code;
+cached judgments from different payloads/models are not mixed.
+
 Successful execution writes `evaluation/report.md`, `semantic_summary.json`,
 per-question metrics, all annotated candidates, uncertainty cases and official
 versus semantic gain cases. Confirmed semantic matching is C3 or strict C2.
